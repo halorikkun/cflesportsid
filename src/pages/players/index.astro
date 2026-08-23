@@ -8,10 +8,12 @@ const teamsMap = new Map(allTeams.map(t => [t.id, t]));
 const allMatches = await getCollection('matches');
 
 function getMatchesPlayed(uid) {
-  return allMatches.filter(m => 
+  return allMatches.filter(m =>
     m.data.playerStats && m.data.playerStats.some(ps => ps.uid === uid)
   ).length;
 }
+
+const teamOptions = allTeams.map(t => ({ id: t.id, name: t.data.name })).sort((a, b) => a.name.localeCompare(b.name));
 ---
 
 <Layout title="Players - CFL Tournament Hub" current="Players">
@@ -19,6 +21,26 @@ function getMatchesPlayed(uid) {
     <div class="page-header">
       <h1>Players</h1>
       <p>{players.length} players across all teams.</p>
+    </div>
+
+    <div style="display: flex; gap: 0.75rem; margin-bottom: 2rem; flex-wrap: wrap;">
+      <input type="text" id="searchInput" placeholder="Search player IGN..."
+        style="flex: 1; min-width: 200px; padding: 0.5rem 0.75rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-primary); font-size: 0.9rem;" />
+      <select id="teamFilter" style="padding: 0.5rem 0.75rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-primary); font-size: 0.9rem;">
+        <option value="">All Teams</option>
+        {teamOptions.map(t => <option value={t.id}>{t.name}</option>)}
+      </select>
+      <select id="sortSelect" style="padding: 0.5rem 0.75rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-primary); font-size: 0.9rem;">
+        <option value="kills-desc">Most Kills</option>
+        <option value="kills-asc">Least Kills</option>
+        <option value="deaths-desc">Most Deaths</option>
+        <option value="deaths-asc">Least Deaths</option>
+        <option value="assists-desc">Most Assists</option>
+        <option value="kd-desc">Best K/D</option>
+        <option value="kd-asc">Worst K/D</option>
+        <option value="matches-desc">Most Matches</option>
+        <option value="name-asc">Name (A-Z)</option>
+      </select>
     </div>
 
     <div class="table-wrap">
@@ -34,14 +56,23 @@ function getMatchesPlayed(uid) {
             <th>Matches</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody id="playersBody">
           {players.map(p => {
             const team = p.data.team ? teamsMap.get(p.data.team) : undefined;
             const kd = (p.data.stats.kills / Math.max(p.data.stats.deaths, 1)).toFixed(2);
             const kdClass = parseFloat(kd) >= 1 ? 'kd-positive' : 'kd-negative';
             const matchesPlayed = getMatchesPlayed(p.data.uid || p.id);
             return (
-              <tr>
+              <tr class="player-row"
+                data-search={p.data.ign.toLowerCase()}
+                data-team={p.data.team || ''}
+                data-kills={p.data.stats.kills}
+                data-deaths={p.data.stats.deaths}
+                data-assists={p.data.stats.assists}
+                data-kd={kd}
+                data-matches={matchesPlayed}
+                data-name={p.data.ign.toLowerCase()}
+              >
                 <td><a href={`/players/${p.id}`}><strong>{p.data.ign}</strong></a></td>
                 <td>{team ? <a href={`/teams/${team.id}`}>{team.data.name}</a> : '—'}</td>
                 <td class="kda"><span class="kill">{p.data.stats.kills}</span></td>
@@ -55,5 +86,51 @@ function getMatchesPlayed(uid) {
         </tbody>
       </table>
     </div>
+
+    <p id="noResults" style="text-align: center; color: var(--text-muted); display: none; padding: 2rem;">No players found.</p>
   </div>
+
+  <script>
+    const searchInput = document.getElementById('searchInput');
+    const teamFilter = document.getElementById('teamFilter');
+    const sortSelect = document.getElementById('sortSelect');
+    const body = document.getElementById('playersBody');
+    const noResults = document.getElementById('noResults');
+    const rows = Array.from(body.querySelectorAll('.player-row'));
+
+    function applyFilters() {
+      const search = searchInput.value.toLowerCase();
+      const team = teamFilter.value;
+      const sort = sortSelect.value;
+
+      let visible = rows.filter(row => {
+        const matchesSearch = !search || row.dataset.search.includes(search);
+        const matchesTeam = !team || row.dataset.team === team;
+        return matchesSearch && matchesTeam;
+      });
+
+      visible.sort((a, b) => {
+        switch(sort) {
+          case 'kills-desc': return parseInt(b.dataset.kills) - parseInt(a.dataset.kills);
+          case 'kills-asc': return parseInt(a.dataset.kills) - parseInt(b.dataset.kills);
+          case 'deaths-desc': return parseInt(b.dataset.deaths) - parseInt(a.dataset.deaths);
+          case 'deaths-asc': return parseInt(a.dataset.deaths) - parseInt(b.dataset.deaths);
+          case 'assists-desc': return parseInt(b.dataset.assists) - parseInt(a.dataset.assists);
+          case 'kd-desc': return parseFloat(b.dataset.kd) - parseFloat(a.dataset.kd);
+          case 'kd-asc': return parseFloat(a.dataset.kd) - parseFloat(b.dataset.kd);
+          case 'matches-desc': return parseInt(b.dataset.matches) - parseInt(a.dataset.matches);
+          case 'name-asc': return a.dataset.name.localeCompare(b.dataset.name);
+          default: return 0;
+        }
+      });
+
+      visible.forEach(row => body.appendChild(row));
+      rows.forEach(row => { row.style.display = visible.includes(row) ? '' : 'none'; });
+      noResults.style.display = visible.length === 0 ? 'block' : 'none';
+    }
+
+    searchInput.addEventListener('input', applyFilters);
+    teamFilter.addEventListener('change', applyFilters);
+    sortSelect.addEventListener('change', applyFilters);
+  </script>
 </Layout>

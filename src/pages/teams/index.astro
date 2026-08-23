@@ -33,11 +33,32 @@ const teams = (await getCollection('teams')).sort((a, b) => {
       <p>{teams.length} teams competing in CFL tournaments.</p>
     </div>
 
-    <div class="grid grid-2">
+    <div style="display: flex; gap: 0.75rem; margin-bottom: 2rem; flex-wrap: wrap;">
+      <input type="text" id="searchInput" placeholder="Search team name or tag..."
+        style="flex: 1; min-width: 200px; padding: 0.5rem 0.75rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-primary); font-size: 0.9rem;" />
+      <select id="sortSelect" style="padding: 0.5rem 0.75rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-primary); font-size: 0.9rem;">
+        <option value="wins-desc">Most Wins</option>
+        <option value="wins-asc">Least Wins</option>
+        <option value="losses-desc">Most Losses</option>
+        <option value="losses-asc">Least Losses</option>
+        <option value="name-asc">Name (A-Z)</option>
+        <option value="name-desc">Name (Z-A)</option>
+        <option value="players-desc">Most Players</option>
+      </select>
+    </div>
+
+    <div id="teamsGrid" class="grid grid-2">
       {teams.map(team => {
         const record = getTeamRecord(team.id);
+        const searchText = (team.data.name + ' ' + team.data.tag).toLowerCase();
         return (
-          <a href={`/teams/${team.id}`} class="card" style="text-decoration: none; color: inherit;">
+          <a href={`/teams/${team.id}`} class="card team-card" style="text-decoration: none; color: inherit;"
+            data-search={searchText}
+            data-wins={record.wins}
+            data-losses={record.losses}
+            data-players={team.data.players.length}
+            data-name={team.data.name.toLowerCase()}
+          >
             <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
               <div class="avatar" style="width: 56px; height: 56px; font-size: 1.3rem;">
                 {team.data.tag.charAt(0)}
@@ -72,5 +93,42 @@ const teams = (await getCollection('teams')).sort((a, b) => {
         );
       })}
     </div>
+
+    <p id="noResults" style="text-align: center; color: var(--text-muted); display: none; padding: 2rem;">No teams found.</p>
   </div>
+
+  <script>
+    const searchInput = document.getElementById('searchInput');
+    const sortSelect = document.getElementById('sortSelect');
+    const grid = document.getElementById('teamsGrid');
+    const noResults = document.getElementById('noResults');
+    const cards = Array.from(grid.querySelectorAll('.team-card'));
+
+    function applyFilters() {
+      const search = searchInput.value.toLowerCase();
+      const sort = sortSelect.value;
+
+      let visible = cards.filter(card => !search || card.dataset.search.includes(search));
+
+      visible.sort((a, b) => {
+        switch(sort) {
+          case 'wins-desc': return parseInt(b.dataset.wins) - parseInt(a.dataset.wins);
+          case 'wins-asc': return parseInt(a.dataset.wins) - parseInt(b.dataset.wins);
+          case 'losses-desc': return parseInt(b.dataset.losses) - parseInt(a.dataset.losses);
+          case 'losses-asc': return parseInt(a.dataset.losses) - parseInt(b.dataset.losses);
+          case 'name-asc': return a.dataset.name.localeCompare(b.dataset.name);
+          case 'name-desc': return b.dataset.name.localeCompare(a.dataset.name);
+          case 'players-desc': return parseInt(b.dataset.players) - parseInt(a.dataset.players);
+          default: return 0;
+        }
+      });
+
+      visible.forEach(card => grid.appendChild(card));
+      cards.forEach(card => { card.style.display = visible.includes(card) ? '' : 'none'; });
+      noResults.style.display = visible.length === 0 ? 'block' : 'none';
+    }
+
+    searchInput.addEventListener('input', applyFilters);
+    sortSelect.addEventListener('change', applyFilters);
+  </script>
 </Layout>

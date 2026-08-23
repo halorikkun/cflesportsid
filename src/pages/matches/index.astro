@@ -8,27 +8,23 @@ const teamsMap = new Map(allTeams.map(t => [t.id, t]));
 const playersMap = new Map(allPlayers.map(p => [p.data.uid, p]));
 
 const roundOrder = {
-  'First Round': 1, 'Second Round': 2, 'Third Round': 3,
-  'Top 16': 4, 'Quarter Final': 5, 'Semi Final': 6,
-  'Bronze Match': 7, 'Final': 8,
+  'Final': 8, 'Bronze Match': 7, 'Semi Final': 6, 'Quarter Final': 5,
+  'Top 16': 4, 'Third Round': 3, 'Second Round': 2, 'First Round': 1,
 };
 
 const matches = (await getCollection('matches')).sort((a, b) => {
-  // Upcoming first, then completed
   if (a.data.status !== b.data.status) {
     if (a.data.status === 'upcoming') return -1;
     if (b.data.status === 'upcoming') return 1;
     if (a.data.status === 'live') return -1;
     if (b.data.status === 'live') return 1;
   }
-  // Then by date
   const dateA = new Date(a.data.date).getTime();
   const dateB = new Date(b.data.date).getTime();
   if (dateA !== dateB) return dateB - dateA;
-  // Then by round
   const rA = roundOrder[a.data.round] || 99;
   const rB = roundOrder[b.data.round] || 99;
-  return rA - rB;
+  return rB - rA;
 });
 
 function getTeamKDA(match, teamId) {
@@ -49,6 +45,8 @@ function getTeamKDA(match, teamId) {
   }
   return { kills, deaths, assists };
 }
+
+const rounds = [...new Set(matches.map(m => m.data.round))];
 ---
 
 <Layout title="Matches - CFL Tournament Hub" current="Matches">
@@ -58,23 +56,51 @@ function getTeamKDA(match, teamId) {
       <p>{matches.length} matches across all CFL tournaments.</p>
     </div>
 
-    <div class="grid grid-2">
+    <div style="display: flex; gap: 0.75rem; margin-bottom: 2rem; flex-wrap: wrap;">
+      <input type="text" id="searchInput" placeholder="Search tournament or team..."
+        style="flex: 1; min-width: 200px; padding: 0.5rem 0.75rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-primary); font-size: 0.9rem;" />
+      <select id="statusFilter" style="padding: 0.5rem 0.75rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-primary); font-size: 0.9rem;">
+        <option value="">All Status</option>
+        <option value="upcoming">Upcoming</option>
+        <option value="completed">Completed</option>
+      </select>
+      <select id="roundFilter" style="padding: 0.5rem 0.75rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-primary); font-size: 0.9rem;">
+        <option value="">All Rounds</option>
+        {rounds.map(r => <option value={r}>{r}</option>)}
+      </select>
+      <select id="sortSelect" style="padding: 0.5rem 0.75rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-primary); font-size: 0.9rem;">
+        <option value="default">Default (Status → Date → Round)</option>
+        <option value="date-desc">Date (Newest)</option>
+        <option value="date-asc">Date (Oldest)</option>
+        <option value="round-desc">Round (Final → R1)</option>
+        <option value="round-asc">Round (R1 → Final)</option>
+      </select>
+    </div>
+
+    <div id="matchesGrid" class="grid grid-2">
       {matches.map(m => {
         const t1 = teamsMap.get(m.data.team1);
         const t2 = teamsMap.get(m.data.team2);
         const team1Name = t1 ? t1.data.name : m.data.team1;
         const team2Name = t2 ? t2.data.name : m.data.team2;
-        const scoreText = m.data.status === 'completed'
-          ? `${m.data.score1} - ${m.data.score2}`
-          : 'VS';
+        const team1Tag = t1 ? t1.data.tag : m.data.team1;
+        const team2Tag = t2 ? t2.data.tag : m.data.team2;
+        const scoreText = m.data.status === 'completed' ? `${m.data.score1} - ${m.data.score2}` : 'VS';
         const t1Won = m.data.winner === m.data.team1;
         const t2Won = m.data.winner === m.data.team2;
         const t1Color = m.data.status === 'completed' ? (t1Won ? '#f59e0b' : '#6b7280') : 'var(--text-primary)';
         const t2Color = m.data.status === 'completed' ? (t2Won ? '#f59e0b' : '#6b7280') : 'var(--text-primary)';
         const stats1 = getTeamKDA(m, m.data.team1);
         const stats2 = getTeamKDA(m, m.data.team2);
+        const searchText = (m.data.tournament + ' ' + team1Name + ' ' + team2Name + ' ' + team1Tag + ' ' + team2Tag).toLowerCase();
         return (
-          <div class="card">
+          <div class="card match-card"
+            data-search={searchText}
+            data-status={m.data.status}
+            data-round={m.data.round}
+            data-date={m.data.date}
+            data-round-order={roundOrder[m.data.round] || 99}
+          >
             <div style="text-align: center; margin-bottom: 1rem;">
               <div style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600;">
                 {m.data.tournament}
@@ -96,10 +122,10 @@ function getTeamKDA(match, teamId) {
             {m.data.status === 'completed' && (
               <div style="display: flex; justify-content: space-around; margin-top: 1rem; font-size: 0.8rem; color: var(--text-muted);">
                 <div>
-                  <span style={`color: ${t1Color}; font-weight: 600;`}>{team1Name}</span>: <span class="kda"><span class="kill">{stats1.kills}</span>/<span class="death">{stats1.deaths}</span>/<span class="assist">{stats1.assists}</span></span>
+                  <span style={`color: ${t1Color}; font-weight: 600;`}>{team1Tag}</span>: <span class="kda"><span class="kill">{stats1.kills}</span>/<span class="death">{stats1.deaths}</span>/<span class="assist">{stats1.assists}</span></span>
                 </div>
                 <div>
-                  <span style={`color: ${t2Color}; font-weight: 600;`}>{team2Name}</span>: <span class="kda"><span class="kill">{stats2.kills}</span>/<span class="death">{stats2.deaths}</span>/<span class="assist">{stats2.assists}</span></span>
+                  <span style={`color: ${t2Color}; font-weight: 600;`}>{team2Tag}</span>: <span class="kda"><span class="kill">{stats2.kills}</span>/<span class="death">{stats2.deaths}</span>/<span class="assist">{stats2.assists}</span></span>
                 </div>
               </div>
             )}
@@ -107,5 +133,60 @@ function getTeamKDA(match, teamId) {
         );
       })}
     </div>
+
+    <p id="noResults" style="text-align: center; color: var(--text-muted); display: none; padding: 2rem;">No matches found.</p>
   </div>
+
+  <script>
+    const searchInput = document.getElementById('searchInput');
+    const statusFilter = document.getElementById('statusFilter');
+    const roundFilter = document.getElementById('roundFilter');
+    const sortSelect = document.getElementById('sortSelect');
+    const grid = document.getElementById('matchesGrid');
+    const noResults = document.getElementById('noResults');
+    const cards = Array.from(grid.querySelectorAll('.match-card'));
+
+    function applyFilters() {
+      const search = searchInput.value.toLowerCase();
+      const status = statusFilter.value;
+      const round = roundFilter.value;
+      const sort = sortSelect.value;
+
+      let visible = cards.filter(card => {
+        const matchesSearch = !search || card.dataset.search.includes(search);
+        const matchesStatus = !status || card.dataset.status === status;
+        const matchesRound = !round || card.dataset.round === round;
+        return matchesSearch && matchesStatus && matchesRound;
+      });
+
+      visible.sort((a, b) => {
+        switch(sort) {
+          case 'date-desc':
+            return new Date(b.dataset.date).getTime() - new Date(a.dataset.date).getTime();
+          case 'date-asc':
+            return new Date(a.dataset.date).getTime() - new Date(b.dataset.date).getTime();
+          case 'round-desc':
+            return parseInt(b.dataset.roundOrder) - parseInt(a.dataset.roundOrder);
+          case 'round-asc':
+            return parseInt(a.dataset.roundOrder) - parseInt(b.dataset.roundOrder);
+          default:
+            const aUpcoming = a.dataset.status === 'upcoming' ? 0 : 1;
+            const bUpcoming = b.dataset.status === 'upcoming' ? 0 : 1;
+            if (aUpcoming !== bUpcoming) return aUpcoming - bUpcoming;
+            const dateDiff = new Date(b.dataset.date).getTime() - new Date(a.dataset.date).getTime();
+            if (dateDiff !== 0) return dateDiff;
+            return parseInt(b.dataset.roundOrder) - parseInt(a.dataset.roundOrder);
+        }
+      });
+
+      visible.forEach(card => grid.appendChild(card));
+      cards.forEach(card => { card.style.display = visible.includes(card) ? '' : 'none'; });
+      noResults.style.display = visible.length === 0 ? 'block' : 'none';
+    }
+
+    searchInput.addEventListener('input', applyFilters);
+    statusFilter.addEventListener('change', applyFilters);
+    roundFilter.addEventListener('change', applyFilters);
+    sortSelect.addEventListener('change', applyFilters);
+  </script>
 </Layout>
