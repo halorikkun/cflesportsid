@@ -15,9 +15,12 @@ const allTeams = await getCollection('teams');
 const teamsMap = new Map(allTeams.map(t => [t.id, t]));
 const team = player.data.team ? teamsMap.get(player.data.team) : undefined;
 const allMatches = await getCollection('matches');
-const playerMatches = team
-  ? allMatches.filter(m => m.data.team1 === team.id || m.data.team2 === team.id)
-  : [];
+
+const playerMatches = allMatches.filter(m => 
+  m.data.playerStats && m.data.playerStats.some(ps => ps.uid === player.data.uid)
+);
+
+const matchesPlayed = playerMatches.length;
 const kd = (player.data.stats.kills / Math.max(player.data.stats.deaths, 1)).toFixed(2);
 const kdClass = parseFloat(kd) >= 1 ? 'kd-positive' : 'kd-negative';
 const hasSocials = Object.values(player.data.socials).some(v => v);
@@ -32,7 +35,7 @@ const hasSocials = Object.values(player.data.socials).some(v => v);
       <div>
         <h1>{player.data.ign}</h1>
         <p style="color: var(--text-secondary);">
-          {player.data.name} · {player.data.role}
+          {player.data.name}
           {team && <span> · <a href={`/teams/${team.id}`}>{team.data.name}</a></span>}
           {player.data.country && <span> · {player.data.country}</span>}
         </p>
@@ -61,12 +64,8 @@ const hasSocials = Object.values(player.data.socials).some(v => v);
         <div class="stat-label">K/D Ratio</div>
       </div>
       <div class="stat-box">
-        <div class="stat-value">{player.data.stats.matchesPlayed}</div>
+        <div class="stat-value">{matchesPlayed}</div>
         <div class="stat-label">Matches</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-value">{player.data.stats.mvpCount}</div>
-        <div class="stat-label">MVP Awards</div>
       </div>
     </div>
 
@@ -94,12 +93,11 @@ const hasSocials = Object.values(player.data.socials).some(v => v);
           <table>
             <thead>
               <tr>
+                <th>Date</th>
                 <th>Tournament</th>
                 <th>Round</th>
                 <th>Match</th>
-                <th>Score</th>
-                <th>MVP</th>
-                <th>Date</th>
+                <th>K/D/A</th>
               </tr>
             </thead>
             <tbody>
@@ -107,14 +105,22 @@ const hasSocials = Object.values(player.data.socials).some(v => v);
                 const t1 = teamsMap.get(m.data.team1);
                 const t2 = teamsMap.get(m.data.team2);
                 const matchName = (t1 ? t1.data.name : m.data.team1) + ' vs ' + (t2 ? t2.data.name : m.data.team2);
+                const ps = m.data.playerStats.find(ps => ps.uid === player.data.uid);
+                let pKills = 0, pDeaths = 0, pAssists = 0;
+                if (ps && ps.rounds) {
+                  ps.rounds.forEach(r => {
+                    pKills += r.kills;
+                    pDeaths += r.deaths;
+                    pAssists += r.assists;
+                  });
+                }
                 return (
                   <tr>
+                    <td style="color: var(--text-muted);">{m.data.date}</td>
                     <td>{m.data.tournament}</td>
                     <td>{m.data.round}</td>
                     <td>{matchName}</td>
-                    <td>{m.data.score1} - {m.data.score2}</td>
-                    <td>{m.data.mvp === player.id && <span class="badge badge-win">MVP</span>}</td>
-                    <td style="color: var(--text-muted);">{m.data.date}</td>
+                    <td class="kda"><span class="kill">{pKills}</span>/<span class="death">{pDeaths}</span>/<span class="assist">{pAssists}</span></td>
                   </tr>
                 );
               })}
