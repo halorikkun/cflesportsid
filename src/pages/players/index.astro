@@ -5,6 +5,7 @@ import { getCollection } from 'astro:content';
 const players = (await getCollection('players')).sort((a, b) => b.data.stats.kills - a.data.stats.kills);
 const allTeams = await getCollection('teams');
 const teamsMap = new Map(allTeams.map(t => [t.id, t]));
+const playersMap = new Map(allPlayers.map(p => [p.id, p]));
 ---
 
 <Layout title="Players - CFL Tournament Hub" current="Players">
