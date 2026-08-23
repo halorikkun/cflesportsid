@@ -1,0 +1,116 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+
+export async function getStaticPaths() {
+  const teams = await getCollection('teams');
+  return teams.map(team => ({
+    params: { id: team.id },
+    props: { team },
+  }));
+}
+
+const { team } = Astro.props;
+const allTeams = await getCollection('teams');
+const allPlayers = await getCollection('players');
+const teamsMap = new Map(allTeams.map(t => [t.id, t]));
+const playersMap = new Map(allPlayers.map(p => [p.id, p]));
+const teamPlayers = team.data.players.map(pid => playersMap.get(pid)).filter(Boolean);
+const allMatches = await getCollection('matches');
+const teamMatches = allMatches.filter(
+  m => m.data.team1 === team.id || m.data.team2 === team.id
+);
+---
+
+<Layout title={`${team.data.name} - CFL Tournament Hub`} current="Teams">
+  <div class="container">
+    <div class="page-header">
+      <h1>{team.data.name} <span style="color: var(--text-muted); font-size: 1rem;">[{team.data.tag}]</span></h1>
+      <p>{team.data.region} · {team.data.founded || ''}</p>
+    </div>
+
+    {team.data.description && (
+      <p style="color: var(--text-secondary); margin-bottom: 2rem; max-width: 600px;">{team.data.description}</p>
+    )}
+
+    <div class="stat-grid" style="margin-bottom: 2rem;">
+      <div class="stat-box">
+        <div class="stat-value">{team.data.stats.wins}</div>
+        <div class="stat-label">Wins</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value">{team.data.stats.losses}</div>
+        <div class="stat-label">Losses</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value">{team.data.stats.draws}</div>
+        <div class="stat-label">Draws</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value">{team.data.stats.matchesPlayed}</div>
+        <div class="stat-label">Matches</div>
+      </div>
+    </div>
+
+    <h2 style="margin-bottom: 1rem;">Roster</h2>
+    <div class="grid grid-3" style="margin-bottom: 2rem;">
+      {teamPlayers.map(player => (
+        <a href={`/players/${player.id}`} class="card" style="text-decoration: none; color: inherit;">
+          <div style="display: flex; align-items: center; gap: 1rem;">
+            <div class="avatar">{player.data.ign.charAt(0).toUpperCase()}</div>
+            <div>
+              <strong>{player.data.ign}</strong>
+              <div style="color: var(--text-muted); font-size: 0.8rem;">{player.data.role}</div>
+            </div>
+          </div>
+        </a>
+      ))}
+    </div>
+
+    {teamMatches.length > 0 && (
+      <div>
+        <h2 style="margin-bottom: 1rem;">Match History</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Tournament</th>
+                <th>Round</th>
+                <th>Opponent</th>
+                <th>Score</th>
+                <th>Result</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {teamMatches.map(m => {
+                const isTeam1 = m.data.team1 === team.id;
+                const opponentId = isTeam1 ? m.data.team2 : m.data.team1;
+                const opponent = teamsMap.get(opponentId);
+                const myScore = isTeam1 ? m.data.score1 : m.data.score2;
+                const oppScore = isTeam1 ? m.data.score2 : m.data.score1;
+                const won = m.data.winner === team.id;
+                const resultBadge = m.data.status === 'completed'
+                  ? (won ? 'badge-win' : 'badge-loss')
+                  : 'badge-upcoming';
+                const resultText = m.data.status === 'completed'
+                  ? (won ? 'Win' : 'Loss')
+                  : m.data.status;
+                return (
+                  <tr>
+                    <td>{m.data.tournament}</td>
+                    <td>{m.data.round}</td>
+                    <td><a href={`/teams/${opponentId}`}>{opponent ? opponent.data.name : opponentId}</a></td>
+                    <td>{myScore} - {oppScore}</td>
+                    <td><span class={`badge ${resultBadge}`}>{resultText}</span></td>
+                    <td style="color: var(--text-muted);">{m.data.date}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    )}
+  </div>
+</Layout>

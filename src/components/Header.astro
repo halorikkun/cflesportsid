@@ -1,0 +1,20 @@
+---
+const { current } = Astro.props;
+const navItems = [
+  { label: 'Home', href: '/' },
+  { label: 'Teams', href: '/teams' },
+  { label: 'Players', href: '/players' },
+  { label: 'Matches', href: '/matches' },
+];
+---
+
+<header class="site-header">
+  <div class="container">
+    <a href="/" class="logo">CFL<span>.</span>Tournament</a>
+    <nav class="nav">
+      {navItems.map(item => (
+        <a href={item.href} class={current === item.label ? 'active' : ''}>{item.label}</a>
+      ))}
+    </nav>
+  </div>
+</header>

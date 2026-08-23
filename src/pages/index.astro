@@ -1,0 +1,104 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+
+const teams = await getCollection('teams');
+const players = await getCollection('players');
+const matches = await getCollection('matches');
+
+const totalTeams = teams.length;
+const totalPlayers = players.length;
+const totalMatches = matches.length;
+const completedMatches = matches.filter(m => m.data.status === 'completed');
+const upcomingMatches = matches.filter(m => m.data.status === 'upcoming');
+
+const topFragger = [...players].sort((a, b) => b.data.stats.kills - a.data.stats.kills)[0];
+const bestTeam = [...teams].sort((a, b) => {
+  const wrA = a.data.stats.wins / Math.max(a.data.stats.matchesPlayed, 1);
+  const wrB = b.data.stats.wins / Math.max(b.data.stats.matchesPlayed, 1);
+  return wrB - wrA;
+})[0];
+---
+
+<Layout title="CFL Tournament Hub - Home" current="Home">
+  <div class="container">
+    <div class="page-header">
+      <h1>CFL Tournament Hub</h1>
+      <p>Crossfire competitive tournament tracker — teams, players, and match results.</p>
+    </div>
+
+    <div class="stat-grid" style="margin-bottom: 2rem;">
+      <div class="stat-box">
+        <div class="stat-value">{totalTeams}</div>
+        <div class="stat-label">Teams</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value">{totalPlayers}</div>
+        <div class="stat-label">Players</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value">{totalMatches}</div>
+        <div class="stat-label">Matches</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value">{completedMatches.length}</div>
+        <div class="stat-label">Completed</div>
+      </div>
+    </div>
+
+    <div class="grid grid-2">
+      <div class="card">
+        <h3 style="margin-bottom: 1rem; color: var(--accent);">Top Fragger</h3>
+        {topFragger && (
+          <div style="display: flex; align-items: center; gap: 1rem;">
+            <div class="avatar">{topFragger.data.ign.charAt(0).toUpperCase()}</div>
+            <div>
+              <a href={`/players/${topFragger.id}`}><strong>{topFragger.data.ign}</strong></a>
+              <div style="color: var(--text-secondary); font-size: 0.85rem;">
+                {topFragger.data.stats.kills} kills / {topFragger.data.stats.deaths} deaths
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div class="card">
+        <h3 style="margin-bottom: 1rem; color: var(--accent);">Best Team</h3>
+        {bestTeam && (
+          <div style="display: flex; align-items: center; gap: 1rem;">
+            <div class="avatar">{bestTeam.data.tag.charAt(0)}</div>
+            <div>
+              <a href={`/teams/${bestTeam.id}`}><strong>{bestTeam.data.name}</strong></a>
+              <div style="color: var(--text-secondary); font-size: 0.85rem;">
+                {bestTeam.data.stats.wins}W - {bestTeam.data.stats.losses}L
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+
+    {upcomingMatches.length > 0 && (
+      <div style="margin-top: 2rem;">
+        <h2 style="margin-bottom: 1rem;">Upcoming Matches</h2>
+        <div class="grid grid-2">
+          {upcomingMatches.slice(0, 4).map(match => (
+            <div class="card">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <span class="badge badge-upcoming">Upcoming</span>
+                  <div style="margin-top: 0.5rem; color: var(--text-secondary); font-size: 0.85rem;">
+                    {match.data.tournament} · {match.data.round}
+                  </div>
+                </div>
+                <div style="text-align: right; color: var(--text-secondary); font-size: 0.85rem;">
+                  {match.data.date}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
+</Layout>
