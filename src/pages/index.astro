@@ -5,8 +5,6 @@ import { getCollection } from 'astro:content';
 const teams = await getCollection('teams');
 const players = await getCollection('players');
 const matches = await getCollection('matches');
-const teamsMap = new Map(allTeams.map(t => [t.id, t]));
-const playersMap = new Map(allPlayers.map(p => [p.id, p]));
 
 const totalTeams = teams.length;
 const totalPlayers = players.length;
