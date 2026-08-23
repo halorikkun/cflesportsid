@@ -2,13 +2,53 @@
 import Layout from '../../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
 
-const matches = (await getCollection('matches')).sort((a, b) =>
-  new Date(b.data.date).getTime() - new Date(a.data.date).getTime()
-);
 const allTeams = await getCollection('teams');
 const allPlayers = await getCollection('players');
 const teamsMap = new Map(allTeams.map(t => [t.id, t]));
-const playersMap = new Map(allPlayers.map(p => [p.id, p]));
+const playersMap = new Map(allPlayers.map(p => [p.data.uid, p]));
+
+const roundOrder = {
+  'First Round': 1, 'Second Round': 2, 'Third Round': 3,
+  'Top 16': 4, 'Quarter Final': 5, 'Semi Final': 6,
+  'Bronze Match': 7, 'Final': 8,
+};
+
+const matches = (await getCollection('matches')).sort((a, b) => {
+  // Upcoming first, then completed
+  if (a.data.status !== b.data.status) {
+    if (a.data.status === 'upcoming') return -1;
+    if (b.data.status === 'upcoming') return 1;
+    if (a.data.status === 'live') return -1;
+    if (b.data.status === 'live') return 1;
+  }
+  // Then by date
+  const dateA = new Date(a.data.date).getTime();
+  const dateB = new Date(b.data.date).getTime();
+  if (dateA !== dateB) return dateB - dateA;
+  // Then by round
+  const rA = roundOrder[a.data.round] || 99;
+  const rB = roundOrder[b.data.round] || 99;
+  return rA - rB;
+});
+
+function getTeamKDA(match, teamId) {
+  let kills = 0, deaths = 0, assists = 0;
+  if (match.data.playerStats) {
+    match.data.playerStats.forEach(ps => {
+      if (!ps.uid) return;
+      const player = playersMap.get(ps.uid);
+      if (!player || player.data.team !== teamId) return;
+      if (ps.rounds) {
+        ps.rounds.forEach(r => {
+          kills += r.kills || 0;
+          deaths += r.deaths || 0;
+          assists += r.assists || 0;
+        });
+      }
+    });
+  }
+  return { kills, deaths, assists };
+}
 ---
 
 <Layout title="Matches - CFL Tournament Hub" current="Matches">
@@ -22,47 +62,44 @@ const playersMap = new Map(allPlayers.map(p => [p.id, p]));
       {matches.map(m => {
         const t1 = teamsMap.get(m.data.team1);
         const t2 = teamsMap.get(m.data.team2);
-        const mvpPlayer = m.data.mvp ? playersMap.get(m.data.mvp) : undefined;
         const team1Name = t1 ? t1.data.name : m.data.team1;
         const team2Name = t2 ? t2.data.name : m.data.team2;
         const scoreText = m.data.status === 'completed'
           ? `${m.data.score1} - ${m.data.score2}`
           : 'VS';
+        const t1Won = m.data.winner === m.data.team1;
+        const t2Won = m.data.winner === m.data.team2;
+        const t1Color = m.data.status === 'completed' ? (t1Won ? '#f59e0b' : '#6b7280') : 'var(--text-primary)';
+        const t2Color = m.data.status === 'completed' ? (t2Won ? '#f59e0b' : '#6b7280') : 'var(--text-primary)';
+        const stats1 = getTeamKDA(m, m.data.team1);
+        const stats2 = getTeamKDA(m, m.data.team2);
         return (
           <div class="card">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem;">
-              <div>
-                <span class={`badge badge-${m.data.status}`}>{m.data.status}</span>
-                <div style="margin-top: 0.5rem; color: var(--text-secondary); font-size: 0.85rem;">
-                  {m.data.tournament} · {m.data.round}
-                </div>
+            <div style="text-align: center; margin-bottom: 1rem;">
+              <div style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600;">
+                {m.data.tournament}
               </div>
-              <div style="text-align: right; color: var(--text-muted); font-size: 0.85rem;">
+              <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">
                 {m.data.date}
-                {m.data.map && <div>Map: {m.data.map}</div>}
-                {m.data.duration && <div>Duration: {m.data.duration}</div>}
+              </div>
+              <div style="margin-top: 0.25rem;">
+                <span class={`badge badge-${m.data.status}`}>{m.data.round}</span>
               </div>
             </div>
 
             <div class="score-display" style="justify-content: center; padding: 1rem 0;">
-              <a href={`/teams/${m.data.team1}`}>{team1Name}</a>
+              <a href={`/teams/${m.data.team1}`} style={`color: ${t1Color};`}>{team1Name}</a>
               <span class="vs">{scoreText}</span>
-              <a href={`/teams/${m.data.team2}`}>{team2Name}</a>
+              <a href={`/teams/${m.data.team2}`} style={`color: ${t2Color};`}>{team2Name}</a>
             </div>
-
-            {m.data.status === 'completed' && mvpPlayer && (
-              <div style="text-align: center; color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.5rem;">
-                MVP: <a href={`/players/${mvpPlayer.id}`}>{mvpPlayer.data.ign}</a>
-              </div>
-            )}
 
             {m.data.status === 'completed' && (
               <div style="display: flex; justify-content: space-around; margin-top: 1rem; font-size: 0.8rem; color: var(--text-muted);">
                 <div>
-                  {team1Name}: <span class="kda"><span class="kill">{m.data.stats1.kills}</span>/<span class="death">{m.data.stats1.deaths}</span>/<span class="assist">{m.data.stats1.assists}</span></span>
+                  <span style={`color: ${t1Color}; font-weight: 600;`}>{team1Name}</span>: <span class="kda"><span class="kill">{stats1.kills}</span>/<span class="death">{stats1.deaths}</span>/<span class="assist">{stats1.assists}</span></span>
                 </div>
                 <div>
-                  {team2Name}: <span class="kda"><span class="kill">{m.data.stats2.kills}</span>/<span class="death">{m.data.stats2.deaths}</span>/<span class="assist">{m.data.stats2.assists}</span></span>
+                  <span style={`color: ${t2Color}; font-weight: 600;`}>{team2Name}</span>: <span class="kda"><span class="kill">{stats2.kills}</span>/<span class="death">{stats2.deaths}</span>/<span class="assist">{stats2.assists}</span></span>
                 </div>
               </div>
             )}
