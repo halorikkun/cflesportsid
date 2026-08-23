@@ -10,6 +10,7 @@ const teams = defineCollection({
     region: z.string(),
     founded: z.string().optional(),
     description: z.string().optional(),
+    placementPoints: z.number().default(0),
     players: z.array(z.string()).default([]),
     stats: z.object({
       wins: z.number().default(0),
@@ -25,6 +26,7 @@ const players = defineCollection({
   schema: z.object({
     name: z.string(),
     ign: z.string(),
+    uid: z.string().optional(),
     team: z.string().optional(),
     role: z.string().default('Player'),
     avatar: z.string().optional(),
