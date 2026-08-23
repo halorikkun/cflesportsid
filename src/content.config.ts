@@ -73,6 +73,15 @@ const matches = defineCollection({
       deaths: z.number().default(0),
       assists: z.number().default(0),
     }).default({ kills: 0, deaths: 0, assists: 0 }),
+    playerStats: z.array(z.object({
+      uid: z.string().optional(),
+      ign: z.string().optional(),
+      rounds: z.array(z.object({
+        kills: z.number().default(0),
+        deaths: z.number().default(0),
+        assists: z.number().default(0),
+      })).default([]),
+    })).default([]),
   }),
 });
 
