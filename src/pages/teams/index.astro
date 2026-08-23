@@ -2,10 +2,27 @@
 import Layout from '../../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
 
+const allMatches = await getCollection('matches');
+const completedMatches = allMatches.filter(m => m.data.status === 'completed');
+
+function getTeamRecord(teamId) {
+  let wins = 0, losses = 0;
+  completedMatches.forEach(m => {
+    if (m.data.team1 === teamId) {
+      if (m.data.score1 > m.data.score2) wins++;
+      else if (m.data.score1 < m.data.score2) losses++;
+    } else if (m.data.team2 === teamId) {
+      if (m.data.score2 > m.data.score1) wins++;
+      else if (m.data.score2 < m.data.score1) losses++;
+    }
+  });
+  return { wins, losses };
+}
+
 const teams = (await getCollection('teams')).sort((a, b) => {
-  const wrA = a.data.stats.wins / Math.max(a.data.stats.matchesPlayed, 1);
-  const wrB = b.data.stats.wins / Math.max(b.data.stats.matchesPlayed, 1);
-  return wrB - wrA;
+  const recA = getTeamRecord(a.id);
+  const recB = getTeamRecord(b.id);
+  return recB.wins - recA.wins;
 });
 ---
 
@@ -17,40 +34,43 @@ const teams = (await getCollection('teams')).sort((a, b) => {
     </div>
 
     <div class="grid grid-2">
-      {teams.map(team => (
-        <a href={`/teams/${team.id}`} class="card" style="text-decoration: none; color: inherit;">
-          <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
-            <div class="avatar" style="width: 56px; height: 56px; font-size: 1.3rem;">
-              {team.data.tag.charAt(0)}
+      {teams.map(team => {
+        const record = getTeamRecord(team.id);
+        return (
+          <a href={`/teams/${team.id}`} class="card" style="text-decoration: none; color: inherit;">
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+              <div class="avatar" style="width: 56px; height: 56px; font-size: 1.3rem;">
+                {team.data.tag.charAt(0)}
+              </div>
+              <div>
+                <h3 style="font-size: 1.1rem;">{team.data.name}</h3>
+                <span style="color: var(--text-muted); font-size: 0.8rem;">
+                  [{team.data.tag}] · {team.data.region}
+                </span>
+              </div>
             </div>
-            <div>
-              <h3 style="font-size: 1.1rem;">{team.data.name}</h3>
-              <span style="color: var(--text-muted); font-size: 0.8rem;">
-                [{team.data.tag}] · {team.data.region}
-              </span>
+            {team.data.description && (
+              <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
+                {team.data.description}
+              </p>
+            )}
+            <div class="stat-grid">
+              <div class="stat-box" style="min-width: 80px; padding: 0.5rem;">
+                <div class="stat-value" style="font-size: 1.2rem; color: var(--win);">{record.wins}</div>
+                <div class="stat-label">Wins</div>
+              </div>
+              <div class="stat-box" style="min-width: 80px; padding: 0.5rem;">
+                <div class="stat-value" style="font-size: 1.2rem; color: var(--loss);">{record.losses}</div>
+                <div class="stat-label">Losses</div>
+              </div>
+              <div class="stat-box" style="min-width: 80px; padding: 0.5rem;">
+                <div class="stat-value" style="font-size: 1.2rem; color: #f59e0b;">{team.data.players.length}</div>
+                <div class="stat-label">Players</div>
+              </div>
             </div>
-          </div>
-          {team.data.description && (
-            <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
-              {team.data.description}
-            </p>
-          )}
-          <div class="stat-grid">
-            <div class="stat-box" style="min-width: 80px; padding: 0.5rem;">
-              <div class="stat-value" style="font-size: 1.2rem;">{team.data.stats.wins}</div>
-              <div class="stat-label">Wins</div>
-            </div>
-            <div class="stat-box" style="min-width: 80px; padding: 0.5rem;">
-              <div class="stat-value" style="font-size: 1.2rem;">{team.data.stats.losses}</div>
-              <div class="stat-label">Losses</div>
-            </div>
-            <div class="stat-box" style="min-width: 80px; padding: 0.5rem;">
-              <div class="stat-value" style="font-size: 1.2rem;">{team.data.players.length}</div>
-              <div class="stat-label">Players</div>
-            </div>
-          </div>
-        </a>
-      ))}
+          </a>
+        );
+      })}
     </div>
   </div>
 </Layout>
