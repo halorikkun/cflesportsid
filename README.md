@@ -2,7 +2,7 @@
 
 A Crossfire tournament hub built with [Astro](https://astro.build) and deployed on Cloudflare Pages.
 
-## Features
+## Features 
 
 - **Teams** — Browse all teams with stats, rosters, and match history
 - **Players** — Player profiles with KDA stats, K/D ratio, MVP awards, and socials
