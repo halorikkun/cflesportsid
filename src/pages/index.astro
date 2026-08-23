@@ -10,14 +10,69 @@ const totalTeams = teams.length;
 const totalPlayers = players.length;
 const totalMatches = matches.length;
 const completedMatches = matches.filter(m => m.data.status === 'completed');
-const upcomingMatches = matches.filter(m => m.data.status === 'upcoming');
+const totalKills = players.reduce((sum, p) => sum + p.data.stats.kills, 0);
 
+// Calculate placement points from Final and Bronze Match
+function getPlacementPoints(teamId) {
+  const finalMatch = matches.find(m => m.data.round === 'Final' && m.data.status === 'completed');
+  const bronzeMatch = matches.find(m => m.data.round === 'Bronze Match' && m.data.status === 'completed');
+  if (finalMatch) {
+    if (finalMatch.data.winner === teamId) return 10;
+    if (finalMatch.data.team1 === teamId || finalMatch.data.team2 === teamId) return 6;
+  }
+  if (bronzeMatch) {
+    if (bronzeMatch.data.winner === teamId) return 4;
+    if (bronzeMatch.data.team1 === teamId || bronzeMatch.data.team2 === teamId) return 2;
+  }
+  return 0;
+}
+
+// Calculate kill points (sum of player kills)
+function getTeamKillPoints(teamId) {
+  return players.filter(p => p.data.team === teamId).reduce((sum, p) => sum + p.data.stats.kills, 0);
+}
+
+// Calculate team record from matches
+function getTeamRecord(teamId) {
+  let wins = 0, losses = 0;
+  completedMatches.forEach(m => {
+    if (m.data.team1 === teamId) {
+      if (m.data.score1 > m.data.score2) wins++;
+      else if (m.data.score1 < m.data.score2) losses++;
+    } else if (m.data.team2 === teamId) {
+      if (m.data.score2 > m.data.score1) wins++;
+      else if (m.data.score2 < m.data.score1) losses++;
+    }
+  });
+  return { wins, losses };
+}
+
+// Team standings
+const standings = teams.map(team => {
+  const killPoints = getTeamKillPoints(team.id);
+  const placementPoints = getPlacementPoints(team.id);
+  return {
+    id: team.id,
+    name: team.data.name,
+    tag: team.data.tag,
+    killPoints,
+    placementPoints,
+    totalScore: killPoints + placementPoints,
+  };
+}).sort((a, b) => b.totalScore - a.totalScore);
+
+// Top fragger
 const topFragger = [...players].sort((a, b) => b.data.stats.kills - a.data.stats.kills)[0];
-const bestTeam = [...teams].sort((a, b) => {
-  const wrA = a.data.stats.wins / Math.max(a.data.stats.matchesPlayed, 1);
-  const wrB = b.data.stats.wins / Math.max(b.data.stats.matchesPlayed, 1);
-  return wrB - wrA;
-})[0];
+const topFraggerKD = (topFragger.data.stats.kills / Math.max(topFragger.data.stats.deaths, 1)).toFixed(2);
+
+// Top assists
+const topAssists = [...players].sort((a, b) => b.data.stats.assists - a.data.stats.assists)[0];
+
+// Best team (most wins)
+const bestTeam = [...teams].map(team => {
+  const record = getTeamRecord(team.id);
+  return { ...team, record };
+}).sort((a, b) => b.record.wins - a.record.wins)[0];
 ---
 
 <Layout title="CFL Tournament Hub - Home" current="Home">
@@ -44,9 +99,39 @@ const bestTeam = [...teams].sort((a, b) => {
         <div class="stat-value">{completedMatches.length}</div>
         <div class="stat-label">Completed</div>
       </div>
+      <div class="stat-box">
+        <div class="stat-value">{totalKills}</div>
+        <div class="stat-label">Total Kills</div>
+      </div>
     </div>
 
-    <div class="grid grid-2">
+    <h2 style="margin-bottom: 1rem;">Team Standings</h2>
+    <div class="table-wrap" style="margin-bottom: 2rem;">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Team</th>
+            <th>Kill Points</th>
+            <th>Placement Points</th>
+            <th>Total Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          {standings.map((team, index) => (
+            <tr>
+              <td style="color: var(--text-muted);">{index + 1}</td>
+              <td><a href={`/teams/${team.id}`}><strong>{team.name}</strong></a></td>
+              <td class="kda"><span class="kill">{team.killPoints}</span></td>
+              <td>{team.placementPoints > 0 ? <span style="color: #f59e0b; font-weight: 700;">{team.placementPoints}</span> : '0'}</td>
+              <td style="font-weight: 700; color: var(--accent);">{team.totalScore}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="grid grid-3">
       <div class="card">
         <h3 style="margin-bottom: 1rem; color: var(--accent);">Top Fragger</h3>
         {topFragger && (
@@ -55,7 +140,23 @@ const bestTeam = [...teams].sort((a, b) => {
             <div>
               <a href={`/players/${topFragger.id}`}><strong>{topFragger.data.ign}</strong></a>
               <div style="color: var(--text-secondary); font-size: 0.85rem;">
-                {topFragger.data.stats.kills} kills / {topFragger.data.stats.deaths} deaths
+                <span class="kda"><span class="kill">{topFragger.data.stats.kills}</span>/<span class="death">{topFragger.data.stats.deaths}</span>/<span class="assist">{topFragger.data.stats.assists}</span></span>
+                <span style="margin-left: 0.5rem;">K/D: {topFraggerKD}</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div class="card">
+        <h3 style="margin-bottom: 1rem; color: var(--accent);">Top Assists</h3>
+        {topAssists && (
+          <div style="display: flex; align-items: center; gap: 1rem;">
+            <div class="avatar">{topAssists.data.ign.charAt(0).toUpperCase()}</div>
+            <div>
+              <a href={`/players/${topAssists.id}`}><strong>{topAssists.data.ign}</strong></a>
+              <div style="color: var(--text-secondary); font-size: 0.85rem;">
+                {topAssists.data.stats.assists} assists
               </div>
             </div>
           </div>
@@ -70,35 +171,12 @@ const bestTeam = [...teams].sort((a, b) => {
             <div>
               <a href={`/teams/${bestTeam.id}`}><strong>{bestTeam.data.name}</strong></a>
               <div style="color: var(--text-secondary); font-size: 0.85rem;">
-                {bestTeam.data.stats.wins}W - {bestTeam.data.stats.losses}L
+                <span style="color: var(--win);">{bestTeam.record.wins}W</span> - <span style="color: var(--loss);">{bestTeam.record.losses}L</span>
               </div>
             </div>
           </div>
         )}
       </div>
     </div>
-
-    {upcomingMatches.length > 0 && (
-      <div style="margin-top: 2rem;">
-        <h2 style="margin-bottom: 1rem;">Upcoming Matches</h2>
-        <div class="grid grid-2">
-          {upcomingMatches.slice(0, 4).map(match => (
-            <div class="card">
-              <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                  <span class="badge badge-upcoming">Upcoming</span>
-                  <div style="margin-top: 0.5rem; color: var(--text-secondary); font-size: 0.85rem;">
-                    {match.data.tournament} · {match.data.round}
-                  </div>
-                </div>
-                <div style="text-align: right; color: var(--text-secondary); font-size: 0.85rem;">
-                  {match.data.date}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    )}
   </div>
 </Layout>
