@@ -17,9 +17,31 @@ const teamsMap = new Map(allTeams.map(t => [t.id, t]));
 const playersMap = new Map(allPlayers.map(p => [p.id, p]));
 const teamPlayers = team.data.players.map(pid => playersMap.get(pid)).filter(Boolean);
 const allMatches = await getCollection('matches');
+
 const teamMatches = allMatches.filter(
   m => m.data.team1 === team.id || m.data.team2 === team.id
 );
+
+const completedMatches = teamMatches.filter(m => m.data.status === 'completed');
+
+let wins = 0, losses = 0;
+completedMatches.forEach(m => {
+  if (m.data.team1 === team.id) {
+    if (m.data.score1 > m.data.score2) wins++;
+    else if (m.data.score1 < m.data.score2) losses++;
+  } else if (m.data.team2 === team.id) {
+    if (m.data.score2 > m.data.score1) wins++;
+    else if (m.data.score2 < m.data.score1) losses++;
+  }
+});
+const matchesPlayed = completedMatches.length;
+
+let totalKills = 0, totalDeaths = 0, totalAssists = 0;
+teamPlayers.forEach(p => {
+  totalKills += p.data.stats.kills;
+  totalDeaths += p.data.stats.deaths;
+  totalAssists += p.data.stats.assists;
+});
 ---
 
 <Layout title={`${team.data.name} - CFL Tournament Hub`} current="Teams">
@@ -35,20 +57,32 @@ const teamMatches = allMatches.filter(
 
     <div class="stat-grid" style="margin-bottom: 2rem;">
       <div class="stat-box">
-        <div class="stat-value">{team.data.stats.wins}</div>
+        <div class="stat-value">{matchesPlayed}</div>
+        <div class="stat-label">Matches</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" style="color: var(--win);">{wins}</div>
         <div class="stat-label">Wins</div>
       </div>
       <div class="stat-box">
-        <div class="stat-value">{team.data.stats.losses}</div>
+        <div class="stat-value" style="color: var(--loss);">{losses}</div>
         <div class="stat-label">Losses</div>
       </div>
+    </div>
+
+    <h3 style="margin-bottom: 1rem; color: var(--accent);">Match Stats</h3>
+    <div class="stat-grid" style="margin-bottom: 2rem;">
       <div class="stat-box">
-        <div class="stat-value">{team.data.stats.draws}</div>
-        <div class="stat-label">Draws</div>
+        <div class="stat-value">{totalKills}</div>
+        <div class="stat-label">Kills</div>
       </div>
       <div class="stat-box">
-        <div class="stat-value">{team.data.stats.matchesPlayed}</div>
-        <div class="stat-label">Matches</div>
+        <div class="stat-value">{totalDeaths}</div>
+        <div class="stat-label">Deaths</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value">{totalAssists}</div>
+        <div class="stat-label">Assists</div>
       </div>
     </div>
 
