@@ -45,7 +45,7 @@ const teams = (await getCollection('teams')).sort((a, b) => {
               <div class="stat-label">Losses</div>
             </div>
             <div class="stat-box" style="min-width: 80px; padding: 0.5rem;">
-              <div class="stat-value" style="font-size: 1.2rem;">{team.data.stats.players.length}</div>
+              <div class="stat-value" style="font-size: 1.2rem;">{team.data.players.length}</div>
               <div class="stat-label">Players</div>
             </div>
           </div>
