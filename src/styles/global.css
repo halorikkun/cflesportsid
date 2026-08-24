@@ -261,47 +261,11 @@ tr:hover td {
   .page-header h1 { font-size: 1.5rem; }
 }
 
-/* Round rank badges */
-tr.rank-gold td:first-child,
-.top-list-item.rank-gold .top-rank {
-  background: #ffd700;
-  color: #1a1a1a;
-}
-tr.rank-silver td:first-child,
-.top-list-item.rank-silver .top-rank {
-  background: #c0c0c0;
-  color: #1a1a1a;
-}
-tr.rank-bronze td:first-child,
-.top-list-item.rank-bronze .top-rank {
-  background: #cd7f32;
-  color: #ffffff;
-}
+/* Rank number colors */
+tr.rank-gold td:first-child { color: #ffd700; font-weight: 700; }
+tr.rank-silver td:first-child { color: #c0c0c0; font-weight: 700; }
+tr.rank-bronze td:first-child { color: #cd7f32; font-weight: 700; }
 
-/* Table rank circle */
-tr.rank-gold td:first-child,
-tr.rank-silver td:first-child,
-tr.rank-bronze td:first-child {
-  display: inline-block;
-  width: 28px;
-  height: 28px;
-  line-height: 28px;
-  text-align: center;
-  border-radius: 50%;
-  font-weight: 700;
-  margin: 0 auto;
-}
-
-/* Top list rank circle */
-.top-list-item.rank-gold .top-rank,
-.top-list-item.rank-silver .top-rank,
-.top-list-item.rank-bronze .top-rank {
-  width: 28px;
-  height: 28px;
-  line-height: 28px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
+.top-list-item.rank-gold .top-rank { color: #ffd700; }
+.top-list-item.rank-silver .top-rank { color: #c0c0c0; }
+.top-list-item.rank-bronze .top-rank { color: #cd7f32; }
