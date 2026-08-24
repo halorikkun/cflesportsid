@@ -220,19 +220,7 @@ const teams = (await getCollection('teams')).map(team => {
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: 1.5rem;
   }
-
-  .team-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 1.25rem;
-    transition: border-color 0.2s, background 0.2s;
-  }
-  .team-card:hover {
-    border-color: var(--border-hover);
-    background: var(--bg-card-hover);
-  }
-
+ 
   .team-card-header {
     display: flex;
     align-items: center;
