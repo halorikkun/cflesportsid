@@ -100,12 +100,13 @@ const teams = (await getCollection('teams')).map(team => {
           </div>
 
           <div class="team-card-stats">
-            <div class="team-stat-item">
-              <span class="team-stat-label">K/D/A</span>
-              <span class="kda">
-                <span class="kill">{team.totalKills}</span>/<span class="death">{team.totalDeaths}</span>/<span class="assist">{team.totalAssists}</span>
-              </span>
-            </div>
+          <div class="team-stat-group team-stat-kda">
+            <span class="team-stat-label">K/D/A</span>
+            <span class="kda">
+              <span class="kill">{team.totalKills}</span>/<span class="death">{team.totalDeaths}</span>/<span class="assist">{team.totalAssists}</span>
+            </span>
+          </div>
+          <div class="team-stat-group team-stat-wl">
             <div class="team-stat-item">
               <span class="team-stat-label">Wins</span>
               <span style="color: var(--win); font-weight: 700;">{team.wins}</span>
@@ -115,6 +116,8 @@ const teams = (await getCollection('teams')).map(team => {
               <span style="color: var(--loss); font-weight: 700;">{team.losses}</span>
             </div>
           </div>
+        </div>
+
 
           <div class="team-players">
             <div class="team-players-label">Roster ({team.playerCount})</div>
@@ -261,13 +264,29 @@ const teams = (await getCollection('teams')).map(team => {
 
   .team-card-stats {
     display: flex;
-    gap: 1rem;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .team-stat-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+  .team-stat-kda {
+    text-align: center;
+  }
+  .team-stat-wl {
+    flex-direction: row;
+    gap: 1.5rem;
   }
   .team-stat-item {
     display: flex;
     flex-direction: column;
     gap: 0.15rem;
+    text-align: center;
   }
   .team-stat-label {
     font-size: 0.7rem;
