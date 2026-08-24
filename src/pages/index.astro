@@ -13,6 +13,9 @@ const completedMatches = matches.filter(m => m.data.status === 'completed');
 const upcomingMatches = matches.filter(m => m.data.status !== 'completed');
 const totalKills = players.reduce((sum, p) => sum + p.data.stats.kills, 0);
 
+// Tournament name — change this to your actual tournament name
+const tournamentName = 'CFL Esports ID Tournament';
+
 // Calculate placement points from Final and Bronze Match
 function getPlacementPoints(teamId) {
   const finalMatch = matches.find(m => m.data.round === 'Final' && m.data.status === 'completed');
@@ -62,12 +65,8 @@ const standings = teams.map(team => {
   };
 }).sort((a, b) => b.totalScore - a.totalScore);
 
-// Top 5 fraggers
+// Top 5 fraggers (kills only)
 const topFraggers = [...players].sort((a, b) => b.data.stats.kills - a.data.stats.kills).slice(0, 5);
-const topFraggersWithKD = topFraggers.map(p => ({
-  ...p,
-  kd: (p.data.stats.kills / Math.max(p.data.stats.deaths, 1)).toFixed(2),
-}));
 
 // Top 5 assists
 const topAssistsPlayers = [...players].sort((a, b) => b.data.stats.assists - a.data.stats.assists).slice(0, 5);
@@ -92,28 +91,28 @@ if (finalMatch) {
 <Layout title="CFL Esports ID Tournament Hub - Home" current="Home">
   <div class="container">
     <div class="page-header">
-      <h1>CFL Esports ID Tournament Hub</h1>
-      <p>Crossfire competitive tournament tracker — teams, players, and match results.</p>
+      <h1>Overall Leaderboard</h1>
+      <p>Team standings ranked by total score (kill points + placement points)</p>
     </div>
 
     <div class="stat-grid" style="margin-bottom: 2rem;">
-      <div class="stat-box">
+      <div class="stat-box stat-teams">
         <div class="stat-value">{totalTeams}</div>
         <div class="stat-label">Total Teams</div>
       </div>
-      <div class="stat-box">
+      <div class="stat-box stat-players">
         <div class="stat-value">{totalPlayers}</div>
         <div class="stat-label">Total Players</div>
       </div>
-      <div class="stat-box">
+      <div class="stat-box stat-fixtures">
         <div class="stat-value">{totalMatches}</div>
         <div class="stat-label">Fixtures Played</div>
       </div>
-      <div class="stat-box">
+      <div class="stat-box stat-upcoming">
         <div class="stat-value">{upcomingMatches.length}</div>
         <div class="stat-label">Upcoming</div>
       </div>
-      <div class="stat-box">
+      <div class="stat-box stat-kills">
         <div class="stat-value">{totalKills}</div>
         <div class="stat-label">Total Kills</div>
       </div>
@@ -149,15 +148,14 @@ if (finalMatch) {
       <div class="card">
         <h3 style="margin-bottom: 1rem; color: var(--accent);">Top Fraggers</h3>
         <div class="top-list">
-          {topFraggersWithKD.map((p, i) => (
-            <div class="top-list-item">
+          {topFraggers.map((p, i) => (
+            <div class={`top-list-item ${i === 0 ? 'top-highlight' : ''}`}>
               <span class="top-rank">{i + 1}</span>
               <div class="avatar">{p.data.ign.charAt(0).toUpperCase()}</div>
               <div class="top-info">
                 <a href={`/players/${p.id}`}><strong>{p.data.ign}</strong></a>
                 <div style="color: var(--text-secondary); font-size: 0.85rem;">
-                  <span class="kda"><span class="kill">{p.data.stats.kills}</span>/<span class="death">{p.data.stats.deaths}</span>/<span class="assist">{p.data.stats.assists}</span></span>
-                  <span style="margin-left: 0.5rem;">K/D: {p.kd}</span>
+                  <span class="kda"><span class="kill">{p.data.stats.kills}</span></span> kills
                 </div>
               </div>
             </div>
@@ -169,7 +167,7 @@ if (finalMatch) {
         <h3 style="margin-bottom: 1rem; color: var(--accent);">Top Assists</h3>
         <div class="top-list">
           {topAssistsPlayers.map((p, i) => (
-            <div class="top-list-item">
+            <div class={`top-list-item ${i === 0 ? 'top-highlight' : ''}`}>
               <span class="top-rank">{i + 1}</span>
               <div class="avatar">{p.data.ign.charAt(0).toUpperCase()}</div>
               <div class="top-info">
@@ -187,6 +185,10 @@ if (finalMatch) {
         <h3 style="margin-bottom: 1rem; color: var(--accent);">Tournament Winner</h3>
         {winnerTeams.length > 0 ? (
           <div class="winner-list">
+            <div style="text-align: center; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border);">
+              <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem;">Tournament</div>
+              <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">{tournamentName}</div>
+            </div>
             {winnerTeams.map((wt) => (
               <div class={`top-list-item ${wt.place === 1 ? 'rank-gold' : wt.place === 2 ? 'rank-silver' : 'rank-bronze'}`}>
                 <span class="top-rank">{wt.place === 1 ? '🥇' : wt.place === 2 ? '🥈' : '🥉'}</span>
@@ -201,74 +203,82 @@ if (finalMatch) {
             ))}
           </div>
         ) : (
-          <p style="color: var(--text-secondary); font-size: 0.9rem;">Tournament in progress.</p>
+          <div style="color: var(--text-muted); text-align: center; padding: 1rem;">Tournament in progress</div>
         )}
       </div>
     </div>
   </div>
-</Layout>
+</template>
 
 <style>
-  /* Team standings rank highlight */
-  .rank-gold {
-    background: rgba(255, 215, 0, 0.12);
-    border-left: 3px solid #ffd700;
+  /* Stat grid — different color per box */
+  .stat-teams {
+    background: rgba(59, 130, 246, 0.12);
+    border-color: rgba(59, 130, 246, 0.3);
   }
-  .rank-gold td:first-child {
-    color: #ffd700 !important;
-    font-weight: 700;
-  }
-  .rank-silver {
-    background: rgba(192, 192, 192, 0.12);
-    border-left: 3px solid #c0c0c0;
-  }
-  .rank-silver td:first-child {
-    color: #c0c0c0 !important;
-    font-weight: 700;
-  }
-  .rank-bronze {
-    background: rgba(205, 127, 50, 0.12);
-    border-left: 3px solid #cd7f32;
-  }
-  .rank-bronze td:first-child {
-    color: #cd7f32 !important;
-    font-weight: 700;
-  }
+  .stat-teams .stat-value { color: #60a5fa; }
 
-  /* Top fraggers / assists / winner list */
-  .top-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
+  .stat-players {
+    background: rgba(34, 197, 94, 0.12);
+    border-color: rgba(34, 197, 94, 0.3);
   }
+  .stat-players .stat-value { color: #4ade80; }
+
+  .stat-fixtures {
+    background: rgba(168, 85, 247, 0.12);
+    border-color: rgba(168, 85, 247, 0.3);
+  }
+  .stat-fixtures .stat-value { color: #c084fc; }
+
+  .stat-upcoming {
+    background: rgba(245, 158, 11, 0.12);
+    border-color: rgba(245, 158, 11, 0.3);
+  }
+  .stat-upcoming .stat-value { color: #fbbf24; }
+
+  .stat-kills {
+    background: rgba(255, 77, 46, 0.12);
+    border-color: rgba(255, 77, 46, 0.3);
+  }
+  .stat-kills .stat-value { color: var(--accent); }
+
+  /* Top list item layout */
   .top-list-item {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    padding: 0.5rem;
-    border-radius: 6px;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--border);
   }
-  .top-list-item:hover {
-    background: var(--bg-card-hover);
-  }
+  .top-list-item:last-child { border-bottom: none; }
   .top-rank {
+    font-size: 0.85rem;
     font-weight: 700;
     color: var(--text-muted);
     min-width: 1.5rem;
     text-align: center;
   }
-  .top-info {
-    flex: 1;
+  .top-info { flex: 1; }
+
+  /* Highlight #1 fragger and #1 assist */
+  .top-highlight {
+    background: var(--accent-dim);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 0.75rem;
+    margin: 0 -0.5rem 0.5rem;
+  }
+  .top-highlight .top-rank { color: var(--accent); }
+  .top-highlight .avatar {
+    box-shadow: 0 0 0 2px var(--accent);
   }
 
-  /* Winner list */
-  .winner-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-  }
-  .winner-list .top-list-item {
-    padding: 0.75rem;
-    border-radius: 8px;
-  }
+  /* Rank colors for standings + tournament winner */
+  .rank-gold { background: rgba(250, 204, 21, 0.08); }
+  .rank-gold td:first-child { color: #facc15 !important; }
+  .rank-silver { background: rgba(203, 213, 225, 0.06); }
+  .rank-silver td:first-child { color: #cbd5e1 !important; }
+  .rank-bronze { background: rgba(217, 119, 6, 0.08); }
+  .rank-bronze td:first-child { color: #d97706 !important; }
 </style>
+</Layout>
