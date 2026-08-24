@@ -132,7 +132,7 @@ const topAssistsPlayers = [...players].sort((a, b) => b.data.stats.assists - a.d
         <tbody>
           {standings.map((team, index) => (
             <tr class={index === 0 ? 'rank-gold' : index === 1 ? 'rank-silver' : index === 2 ? 'rank-bronze' : ''}>
-              <td>{index + 1}</td>
+              <td><span class={`rank ${index === 0 ? 'rank-1' : index === 1 ? 'rank-2' : index === 2 ? 'rank-3' : 'rank-n'}`}>{index + 1}</span></td>
               <td><a href={`/teams/${team.id}`}><strong>{team.name}</strong></a></td>
               <td class="kda"><span class="kill">{team.killPoints}</span></td>
               <td>{team.placementPoints > 0 ? <span style="color: #f59e0b; font-weight: 700;">{team.placementPoints}</span> : '0'}</td>
@@ -148,9 +148,8 @@ const topAssistsPlayers = [...players].sort((a, b) => b.data.stats.assists - a.d
         <h3 style="margin-bottom: 1rem; color: var(--text-primary);">Top Fraggers</h3>
         <div class="top-list">
           {topFraggers.map((p, i) => (
-  <div class={`top-list-item ${i === 0 ? 'rank-gold' : i === 1 ? 'rank-silver' : i === 2 ? 'rank-bronze' : ''}`}>
-              <span class="top-rank">{i + 1}</span>
-              <div class="avatar">{p.data.ign.charAt(0).toUpperCase()}</div>
+          <div class="top-list-item">
+            <span class={`rank ${i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : 'rank-n'}`}>{i + 1}</span>
               <div class="top-info">
                 <a href={`/players/${p.id}`}><strong>{p.data.ign}</strong></a>
                 <div style="color: var(--text-secondary); font-size: 0.85rem;">
@@ -166,9 +165,8 @@ const topAssistsPlayers = [...players].sort((a, b) => b.data.stats.assists - a.d
         <h3 style="margin-bottom: 1rem; color: var(--text-primary);">Top Assists</h3>
         <div class="top-list">
           {topAssistsPlayers.map((p, i) => (
-  <div class={`top-list-item ${i === 0 ? 'rank-gold' : i === 1 ? 'rank-silver' : i === 2 ? 'rank-bronze' : ''}`}>
-              <span class="top-rank">{i + 1}</span>
-              <div class="avatar">{p.data.ign.charAt(0).toUpperCase()}</div>
+          <div class="top-list-item">
+            <span class={`rank ${i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : 'rank-n'}`}>{i + 1}</span>
               <div class="top-info">
                 <a href={`/players/${p.id}`}><strong>{p.data.ign}</strong></a>
                 <div style="color: var(--text-secondary); font-size: 0.85rem;">
@@ -194,7 +192,6 @@ const topAssistsPlayers = [...players].sort((a, b) => b.data.stats.assists - a.d
                   {t.winnerTeams.map((wt) => (
                     <div class={`top-list-item ${wt.place === 1 ? 'rank-gold' : wt.place === 2 ? 'rank-silver' : 'rank-bronze'}`}>
                       <span class="top-rank">{wt.place === 1 ? '🥇' : wt.place === 2 ? '🥈' : '🥉'}</span>
-                      <div class="avatar">{wt.team.data.tag.charAt(0)}</div>
                       <div class="top-info">
                         <a href={`/teams/${wt.team.id}`}><strong>{wt.team.data.name}</strong></a>
                         <div style="color: var(--text-secondary); font-size: 0.85rem;">

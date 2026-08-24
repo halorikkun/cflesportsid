@@ -261,11 +261,20 @@ tr:hover td {
   .page-header h1 { font-size: 1.5rem; }
 }
 
-/* Rank number colors */
-tr.rank-gold td:first-child { color: #ffd700; font-weight: 700; }
-tr.rank-silver td:first-child { color: #c0c0c0; font-weight: 700; }
-tr.rank-bronze td:first-child { color: #cd7f32; font-weight: 700; }
+/* Rank circles */
+.rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-weight: 800;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+.rank-1 { background: #facc15; color: #000; }
+.rank-2 { background: #cbd5e1; color: #000; }
+.rank-3 { background: #d97706; color: #fff; }
+.rank-n { background: #2a2d38; color: #9ca3af; }
 
-.top-list-item.rank-gold .top-rank { color: #ffd700; }
-.top-list-item.rank-silver .top-rank { color: #c0c0c0; }
-.top-list-item.rank-bronze .top-rank { color: #cd7f32; }
