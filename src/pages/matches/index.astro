@@ -68,13 +68,6 @@ const rounds = [...new Set(matches.map(m => m.data.round))];
         <option value="">All Rounds</option>
         {rounds.map(r => <option value={r}>{r}</option>)}
       </select>
-      <select id="sortSelect" style="padding: 0.5rem 0.75rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-primary); font-size: 0.9rem;">
-        <option value="default">Default (Status → Date → Round)</option>
-        <option value="date-desc">Date (Newest)</option>
-        <option value="date-asc">Date (Oldest)</option>
-        <option value="round-desc">Round (Final → R1)</option>
-        <option value="round-asc">Round (R1 → Final)</option>
-      </select>
     </div>
 
     <div id="matchesGrid" class="grid grid-2">
@@ -100,12 +93,13 @@ const rounds = [...new Set(matches.map(m => m.data.round))];
             data-round={m.data.round}
             data-date={m.data.date}
             data-round-order={roundOrder[m.data.round] || 99}
+            data-tournament={m.data.tournament}
           >
             <div style="text-align: center; margin-bottom: 1rem;">
-              <div style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600;">
+              <div class="sort-tournament" style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600;">
                 {m.data.tournament}
               </div>
-              <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">
+              <div class="sort-date" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">
                 {m.data.date}
               </div>
               <div style="margin-top: 0.25rem;">
@@ -141,16 +135,17 @@ const rounds = [...new Set(matches.map(m => m.data.round))];
     const searchInput = document.getElementById('searchInput');
     const statusFilter = document.getElementById('statusFilter');
     const roundFilter = document.getElementById('roundFilter');
-    const sortSelect = document.getElementById('sortSelect');
     const grid = document.getElementById('matchesGrid');
     const noResults = document.getElementById('noResults');
     const cards = Array.from(grid.querySelectorAll('.match-card'));
+
+    let sortColumn = 'default';
+    let sortDirection = 'desc';
 
     function applyFilters() {
       const search = searchInput.value.toLowerCase();
       const status = statusFilter.value;
       const round = roundFilter.value;
-      const sort = sortSelect.value;
 
       let visible = cards.filter(card => {
         const matchesSearch = !search || card.dataset.search.includes(search);
@@ -160,23 +155,33 @@ const rounds = [...new Set(matches.map(m => m.data.round))];
       });
 
       visible.sort((a, b) => {
-        switch(sort) {
-          case 'date-desc':
-            return new Date(b.dataset.date).getTime() - new Date(a.dataset.date).getTime();
-          case 'date-asc':
-            return new Date(a.dataset.date).getTime() - new Date(b.dataset.date).getTime();
-          case 'round-desc':
-            return parseInt(b.dataset.roundOrder) - parseInt(a.dataset.roundOrder);
-          case 'round-asc':
-            return parseInt(a.dataset.roundOrder) - parseInt(b.dataset.roundOrder);
+        let result = 0;
+        switch(sortColumn) {
+          case 'tournament':
+            result = a.dataset.tournament.localeCompare(b.dataset.tournament);
+            break;
+          case 'date':
+            result = new Date(a.dataset.date).getTime() - new Date(b.dataset.date).getTime();
+            break;
+          case 'round':
+            result = parseInt(a.dataset.roundOrder) - parseInt(b.dataset.roundOrder);
+            break;
+          case 'status':
+            const statusOrder = { 'upcoming': 0, 'live': 1, 'completed': 2 };
+            result = (statusOrder[a.dataset.status] || 0) - (statusOrder[b.dataset.status] || 0);
+            break;
           default:
             const aUpcoming = a.dataset.status === 'upcoming' ? 0 : 1;
             const bUpcoming = b.dataset.status === 'upcoming' ? 0 : 1;
-            if (aUpcoming !== bUpcoming) return aUpcoming - bUpcoming;
-            const dateDiff = new Date(b.dataset.date).getTime() - new Date(a.dataset.date).getTime();
-            if (dateDiff !== 0) return dateDiff;
-            return parseInt(b.dataset.roundOrder) - parseInt(a.dataset.roundOrder);
+            if (aUpcoming !== bUpcoming) result = aUpcoming - bUpcoming;
+            else {
+              const dateDiff = new Date(b.dataset.date).getTime() - new Date(a.dataset.date).getTime();
+              if (dateDiff !== 0) result = dateDiff;
+              else result = parseInt(b.dataset.roundOrder) - parseInt(a.dataset.roundOrder);
+            }
+            break;
         }
+        return sortDirection === 'desc' ? result : -result;
       });
 
       visible.forEach(card => grid.appendChild(card));
@@ -184,9 +189,58 @@ const rounds = [...new Set(matches.map(m => m.data.round))];
       noResults.style.display = visible.length === 0 ? 'block' : 'none';
     }
 
+    // Add sort buttons
+    const sortBar = document.createElement('div');
+    sortBar.style.cssText = 'display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center;';
+    sortBar.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">Sort by:</span>';
+
+    const columns = [
+      { key: 'default', label: 'Default' },
+      { key: 'tournament', label: 'Tournament' },
+      { key: 'date', label: 'Date' },
+      { key: 'round', label: 'Round' },
+      { key: 'status', label: 'Status' },
+    ];
+
+    columns.forEach(col => {
+      const btn = document.createElement('button');
+      btn.textContent = col.label + ' ↓';
+      btn.dataset.column = col.key;
+      btn.dataset.direction = 'desc';
+      btn.style.cssText = 'padding: 0.35rem 0.75rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-secondary); cursor: pointer; font-size: 0.85rem; transition: all 0.2s;';
+      if (col.key === 'default') {
+        btn.style.background = 'var(--accent-dim)';
+        btn.style.borderColor = 'var(--accent)';
+        btn.style.color = 'var(--accent)';
+      }
+      btn.addEventListener('click', () => {
+        // Reset all buttons
+        sortBar.querySelectorAll('button').forEach(b => {
+          b.style.background = 'var(--bg-card)';
+          b.style.borderColor = 'var(--border)';
+          b.style.color = 'var(--text-secondary)';
+        });
+        // Toggle direction if same column
+        if (sortColumn === col.key) {
+          sortDirection = sortDirection === 'desc' ? 'asc' : 'desc';
+        } else {
+          sortColumn = col.key;
+          sortDirection = 'desc';
+        }
+        btn.textContent = col.label + ' ' + (sortDirection === 'desc' ? '↓' : '↑');
+        btn.style.background = 'var(--accent-dim)';
+        btn.style.borderColor = 'var(--accent)';
+        btn.style.color = 'var(--accent)';
+        applyFilters();
+      });
+      sortBar.appendChild(btn);
+    });
+
+    const filterArea = document.querySelector('[style*="flex-wrap: wrap; margin-bottom: 2rem;"]');
+    filterArea.parentNode.insertBefore(sortBar, filterArea.nextSibling);
+
     searchInput.addEventListener('input', applyFilters);
     statusFilter.addEventListener('change', applyFilters);
     roundFilter.addEventListener('change', applyFilters);
-    sortSelect.addEventListener('change', applyFilters);
   </script>
 </Layout>
