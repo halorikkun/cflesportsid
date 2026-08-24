@@ -148,7 +148,7 @@ const topAssistsPlayers = [...players].sort((a, b) => b.data.stats.assists - a.d
         <h3 style="margin-bottom: 1rem; color: var(--text-primary);">Top Fraggers</h3>
         <div class="top-list">
           {topFraggers.map((p, i) => (
-  <div class={`top-list-item ${i === 0 ? 'rank-gold' : i === 1 ? 'rank-silver' : i === 2 ? 'rank-bronze' : ''} ${i === 0 ? 'top-highlight' : ''}`}>
+  <div class={`top-list-item ${i === 0 ? 'rank-gold' : i === 1 ? 'rank-silver' : i === 2 ? 'rank-bronze' : ''}`}>
               <span class="top-rank">{i + 1}</span>
               <div class="avatar">{p.data.ign.charAt(0).toUpperCase()}</div>
               <div class="top-info">
@@ -166,7 +166,7 @@ const topAssistsPlayers = [...players].sort((a, b) => b.data.stats.assists - a.d
         <h3 style="margin-bottom: 1rem; color: var(--text-primary);">Top Assists</h3>
         <div class="top-list">
           {topAssistsPlayers.map((p, i) => (
-  <div class={`top-list-item ${i === 0 ? 'rank-gold' : i === 1 ? 'rank-silver' : i === 2 ? 'rank-bronze' : ''} ${i === 0 ? 'top-highlight' : ''}`}>
+  <div class={`top-list-item ${i === 0 ? 'rank-gold' : i === 1 ? 'rank-silver' : i === 2 ? 'rank-bronze' : ''}`}>
               <span class="top-rank">{i + 1}</span>
               <div class="avatar">{p.data.ign.charAt(0).toUpperCase()}</div>
               <div class="top-info">

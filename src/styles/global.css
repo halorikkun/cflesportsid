@@ -261,51 +261,24 @@ tr:hover td {
   .page-header h1 { font-size: 1.5rem; }
 }
 
-/* Team standings table row highlights */
-tr.rank-gold td {
-  background: rgba(255, 215, 0, 0.12);
-  border-left: 3px solid #ffd700;
-}
-tr.rank-gold td:first-child {
-  color: #ffd700;
-  font-weight: 700;
-}
-tr.rank-silver td {
-  background: rgba(192, 192, 192, 0.1);
-  border-left: 3px solid #c0c0c0;
-}
-tr.rank-silver td:first-child {
-  color: #c0c0c0;
-  font-weight: 700;
-}
-tr.rank-bronze td {
-  background: rgba(205, 127, 50, 0.1);
-  border-left: 3px solid #cd7f32;
-}
-tr.rank-bronze td:first-child {
-  color: #cd7f32;
-  font-weight: 700;
-}
-
-/* Top list item highlights (fraggers/assists) */
 .top-list-item.rank-gold {
-  background: rgba(255, 215, 0, 0.12);
-  border-left: 3px solid #ffd700;
+  background: rgba(255, 215, 0, 0.1);
   border-radius: 6px;
-  padding: 0.75rem 0.5rem 0.75rem 0.75rem;
-  margin-left: -3px;
+  padding: 0.5rem;
+  margin: -0.5rem;
+  margin-bottom: 0;
 }
 .top-list-item.rank-silver {
-  background: rgba(192, 192, 192, 0.1);
-  border-left: 3px solid #c0c0c0;
+  background: rgba(192, 192, 192, 0.08);
   border-radius: 6px;
-  padding: 0.75rem 0.5rem 0.75rem 0.75rem;
-  margin-left: -3px;
+  padding: 0.5rem;
+  margin: -0.5rem;
+  margin-bottom: 0;
 }
 .top-list-item.rank-bronze {
-  background: rgba(205, 127, 50, 0.1);
-  border-left: 3px solid #cd7f32;
+  background: rgba(205, 127, 50, 0.08);
   border-radius: 6px;
-  padding: 0.75rem 0.5rem 0.75rem 0.75rem;
-  margin-left: -3px;
+  padding: 0.5rem;
+  margin: -0.5rem;
+  margin-bottom: 0;
 }
