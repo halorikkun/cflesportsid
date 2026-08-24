@@ -3,9 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
 
 const allTeams = await getCollection('teams');
-const allPlayers = await getCollection('players');
 const teamsMap = new Map(allTeams.map(t => [t.id, t]));
-const playersMap = new Map(allPlayers.map(p => [p.data.uid, p]));
 
 const roundOrder = {
   'Final': 8, 'Bronze Match': 7, 'Semi Final': 6, 'Quarter Final': 5,
@@ -27,13 +25,15 @@ const matches = (await getCollection('matches')).sort((a, b) => {
   return rB - rA;
 });
 
+// Use team's player list to determine which players belong to which team
 function getTeamKDA(match, teamId) {
+  const team = teamsMap.get(teamId);
+  if (!team || !team.data.players) return { kills: 0, deaths: 0, assists: 0 };
+  const teamPlayerUids = new Set(team.data.players);
   let kills = 0, deaths = 0, assists = 0;
   if (match.data.playerStats) {
     match.data.playerStats.forEach(ps => {
-      if (!ps.uid) return;
-      const player = playersMap.get(ps.uid);
-      if (!player || player.data.team !== teamId) return;
+      if (!teamPlayerUids.has(ps.uid)) return;
       if (ps.rounds) {
         ps.rounds.forEach(r => {
           kills += r.kills || 0;
@@ -49,25 +49,33 @@ function getTeamKDA(match, teamId) {
 const rounds = [...new Set(matches.map(m => m.data.round))];
 ---
 
-<Layout title="Matches - CFL Tournament Hub" current="Matches">
+<Layout title="Matches - CFL Esports ID Tournament Hub" current="Matches">
   <div class="container">
     <div class="page-header">
       <h1>Matches</h1>
-      <p>{matches.length} matches across all CFL tournaments.</p>
+      <p>Search, sort, and filter all matches</p>
     </div>
 
-    <div style="display: flex; gap: 0.75rem; margin-bottom: 2rem; flex-wrap: wrap;">
-      <input type="text" id="searchInput" placeholder="Search tournament or team..."
-        style="flex: 1; min-width: 200px; padding: 0.5rem 0.75rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-primary); font-size: 0.9rem;" />
-      <select id="statusFilter" style="padding: 0.5rem 0.75rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-primary); font-size: 0.9rem;">
+    <div class="matches-toolbar">
+      <input type="text" id="searchInput" placeholder="Search tournament or team..." class="matches-search" />
+      <select id="statusFilter" class="matches-select">
         <option value="">All Status</option>
         <option value="upcoming">Upcoming</option>
         <option value="completed">Completed</option>
       </select>
-      <select id="roundFilter" style="padding: 0.5rem 0.75rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-primary); font-size: 0.9rem;">
+      <select id="roundFilter" class="matches-select">
         <option value="">All Rounds</option>
         {rounds.map(r => <option value={r}>{r}</option>)}
       </select>
+    </div>
+
+    <div id="sortBar" class="matches-sortbar">
+      <span style="color: var(--text-muted); font-size: 0.85rem;">Sort by:</span>
+      <button class="sort-btn active" data-column="default">Default ↓</button>
+      <button class="sort-btn" data-column="tournament">Tournament ↓</button>
+      <button class="sort-btn" data-column="date">Date ↓</button>
+      <button class="sort-btn" data-column="round">Round ↓</button>
+      <button class="sort-btn" data-column="status">Status ↓</button>
     </div>
 
     <div id="matchesGrid" class="grid grid-2">
@@ -87,19 +95,20 @@ const rounds = [...new Set(matches.map(m => m.data.round))];
         const stats2 = getTeamKDA(m, m.data.team2);
         const searchText = (m.data.tournament + ' ' + team1Name + ' ' + team2Name + ' ' + team1Tag + ' ' + team2Tag).toLowerCase();
         return (
-          <div class="card match-card"
+          <a href={`/matches/${m.id}`} class="card match-card"
             data-search={searchText}
             data-status={m.data.status}
             data-round={m.data.round}
             data-date={m.data.date}
             data-round-order={roundOrder[m.data.round] || 99}
             data-tournament={m.data.tournament}
+            style="text-decoration: none; color: inherit;"
           >
             <div style="text-align: center; margin-bottom: 1rem;">
-              <div class="sort-tournament" style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600;">
+              <div style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600;">
                 {m.data.tournament}
               </div>
-              <div class="sort-date" style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">
+              <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">
                 {m.data.date}
               </div>
               <div style="margin-top: 0.25rem;">
@@ -108,12 +117,12 @@ const rounds = [...new Set(matches.map(m => m.data.round))];
             </div>
 
             <div class="score-display" style="justify-content: center; padding: 1rem 0;">
-              <a href={`/teams/${m.data.team1}`} style={`color: ${t1Color};`}>{team1Name}</a>
+              <span style={`color: ${t1Color};`}>{team1Name}</span>
               <span class="vs">{scoreText}</span>
-              <a href={`/teams/${m.data.team2}`} style={`color: ${t2Color};`}>{team2Name}</a>
+              <span style={`color: ${t2Color};`}>{team2Name}</span>
             </div>
 
-            {m.data.status === 'completed' && (
+            {m.data.status === 'completed' && (stats1.kills > 0 || stats2.kills > 0) && (
               <div style="display: flex; justify-content: space-around; margin-top: 1rem; font-size: 0.8rem; color: var(--text-muted);">
                 <div>
                   <span style={`color: ${t1Color}; font-weight: 600;`}>{team1Tag}</span>: <span class="kda"><span class="kill">{stats1.kills}</span>/<span class="death">{stats1.deaths}</span>/<span class="assist">{stats1.assists}</span></span>
@@ -123,7 +132,7 @@ const rounds = [...new Set(matches.map(m => m.data.round))];
                 </div>
               </div>
             )}
-          </div>
+          </a>
         );
       })}
     </div>
@@ -138,6 +147,7 @@ const rounds = [...new Set(matches.map(m => m.data.round))];
     const grid = document.getElementById('matchesGrid');
     const noResults = document.getElementById('noResults');
     const cards = Array.from(grid.querySelectorAll('.match-card'));
+    const sortBtns = document.querySelectorAll('.sort-btn');
 
     let sortColumn = 'default';
     let sortDirection = 'desc';
@@ -184,63 +194,96 @@ const rounds = [...new Set(matches.map(m => m.data.round))];
         return sortDirection === 'desc' ? result : -result;
       });
 
-      visible.forEach(card => grid.appendChild(card));
-      cards.forEach(card => { card.style.display = visible.includes(card) ? '' : 'none'; });
+      cards.forEach(card => { card.style.display = 'none'; });
+      visible.forEach(card => {
+        card.style.display = '';
+        grid.appendChild(card);
+      });
       noResults.style.display = visible.length === 0 ? 'block' : 'none';
     }
 
-    // Add sort buttons
-    const sortBar = document.createElement('div');
-    sortBar.style.cssText = 'display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center;';
-    sortBar.innerHTML = '<span style="color: var(--text-muted); font-size: 0.85rem;">Sort by:</span>';
-
-    const columns = [
-      { key: 'default', label: 'Default' },
-      { key: 'tournament', label: 'Tournament' },
-      { key: 'date', label: 'Date' },
-      { key: 'round', label: 'Round' },
-      { key: 'status', label: 'Status' },
-    ];
-
-    columns.forEach(col => {
-      const btn = document.createElement('button');
-      btn.textContent = col.label + ' ↓';
-      btn.dataset.column = col.key;
-      btn.dataset.direction = 'desc';
-      btn.style.cssText = 'padding: 0.35rem 0.75rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-secondary); cursor: pointer; font-size: 0.85rem; transition: all 0.2s;';
-      if (col.key === 'default') {
-        btn.style.background = 'var(--accent-dim)';
-        btn.style.borderColor = 'var(--accent)';
-        btn.style.color = 'var(--accent)';
-      }
+    sortBtns.forEach(btn => {
       btn.addEventListener('click', () => {
-        // Reset all buttons
-        sortBar.querySelectorAll('button').forEach(b => {
-          b.style.background = 'var(--bg-card)';
-          b.style.borderColor = 'var(--border)';
-          b.style.color = 'var(--text-secondary)';
-        });
-        // Toggle direction if same column
-        if (sortColumn === col.key) {
+        const col = btn.dataset.column;
+        if (sortColumn === col) {
           sortDirection = sortDirection === 'desc' ? 'asc' : 'desc';
         } else {
-          sortColumn = col.key;
+          sortColumn = col;
           sortDirection = 'desc';
         }
-        btn.textContent = col.label + ' ' + (sortDirection === 'desc' ? '↓' : '↑');
-        btn.style.background = 'var(--accent-dim)';
-        btn.style.borderColor = 'var(--accent)';
-        btn.style.color = 'var(--accent)';
+        sortBtns.forEach(b => {
+          b.classList.remove('active');
+          b.textContent = b.textContent.replace(/ [↑↓]$/, '');
+        });
+        btn.classList.add('active');
+        btn.textContent = btn.textContent.replace(/ [↑↓]$/, '') + ' ' + (sortDirection === 'desc' ? '↓' : '↑');
         applyFilters();
       });
-      sortBar.appendChild(btn);
     });
-
-    const filterArea = document.querySelector('[style*="flex-wrap: wrap; margin-bottom: 2rem;"]');
-    filterArea.parentNode.insertBefore(sortBar, filterArea.nextSibling);
 
     searchInput.addEventListener('input', applyFilters);
     statusFilter.addEventListener('change', applyFilters);
     roundFilter.addEventListener('change', applyFilters);
+    applyFilters();
   </script>
 </Layout>
+
+<style>
+  .matches-toolbar {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+  }
+  .matches-search {
+    flex: 1;
+    min-width: 200px;
+    padding: 0.5rem 0.75rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+  }
+  .matches-select {
+    padding: 0.5rem 0.75rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+  .matches-search:focus, .matches-select:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  .matches-sortbar {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .sort-btn {
+    padding: 0.35rem 0.75rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+  }
+  .sort-btn:hover {
+    border-color: var(--border-hover);
+  }
+  .sort-btn.active {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .match-card {
+    cursor: pointer;
+  }
+</style>
