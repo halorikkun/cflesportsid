@@ -3,4 +3,5 @@ import { defineConfig } from 'astro/config';
 
 export default defineConfig({
   site: 'https://cflesportsid.pages.dev',
+  prefetch: true,
 });
