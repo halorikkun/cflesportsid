@@ -290,3 +290,11 @@ tr.rank-bronze td:first-child {
   color: #cd7f32;
   font-weight: 700;
 }
+
+.top-list-item.rank-gold,
+.top-list-item.rank-silver,
+.top-list-item.rank-bronze {
+  padding: 0.75rem;
+  margin: 0.25rem 0;
+}
+
