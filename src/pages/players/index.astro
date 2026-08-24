@@ -29,31 +29,53 @@ const players = (await getCollection('players')).map(p => {
     matches: matchesPlayed,
   };
 });
+
+// Unique team names for filter dropdown
+const teamNames = [...new Set(players.map(p => p.teamName).filter(t => t !== '—'))].sort();
 ---
 
-<Layout title="Players - CFL Tournament Hub" current="Players">
+<Layout title="Players - CFL Esports ID Tournament Hub" current="Players">
   <div class="container">
     <div class="page-header">
       <h1>Players</h1>
-      <p>{players.length} players across all teams.</p>
+      <p>Search, sort, and filter all players</p>
     </div>
 
-    <div style="display: flex; gap: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap;">
-      <input type="text" id="searchInput" placeholder="Search player or team..."
-        style="flex: 1; min-width: 200px; padding: 0.5rem 0.75rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-primary); font-size: 0.9rem;" />
+    <div class="players-toolbar">
+      <input type="text" id="searchInput" placeholder="Search player or team..." class="players-search" />
+      <select id="teamFilter" class="players-filter">
+        <option value="">All Teams</option>
+        {teamNames.map(name => (
+          <option value={name.toLowerCase()}>{name}</option>
+        ))}
+      </select>
+      <select id="sortSelect" class="players-sort">
+        <option value="kills-desc">Kills (High–Low)</option>
+        <option value="kills-asc">Kills (Low–High)</option>
+        <option value="deaths-desc">Deaths (High–Low)</option>
+        <option value="deaths-asc">Deaths (Low–High)</option>
+        <option value="assists-desc">Assists (High–Low)</option>
+        <option value="assists-asc">Assists (Low–High)</option>
+        <option value="kd-desc">KDA Ratio (High–Low)</option>
+        <option value="kd-asc">KDA Ratio (Low–High)</option>
+        <option value="matches-desc">Matches (High–Low)</option>
+        <option value="matches-asc">Matches (Low–High)</option>
+        <option value="ign-asc">Name (A–Z)</option>
+        <option value="ign-desc">Name (Z–A)</option>
+      </select>
     </div>
 
     <div class="table-wrap">
       <table id="playersTable">
         <thead>
           <tr>
-            <th class="sortable" data-key="ign" style="cursor: pointer;">Player <span class="arrow"></span></th>
-            <th class="sortable" data-key="team" style="cursor: pointer;">Team <span class="arrow"></span></th>
-            <th class="sortable" data-key="kills" data-numeric="true" style="cursor: pointer;">Kills <span class="arrow"></span></th>
-            <th class="sortable" data-key="deaths" data-numeric="true" style="cursor: pointer;">Deaths <span class="arrow"></span></th>
-            <th class="sortable" data-key="assists" data-numeric="true" style="cursor: pointer;">Assists <span class="arrow"></span></th>
-            <th class="sortable" data-key="kd" data-numeric="true" style="cursor: pointer;">K/D <span class="arrow"></span></th>
-            <th class="sortable" data-key="matches" data-numeric="true" style="cursor: pointer;">Matches <span class="arrow"></span></th>
+            <th>Player</th>
+            <th>Team</th>
+            <th>Kills</th>
+            <th>Deaths</th>
+            <th>Assists</th>
+            <th>KDA Ratio</th>
+            <th>Matches</th>
           </tr>
         </thead>
         <tbody id="playersBody">
@@ -78,70 +100,83 @@ const players = (await getCollection('players')).map(p => {
 
   <script>
     const searchInput = document.getElementById('searchInput');
+    const teamFilter = document.getElementById('teamFilter');
+    const sortSelect = document.getElementById('sortSelect');
     const tbody = document.getElementById('playersBody');
     const noResults = document.getElementById('noResults');
     const rows = Array.from(tbody.querySelectorAll('tr'));
-    const headers = document.querySelectorAll('.sortable');
-    let sortKey = 'kills';
-    let sortDir = 'desc';
-    let isNumeric = true;
-
-    function sortRows() {
-      rows.sort((a, b) => {
-        let valA, valB;
-        if (isNumeric) {
-          valA = parseFloat(a.dataset[sortKey]);
-          valB = parseFloat(b.dataset[sortKey]);
-        } else {
-          valA = a.dataset[sortKey];
-          valB = b.dataset[sortKey];
-        }
-        let result;
-        if (isNumeric) result = valA - valB;
-        else result = valA.localeCompare(valB);
-        return sortDir === 'asc' ? result : -result;
-      });
-      rows.forEach(row => tbody.appendChild(row));
-    }
 
     function applyFilters() {
       const search = searchInput.value.toLowerCase();
+      const team = teamFilter.value;
+      const sortValue = sortSelect.value;
+      const [key, dir] = sortValue.split('-');
+      const isNumeric = ['kills', 'deaths', 'assists', 'kd', 'matches'].includes(key);
+      const asc = dir === 'asc';
+
+      // Sort
+      rows.sort((a, b) => {
+        let valA, valB;
+        if (isNumeric) {
+          valA = parseFloat(a.dataset[key]);
+          valB = parseFloat(b.dataset[key]);
+          return asc ? valA - valB : valB - valA;
+        } else {
+          valA = a.dataset[key];
+          valB = b.dataset[key];
+          return asc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        }
+      });
+
+      // Filter + re-append
       let visible = 0;
       rows.forEach(row => {
         const matchesSearch = !search || row.dataset.ign.includes(search) || row.dataset.team.includes(search);
-        row.style.display = matchesSearch ? '' : 'none';
-        if (matchesSearch) visible++;
+        const matchesTeam = !team || row.dataset.team === team;
+        const show = matchesSearch && matchesTeam;
+        row.style.display = show ? '' : 'none';
+        if (show) visible++;
+        tbody.appendChild(row);
       });
+
       noResults.style.display = visible === 0 ? 'block' : 'none';
     }
 
-    headers.forEach(header => {
-      const arrow = header.querySelector('.arrow');
-      header.addEventListener('click', () => {
-        const key = header.dataset.key;
-        isNumeric = header.dataset.numeric === 'true';
-        if (sortKey === key) {
-          sortDir = sortDir === 'asc' ? 'desc' : 'asc';
-        } else {
-          sortKey = key;
-          sortDir = isNumeric ? 'desc' : 'asc';
-        }
-        headers.forEach(h => {
-          h.style.color = '';
-          h.querySelector('.arrow').textContent = '';
-        });
-        header.style.color = 'var(--accent)';
-        arrow.textContent = sortDir === 'asc' ? ' ↑' : ' ↓';
-        sortRows();
-      });
-    });
-
-    // Default sort: Kills desc
-    const defaultHeader = document.querySelector('[data-key="kills"]');
-    defaultHeader.style.color = 'var(--accent)';
-    defaultHeader.querySelector('.arrow').textContent = ' ↓';
-    sortRows();
-
     searchInput.addEventListener('input', applyFilters);
+    teamFilter.addEventListener('change', applyFilters);
+    sortSelect.addEventListener('change', applyFilters);
+    applyFilters();
   </script>
 </Layout>
+
+<style>
+  .players-toolbar {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .players-search {
+    flex: 1;
+    min-width: 200px;
+    padding: 0.5rem 0.75rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+  }
+  .players-filter, .players-sort {
+    padding: 0.5rem 0.75rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+  .players-search:focus, .players-filter:focus, .players-sort:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+</style>
