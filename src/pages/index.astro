@@ -10,6 +10,7 @@ const totalTeams = teams.length;
 const totalPlayers = players.length;
 const totalMatches = matches.length;
 const completedMatches = matches.filter(m => m.data.status === 'completed');
+const upcomingMatches = matches.filter(m => m.data.status !== 'completed');
 const totalKills = players.reduce((sum, p) => sum + p.data.stats.kills, 0);
 
 // Calculate placement points from Final and Bronze Match
@@ -61,43 +62,56 @@ const standings = teams.map(team => {
   };
 }).sort((a, b) => b.totalScore - a.totalScore);
 
-// Top fragger
-const topFragger = [...players].sort((a, b) => b.data.stats.kills - a.data.stats.kills)[0];
-const topFraggerKD = (topFragger.data.stats.kills / Math.max(topFragger.data.stats.deaths, 1)).toFixed(2);
+// Top 5 fraggers
+const topFraggers = [...players].sort((a, b) => b.data.stats.kills - a.data.stats.kills).slice(0, 5);
+const topFraggersWithKD = topFraggers.map(p => ({
+  ...p,
+  kd: (p.data.stats.kills / Math.max(p.data.stats.deaths, 1)).toFixed(2),
+}));
 
-// Top assists
-const topAssists = [...players].sort((a, b) => b.data.stats.assists - a.data.stats.assists)[0];
+// Top 5 assists
+const topAssistsPlayers = [...players].sort((a, b) => b.data.stats.assists - a.data.stats.assists).slice(0, 5);
 
-// Best team (most wins)
-const bestTeam = [...teams].map(team => {
-  const record = getTeamRecord(team.id);
-  return { ...team, record };
-}).sort((a, b) => b.record.wins - a.record.wins)[0];
+// Tournament winner (1st-3rd from Final and Bronze Match)
+const finalMatch = matches.find(m => m.data.round === 'Final' && m.data.status === 'completed');
+const bronzeMatch = matches.find(m => m.data.round === 'Bronze Match' && m.data.status === 'completed');
+
+let winnerTeams = [];
+
+if (finalMatch) {
+  const winner = teams.find(t => t.id === finalMatch.data.winner);
+  const runnerUp = teams.find(t => t.id === (finalMatch.data.team1 === finalMatch.data.winner ? finalMatch.data.team2 : finalMatch.data.team1));
+  const thirdPlace = bronzeMatch ? teams.find(t => t.id === bronzeMatch.data.winner) : null;
+
+  if (winner) winnerTeams.push({ team: winner, place: 1 });
+  if (runnerUp) winnerTeams.push({ team: runnerUp, place: 2 });
+  if (thirdPlace) winnerTeams.push({ team: thirdPlace, place: 3 });
+}
 ---
 
-<Layout title="CFL Tournament Hub - Home" current="Home">
+<Layout title="CFL Esports ID Tournament Hub - Home" current="Home">
   <div class="container">
     <div class="page-header">
-      <h1>CFL Tournament Hub</h1>
+      <h1>CFL Esports ID Tournament Hub</h1>
       <p>Crossfire competitive tournament tracker — teams, players, and match results.</p>
     </div>
 
     <div class="stat-grid" style="margin-bottom: 2rem;">
       <div class="stat-box">
         <div class="stat-value">{totalTeams}</div>
-        <div class="stat-label">Teams</div>
+        <div class="stat-label">Total Teams</div>
       </div>
       <div class="stat-box">
         <div class="stat-value">{totalPlayers}</div>
-        <div class="stat-label">Players</div>
+        <div class="stat-label">Total Players</div>
       </div>
       <div class="stat-box">
         <div class="stat-value">{totalMatches}</div>
-        <div class="stat-label">Matches</div>
+        <div class="stat-label">Fixtures Played</div>
       </div>
       <div class="stat-box">
-        <div class="stat-value">{completedMatches.length}</div>
-        <div class="stat-label">Completed</div>
+        <div class="stat-value">{upcomingMatches.length}</div>
+        <div class="stat-label">Upcoming</div>
       </div>
       <div class="stat-box">
         <div class="stat-value">{totalKills}</div>
@@ -119,7 +133,7 @@ const bestTeam = [...teams].map(team => {
         </thead>
         <tbody>
           {standings.map((team, index) => (
-            <tr>
+            <tr class={index === 0 ? 'rank-gold' : index === 1 ? 'rank-silver' : index === 2 ? 'rank-bronze' : ''}>
               <td style="color: var(--text-muted);">{index + 1}</td>
               <td><a href={`/teams/${team.id}`}><strong>{team.name}</strong></a></td>
               <td class="kda"><span class="kill">{team.killPoints}</span></td>
@@ -133,50 +147,128 @@ const bestTeam = [...teams].map(team => {
 
     <div class="grid grid-3">
       <div class="card">
-        <h3 style="margin-bottom: 1rem; color: var(--accent);">Top Fragger</h3>
-        {topFragger && (
-          <div style="display: flex; align-items: center; gap: 1rem;">
-            <div class="avatar">{topFragger.data.ign.charAt(0).toUpperCase()}</div>
-            <div>
-              <a href={`/players/${topFragger.id}`}><strong>{topFragger.data.ign}</strong></a>
-              <div style="color: var(--text-secondary); font-size: 0.85rem;">
-                <span class="kda"><span class="kill">{topFragger.data.stats.kills}</span>/<span class="death">{topFragger.data.stats.deaths}</span>/<span class="assist">{topFragger.data.stats.assists}</span></span>
-                <span style="margin-left: 0.5rem;">K/D: {topFraggerKD}</span>
+        <h3 style="margin-bottom: 1rem; color: var(--accent);">Top Fraggers</h3>
+        <div class="top-list">
+          {topFraggersWithKD.map((p, i) => (
+            <div class="top-list-item">
+              <span class="top-rank">{i + 1}</span>
+              <div class="avatar">{p.data.ign.charAt(0).toUpperCase()}</div>
+              <div class="top-info">
+                <a href={`/players/${p.id}`}><strong>{p.data.ign}</strong></a>
+                <div style="color: var(--text-secondary); font-size: 0.85rem;">
+                  <span class="kda"><span class="kill">{p.data.stats.kills}</span>/<span class="death">{p.data.stats.deaths}</span>/<span class="assist">{p.data.stats.assists}</span></span>
+                  <span style="margin-left: 0.5rem;">K/D: {p.kd}</span>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          ))}
+        </div>
       </div>
 
       <div class="card">
         <h3 style="margin-bottom: 1rem; color: var(--accent);">Top Assists</h3>
-        {topAssists && (
-          <div style="display: flex; align-items: center; gap: 1rem;">
-            <div class="avatar">{topAssists.data.ign.charAt(0).toUpperCase()}</div>
-            <div>
-              <a href={`/players/${topAssists.id}`}><strong>{topAssists.data.ign}</strong></a>
-              <div style="color: var(--text-secondary); font-size: 0.85rem;">
-                {topAssists.data.stats.assists} assists
+        <div class="top-list">
+          {topAssistsPlayers.map((p, i) => (
+            <div class="top-list-item">
+              <span class="top-rank">{i + 1}</span>
+              <div class="avatar">{p.data.ign.charAt(0).toUpperCase()}</div>
+              <div class="top-info">
+                <a href={`/players/${p.id}`}><strong>{p.data.ign}</strong></a>
+                <div style="color: var(--text-secondary); font-size: 0.85rem;">
+                  {p.data.stats.assists} assists
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          ))}
+        </div>
       </div>
 
       <div class="card">
-        <h3 style="margin-bottom: 1rem; color: var(--accent);">Best Team</h3>
-        {bestTeam && (
-          <div style="display: flex; align-items: center; gap: 1rem;">
-            <div class="avatar">{bestTeam.data.tag.charAt(0)}</div>
-            <div>
-              <a href={`/teams/${bestTeam.id}`}><strong>{bestTeam.data.name}</strong></a>
-              <div style="color: var(--text-secondary); font-size: 0.85rem;">
-                <span style="color: var(--win);">{bestTeam.record.wins}W</span> - <span style="color: var(--loss);">{bestTeam.record.losses}L</span>
+        <h3 style="margin-bottom: 1rem; color: var(--accent);">Tournament Winner</h3>
+        {winnerTeams.length > 0 ? (
+          <div class="winner-list">
+            {winnerTeams.map((wt) => (
+              <div class={`top-list-item ${wt.place === 1 ? 'rank-gold' : wt.place === 2 ? 'rank-silver' : 'rank-bronze'}`}>
+                <span class="top-rank">{wt.place === 1 ? '🥇' : wt.place === 2 ? '🥈' : '🥉'}</span>
+                <div class="avatar">{wt.team.data.tag.charAt(0)}</div>
+                <div class="top-info">
+                  <a href={`/teams/${wt.team.id}`}><strong>{wt.team.data.name}</strong></a>
+                  <div style="color: var(--text-secondary); font-size: 0.85rem;">
+                    {wt.place === 1 ? 'Champion' : wt.place === 2 ? 'Runner-up' : 'Third Place'}
+                  </div>
+                </div>
               </div>
-            </div>
+            ))}
           </div>
+        ) : (
+          <p style="color: var(--text-secondary); font-size: 0.9rem;">Tournament in progress.</p>
         )}
       </div>
     </div>
   </div>
 </Layout>
+
+<style>
+  /* Team standings rank highlight */
+  .rank-gold {
+    background: rgba(255, 215, 0, 0.12);
+    border-left: 3px solid #ffd700;
+  }
+  .rank-gold td:first-child {
+    color: #ffd700 !important;
+    font-weight: 700;
+  }
+  .rank-silver {
+    background: rgba(192, 192, 192, 0.12);
+    border-left: 3px solid #c0c0c0;
+  }
+  .rank-silver td:first-child {
+    color: #c0c0c0 !important;
+    font-weight: 700;
+  }
+  .rank-bronze {
+    background: rgba(205, 127, 50, 0.12);
+    border-left: 3px solid #cd7f32;
+  }
+  .rank-bronze td:first-child {
+    color: #cd7f32 !important;
+    font-weight: 700;
+  }
+
+  /* Top fraggers / assists / winner list */
+  .top-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .top-list-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem;
+    border-radius: 6px;
+  }
+  .top-list-item:hover {
+    background: var(--bg-card-hover);
+  }
+  .top-rank {
+    font-weight: 700;
+    color: var(--text-muted);
+    min-width: 1.5rem;
+    text-align: center;
+  }
+  .top-info {
+    flex: 1;
+  }
+
+  /* Winner list */
+  .winner-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .winner-list .top-list-item {
+    padding: 0.75rem;
+    border-radius: 8px;
+  }
+</style>
