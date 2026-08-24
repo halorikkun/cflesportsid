@@ -2,7 +2,6 @@
 import Layout from '../../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
 
-const players = (await getCollection('players')).sort((a, b) => b.data.stats.kills - a.data.stats.kills);
 const allTeams = await getCollection('teams');
 const teamsMap = new Map(allTeams.map(t => [t.id, t]));
 const allMatches = await getCollection('matches');
@@ -13,7 +12,23 @@ function getMatchesPlayed(uid) {
   ).length;
 }
 
-const teamOptions = allTeams.map(t => ({ id: t.id, name: t.data.name })).sort((a, b) => a.name.localeCompare(b.name));
+const players = (await getCollection('players')).map(p => {
+  const team = p.data.team ? teamsMap.get(p.data.team) : undefined;
+  const kd = (p.data.stats.kills / Math.max(p.data.stats.deaths, 1)).toFixed(2);
+  const matchesPlayed = getMatchesPlayed(p.data.uid || p.id);
+  return {
+    id: p.id,
+    ign: p.data.ign,
+    teamName: team ? team.data.name : '—',
+    teamId: team ? team.id : '',
+    kills: p.data.stats.kills,
+    deaths: p.data.stats.deaths,
+    assists: p.data.stats.assists,
+    kd: parseFloat(kd),
+    kdDisplay: kd,
+    matches: matchesPlayed,
+  };
+});
 ---
 
 <Layout title="Players - CFL Tournament Hub" current="Players">
@@ -23,114 +38,110 @@ const teamOptions = allTeams.map(t => ({ id: t.id, name: t.data.name })).sort((a
       <p>{players.length} players across all teams.</p>
     </div>
 
-    <div style="display: flex; gap: 0.75rem; margin-bottom: 2rem; flex-wrap: wrap;">
-      <input type="text" id="searchInput" placeholder="Search player IGN..."
+    <div style="display: flex; gap: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap;">
+      <input type="text" id="searchInput" placeholder="Search player or team..."
         style="flex: 1; min-width: 200px; padding: 0.5rem 0.75rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-primary); font-size: 0.9rem;" />
-      <select id="teamFilter" style="padding: 0.5rem 0.75rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-primary); font-size: 0.9rem;">
-        <option value="">All Teams</option>
-        {teamOptions.map(t => <option value={t.id}>{t.name}</option>)}
-      </select>
-      <select id="sortSelect" style="padding: 0.5rem 0.75rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-primary); font-size: 0.9rem;">
-        <option value="kills-desc">Most Kills</option>
-        <option value="kills-asc">Least Kills</option>
-        <option value="deaths-desc">Most Deaths</option>
-        <option value="deaths-asc">Least Deaths</option>
-        <option value="assists-desc">Most Assists</option>
-        <option value="kd-desc">Best K/D</option>
-        <option value="kd-asc">Worst K/D</option>
-        <option value="matches-desc">Most Matches</option>
-        <option value="name-asc">Name (A-Z)</option>
-      </select>
     </div>
 
     <div class="table-wrap">
-      <table>
+      <table id="playersTable">
         <thead>
           <tr>
-            <th>Player</th>
-            <th>Team</th>
-            <th>Kills</th>
-            <th>Deaths</th>
-            <th>Assists</th>
-            <th>K/D</th>
-            <th>Matches</th>
+            <th class="sortable" data-key="ign" style="cursor: pointer;">Player <span class="arrow"></span></th>
+            <th class="sortable" data-key="team" style="cursor: pointer;">Team <span class="arrow"></span></th>
+            <th class="sortable" data-key="kills" data-numeric="true" style="cursor: pointer;">Kills <span class="arrow"></span></th>
+            <th class="sortable" data-key="deaths" data-numeric="true" style="cursor: pointer;">Deaths <span class="arrow"></span></th>
+            <th class="sortable" data-key="assists" data-numeric="true" style="cursor: pointer;">Assists <span class="arrow"></span></th>
+            <th class="sortable" data-key="kd" data-numeric="true" style="cursor: pointer;">K/D <span class="arrow"></span></th>
+            <th class="sortable" data-key="matches" data-numeric="true" style="cursor: pointer;">Matches <span class="arrow"></span></th>
           </tr>
         </thead>
         <tbody id="playersBody">
-          {players.map(p => {
-            const team = p.data.team ? teamsMap.get(p.data.team) : undefined;
-            const kd = (p.data.stats.kills / Math.max(p.data.stats.deaths, 1)).toFixed(2);
-            const kdClass = parseFloat(kd) >= 1 ? 'kd-positive' : 'kd-negative';
-            const matchesPlayed = getMatchesPlayed(p.data.uid || p.id);
-            return (
-              <tr class="player-row"
-                data-search={p.data.ign.toLowerCase()}
-                data-team={p.data.team || ''}
-                data-kills={p.data.stats.kills}
-                data-deaths={p.data.stats.deaths}
-                data-assists={p.data.stats.assists}
-                data-kd={kd}
-                data-matches={matchesPlayed}
-                data-name={p.data.ign.toLowerCase()}
-              >
-                <td><a href={`/players/${p.id}`}><strong>{p.data.ign}</strong></a></td>
-                <td>{team ? <a href={`/teams/${team.id}`}>{team.data.name}</a> : '—'}</td>
-                <td class="kda"><span class="kill">{p.data.stats.kills}</span></td>
-                <td class="kda"><span class="death">{p.data.stats.deaths}</span></td>
-                <td class="kda"><span class="assist">{p.data.stats.assists}</span></td>
-                <td class={kdClass}>{kd}</td>
-                <td>{matchesPlayed}</td>
-              </tr>
-            );
-          })}
+          {players.map(p => (
+            <tr data-ign={p.ign.toLowerCase()} data-team={p.teamName.toLowerCase()}
+                data-kills={p.kills} data-deaths={p.deaths} data-assists={p.assists}
+                data-kd={p.kd} data-matches={p.matches}>
+              <td><a href={`/players/${p.id}`}><strong>{p.ign}</strong></a></td>
+              <td>{p.teamId ? <a href={`/teams/${p.teamId}`}>{p.teamName}</a> : '—'}</td>
+              <td class="kda"><span class="kill">{p.kills}</span></td>
+              <td class="kda"><span class="death">{p.deaths}</span></td>
+              <td class="kda"><span class="assist">{p.assists}</span></td>
+              <td class={p.kd >= 1 ? 'kd-positive' : 'kd-negative'}>{p.kdDisplay}</td>
+              <td>{p.matches}</td>
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>
-
     <p id="noResults" style="text-align: center; color: var(--text-muted); display: none; padding: 2rem;">No players found.</p>
   </div>
 
   <script>
     const searchInput = document.getElementById('searchInput');
-    const teamFilter = document.getElementById('teamFilter');
-    const sortSelect = document.getElementById('sortSelect');
-    const body = document.getElementById('playersBody');
+    const tbody = document.getElementById('playersBody');
     const noResults = document.getElementById('noResults');
-    const rows = Array.from(body.querySelectorAll('.player-row'));
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const headers = document.querySelectorAll('.sortable');
+    let sortKey = 'kills';
+    let sortDir = 'desc';
+    let isNumeric = true;
+
+    function sortRows() {
+      rows.sort((a, b) => {
+        let valA, valB;
+        if (isNumeric) {
+          valA = parseFloat(a.dataset[sortKey]);
+          valB = parseFloat(b.dataset[sortKey]);
+        } else {
+          valA = a.dataset[sortKey];
+          valB = b.dataset[sortKey];
+        }
+        let result;
+        if (isNumeric) result = valA - valB;
+        else result = valA.localeCompare(valB);
+        return sortDir === 'asc' ? result : -result;
+      });
+      rows.forEach(row => tbody.appendChild(row));
+    }
 
     function applyFilters() {
       const search = searchInput.value.toLowerCase();
-      const team = teamFilter.value;
-      const sort = sortSelect.value;
-
-      let visible = rows.filter(row => {
-        const matchesSearch = !search || row.dataset.search.includes(search);
-        const matchesTeam = !team || row.dataset.team === team;
-        return matchesSearch && matchesTeam;
+      let visible = 0;
+      rows.forEach(row => {
+        const matchesSearch = !search || row.dataset.ign.includes(search) || row.dataset.team.includes(search);
+        row.style.display = matchesSearch ? '' : 'none';
+        if (matchesSearch) visible++;
       });
-
-      visible.sort((a, b) => {
-        switch(sort) {
-          case 'kills-desc': return parseInt(b.dataset.kills) - parseInt(a.dataset.kills);
-          case 'kills-asc': return parseInt(a.dataset.kills) - parseInt(b.dataset.kills);
-          case 'deaths-desc': return parseInt(b.dataset.deaths) - parseInt(a.dataset.deaths);
-          case 'deaths-asc': return parseInt(a.dataset.deaths) - parseInt(b.dataset.deaths);
-          case 'assists-desc': return parseInt(b.dataset.assists) - parseInt(a.dataset.assists);
-          case 'kd-desc': return parseFloat(b.dataset.kd) - parseFloat(a.dataset.kd);
-          case 'kd-asc': return parseFloat(a.dataset.kd) - parseFloat(b.dataset.kd);
-          case 'matches-desc': return parseInt(b.dataset.matches) - parseInt(a.dataset.matches);
-          case 'name-asc': return a.dataset.name.localeCompare(b.dataset.name);
-          default: return 0;
-        }
-      });
-
-      visible.forEach(row => body.appendChild(row));
-      rows.forEach(row => { row.style.display = visible.includes(row) ? '' : 'none'; });
-      noResults.style.display = visible.length === 0 ? 'block' : 'none';
+      noResults.style.display = visible === 0 ? 'block' : 'none';
     }
 
+    headers.forEach(header => {
+      const arrow = header.querySelector('.arrow');
+      header.addEventListener('click', () => {
+        const key = header.dataset.key;
+        isNumeric = header.dataset.numeric === 'true';
+        if (sortKey === key) {
+          sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+        } else {
+          sortKey = key;
+          sortDir = isNumeric ? 'desc' : 'asc';
+        }
+        headers.forEach(h => {
+          h.style.color = '';
+          h.querySelector('.arrow').textContent = '';
+        });
+        header.style.color = 'var(--accent)';
+        arrow.textContent = sortDir === 'asc' ? ' ↑' : ' ↓';
+        sortRows();
+      });
+    });
+
+    // Default sort: Kills desc
+    const defaultHeader = document.querySelector('[data-key="kills"]');
+    defaultHeader.style.color = 'var(--accent)';
+    defaultHeader.querySelector('.arrow').textContent = ' ↓';
+    sortRows();
+
     searchInput.addEventListener('input', applyFilters);
-    teamFilter.addEventListener('change', applyFilters);
-    sortSelect.addEventListener('change', applyFilters);
   </script>
 </Layout>

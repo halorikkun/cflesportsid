@@ -19,10 +19,25 @@ function getTeamRecord(teamId) {
   return { wins, losses };
 }
 
-const teams = (await getCollection('teams')).sort((a, b) => {
-  const recA = getTeamRecord(a.id);
-  const recB = getTeamRecord(b.id);
-  return recB.wins - recA.wins;
+const allPlayers = await getCollection('players');
+
+function getTeamKills(teamId) {
+  return allPlayers.filter(p => p.data.team === teamId).reduce((sum, p) => sum + p.data.stats.kills, 0);
+}
+
+const teams = (await getCollection('teams')).map(team => {
+  const record = getTeamRecord(team.id);
+  const kills = getTeamKills(team.id);
+  return {
+    id: team.id,
+    name: team.data.name,
+    tag: team.data.tag,
+    region: team.data.region,
+    wins: record.wins,
+    losses: record.losses,
+    players: team.data.players.length,
+    kills,
+  };
 });
 ---
 
@@ -33,102 +48,111 @@ const teams = (await getCollection('teams')).sort((a, b) => {
       <p>{teams.length} teams competing in CFL tournaments.</p>
     </div>
 
-    <div style="display: flex; gap: 0.75rem; margin-bottom: 2rem; flex-wrap: wrap;">
+    <div style="display: flex; gap: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap;">
       <input type="text" id="searchInput" placeholder="Search team name or tag..."
         style="flex: 1; min-width: 200px; padding: 0.5rem 0.75rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-primary); font-size: 0.9rem;" />
-      <select id="sortSelect" style="padding: 0.5rem 0.75rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-primary); font-size: 0.9rem;">
-        <option value="wins-desc">Most Wins</option>
-        <option value="wins-asc">Least Wins</option>
-        <option value="losses-desc">Most Losses</option>
-        <option value="losses-asc">Least Losses</option>
-        <option value="name-asc">Name (A-Z)</option>
-        <option value="name-desc">Name (Z-A)</option>
-        <option value="players-desc">Most Players</option>
-      </select>
     </div>
 
-    <div id="teamsGrid" class="grid grid-2">
-      {teams.map(team => {
-        const record = getTeamRecord(team.id);
-        const searchText = (team.data.name + ' ' + team.data.tag).toLowerCase();
-        return (
-          <a href={`/teams/${team.id}`} class="card team-card" style="text-decoration: none; color: inherit;"
-            data-search={searchText}
-            data-wins={record.wins}
-            data-losses={record.losses}
-            data-players={team.data.players.length}
-            data-name={team.data.name.toLowerCase()}
-          >
-            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
-              <div class="avatar" style="width: 56px; height: 56px; font-size: 1.3rem;">
-                {team.data.tag.charAt(0)}
-              </div>
-              <div>
-                <h3 style="font-size: 1.1rem;">{team.data.name}</h3>
-                <span style="color: var(--text-muted); font-size: 0.8rem;">
-                  [{team.data.tag}] · {team.data.region}
-                </span>
-              </div>
-            </div>
-            {team.data.description && (
-              <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1rem;">
-                {team.data.description}
-              </p>
-            )}
-            <div class="stat-grid">
-              <div class="stat-box" style="min-width: 80px; padding: 0.5rem;">
-                <div class="stat-value" style="font-size: 1.2rem; color: var(--win);">{record.wins}</div>
-                <div class="stat-label">Wins</div>
-              </div>
-              <div class="stat-box" style="min-width: 80px; padding: 0.5rem;">
-                <div class="stat-value" style="font-size: 1.2rem; color: var(--loss);">{record.losses}</div>
-                <div class="stat-label">Losses</div>
-              </div>
-              <div class="stat-box" style="min-width: 80px; padding: 0.5rem;">
-                <div class="stat-value" style="font-size: 1.2rem; color: #f59e0b;">{team.data.players.length}</div>
-                <div class="stat-label">Players</div>
-              </div>
-            </div>
-          </a>
-        );
-      })}
+    <div id="sortBar" style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; align-items: center;">
+      <span style="color: var(--text-muted); font-size: 0.85rem;">Sort by:</span>
     </div>
 
+    <div class="table-wrap">
+      <table id="teamsTable">
+        <thead>
+          <tr>
+            <th class="sortable" data-key="name" style="cursor: pointer;">Team <span class="arrow"></span></th>
+            <th class="sortable" data-key="tag" style="cursor: pointer;">Tag <span class="arrow"></span></th>
+            <th class="sortable" data-key="wins" data-numeric="true" style="cursor: pointer;">Wins <span class="arrow"></span></th>
+            <th class="sortable" data-key="losses" data-numeric="true" style="cursor: pointer;">Losses <span class="arrow"></span></th>
+            <th class="sortable" data-key="players" data-numeric="true" style="cursor: pointer;">Players <span class="arrow"></span></th>
+            <th class="sortable" data-key="kills" data-numeric="true" style="cursor: pointer;">Kills <span class="arrow"></span></th>
+          </tr>
+        </thead>
+        <tbody id="teamsBody">
+          {teams.map(team => (
+            <tr data-name={team.name.toLowerCase()} data-tag={team.tag.toLowerCase()}
+                data-wins={team.wins} data-losses={team.losses} data-players={team.players} data-kills={team.kills}>
+              <td><a href={`/teams/${team.id}`}><strong>{team.name}</strong></a></td>
+              <td style="color: var(--text-muted);">[{team.tag}]</td>
+              <td style="color: var(--win); font-weight: 700;">{team.wins}</td>
+              <td style="color: var(--loss); font-weight: 700;">{team.losses}</td>
+              <td style="color: #f59e0b; font-weight: 700;">{team.players}</td>
+              <td class="kda"><span class="kill">{team.kills}</span></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
     <p id="noResults" style="text-align: center; color: var(--text-muted); display: none; padding: 2rem;">No teams found.</p>
   </div>
 
   <script>
     const searchInput = document.getElementById('searchInput');
-    const sortSelect = document.getElementById('sortSelect');
-    const grid = document.getElementById('teamsGrid');
+    const tbody = document.getElementById('teamsBody');
     const noResults = document.getElementById('noResults');
-    const cards = Array.from(grid.querySelectorAll('.team-card'));
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const headers = document.querySelectorAll('.sortable');
+    let sortKey = 'name';
+    let sortDir = 'asc';
+    let isNumeric = false;
+
+    function sortRows() {
+      rows.sort((a, b) => {
+        let valA, valB;
+        if (isNumeric) {
+          valA = parseFloat(a.dataset[sortKey]);
+          valB = parseFloat(b.dataset[sortKey]);
+        } else {
+          valA = a.dataset[sortKey];
+          valB = b.dataset[sortKey];
+        }
+        let result;
+        if (isNumeric) result = valA - valB;
+        else result = valA.localeCompare(valB);
+        return sortDir === 'asc' ? result : -result;
+      });
+      rows.forEach(row => tbody.appendChild(row));
+    }
 
     function applyFilters() {
       const search = searchInput.value.toLowerCase();
-      const sort = sortSelect.value;
-
-      let visible = cards.filter(card => !search || card.dataset.search.includes(search));
-
-      visible.sort((a, b) => {
-        switch(sort) {
-          case 'wins-desc': return parseInt(b.dataset.wins) - parseInt(a.dataset.wins);
-          case 'wins-asc': return parseInt(a.dataset.wins) - parseInt(b.dataset.wins);
-          case 'losses-desc': return parseInt(b.dataset.losses) - parseInt(a.dataset.losses);
-          case 'losses-asc': return parseInt(a.dataset.losses) - parseInt(b.dataset.losses);
-          case 'name-asc': return a.dataset.name.localeCompare(b.dataset.name);
-          case 'name-desc': return b.dataset.name.localeCompare(a.dataset.name);
-          case 'players-desc': return parseInt(b.dataset.players) - parseInt(a.dataset.players);
-          default: return 0;
-        }
+      let visible = 0;
+      rows.forEach(row => {
+        const matchesSearch = !search || row.dataset.name.includes(search) || row.dataset.tag.includes(search);
+        row.style.display = matchesSearch ? '' : 'none';
+        if (matchesSearch) visible++;
       });
-
-      visible.forEach(card => grid.appendChild(card));
-      cards.forEach(card => { card.style.display = visible.includes(card) ? '' : 'none'; });
-      noResults.style.display = visible.length === 0 ? 'block' : 'none';
+      noResults.style.display = visible === 0 ? 'block' : 'none';
     }
 
+    headers.forEach(header => {
+      const arrow = header.querySelector('.arrow');
+      header.addEventListener('click', () => {
+        const key = header.dataset.key;
+        isNumeric = header.dataset.numeric === 'true';
+        if (sortKey === key) {
+          sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+        } else {
+          sortKey = key;
+          sortDir = isNumeric ? 'desc' : 'asc';
+        }
+        headers.forEach(h => {
+          h.style.color = '';
+          h.querySelector('.arrow').textContent = '';
+        });
+        header.style.color = 'var(--accent)';
+        arrow.textContent = sortDir === 'asc' ? ' ↑' : ' ↓';
+        sortRows();
+      });
+    });
+
+    // Default sort
+    const defaultHeader = document.querySelector('[data-key="name"]');
+    defaultHeader.style.color = 'var(--accent)';
+    defaultHeader.querySelector('.arrow').textContent = ' ↑';
+    sortRows();
+
     searchInput.addEventListener('input', applyFilters);
-    sortSelect.addEventListener('change', applyFilters);
   </script>
 </Layout>
