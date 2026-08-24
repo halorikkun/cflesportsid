@@ -26,7 +26,7 @@ const players = defineCollection({
   schema: z.object({
     name: z.string(),
     ign: z.string(),
-    uid: z.string().optional(),
+    uid: z.string().nullable().optional(),
     team: z.string().optional(),
     role: z.string().default('Player'),
     avatar: z.string().optional(),
@@ -74,7 +74,7 @@ const matches = defineCollection({
       assists: z.number().default(0),
     }).default({ kills: 0, deaths: 0, assists: 0 }),
     playerStats: z.array(z.object({
-      uid: z.string().optional(),
+      uid: z.string().nullable().optional(),
       ign: z.string().optional(),
       rounds: z.array(z.object({
         kills: z.number().default(0),
