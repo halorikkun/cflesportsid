@@ -21,13 +21,28 @@ function getTeamRecord(teamId) {
 
 const allPlayers = await getCollection('players');
 
-function getTeamKills(teamId) {
-  return allPlayers.filter(p => p.data.team === teamId).reduce((sum, p) => sum + p.data.stats.kills, 0);
-}
+// Lookup players by uid
+const playersByUid = {};
+allPlayers.forEach(p => {
+  if (p.data.uid) playersByUid[p.data.uid] = p;
+});
 
 const teams = (await getCollection('teams')).map(team => {
   const record = getTeamRecord(team.id);
-  const kills = getTeamKills(team.id);
+
+  // Find players by uid array, fall back to team field
+  let teamPlayers = team.data.players
+    .map(uid => playersByUid[uid])
+    .filter(Boolean);
+
+  if (teamPlayers.length === 0) {
+    teamPlayers = allPlayers.filter(p => p.data.team === team.id);
+  }
+
+  const totalKills = teamPlayers.reduce((sum, p) => sum + (p.data.stats?.kills || 0), 0);
+  const totalDeaths = teamPlayers.reduce((sum, p) => sum + (p.data.stats?.deaths || 0), 0);
+  const totalAssists = teamPlayers.reduce((sum, p) => sum + (p.data.stats?.assists || 0), 0);
+
   return {
     id: team.id,
     name: team.data.name,
@@ -35,124 +50,284 @@ const teams = (await getCollection('teams')).map(team => {
     region: team.data.region,
     wins: record.wins,
     losses: record.losses,
-    players: team.data.players.length,
-    kills,
+    totalKills,
+    totalDeaths,
+    totalAssists,
+    players: teamPlayers.map(p => ({
+      ign: p.data.ign,
+      uid: p.data.uid,
+      status: p.data.status || 'active',
+    })),
+    playerCount: teamPlayers.length,
   };
 });
 ---
 
-<Layout title="Teams - CFL Tournament Hub" current="Teams">
+<Layout title="Teams - CFL Esports ID Tournament Hub" current="Teams">
   <div class="container">
     <div class="page-header">
       <h1>Teams</h1>
-      <p>{teams.length} teams competing in CFL tournaments.</p>
+      <p>Search, sort, and filter all competing teams</p>
     </div>
 
-    <div style="display: flex; gap: 0.75rem; margin-bottom: 1rem; flex-wrap: wrap;">
-      <input type="text" id="searchInput" placeholder="Search team name or tag..."
-        style="flex: 1; min-width: 200px; padding: 0.5rem 0.75rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-primary); font-size: 0.9rem;" />
+    <div class="teams-toolbar">
+      <input type="text" id="searchInput" placeholder="Search team name or tag..." class="teams-search" />
+      <select id="sortSelect" class="teams-sort">
+        <option value="name-asc">Name (A–Z)</option>
+        <option value="name-desc">Name (Z–A)</option>
+        <option value="wins-desc">Wins (High–Low)</option>
+        <option value="wins-asc">Wins (Low–High)</option>
+        <option value="losses-desc">Losses (High–Low)</option>
+        <option value="losses-asc">Losses (Low–High)</option>
+        <option value="kills-desc">Kills (High–Low)</option>
+        <option value="kills-asc">Kills (Low–High)</option>
+      </select>
     </div>
 
-    <div id="sortBar" style="display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; align-items: center;">
-      <span style="color: var(--text-muted); font-size: 0.85rem;">Sort by:</span>
+    <div class="teams-grid" id="teamsGrid">
+      {teams.map(team => (
+        <div class="team-card"
+          data-name={team.name.toLowerCase()}
+          data-tag={team.tag.toLowerCase()}
+          data-wins={team.wins}
+          data-losses={team.losses}
+          data-kills={team.totalKills}
+        >
+          <div class="team-card-header">
+            <a href={`/teams/${team.id}`}><strong>{team.name}</strong></a>
+            <span class="team-tag">[{team.tag}]</span>
+            <span class="team-region">{team.region}</span>
+          </div>
+
+          <div class="team-card-stats">
+            <div class="team-stat-item">
+              <span class="team-stat-label">K/D/A</span>
+              <span class="kda">
+                <span class="kill">{team.totalKills}</span>/<span class="death">{team.totalDeaths}</span>/<span class="assist">{team.totalAssists}</span>
+              </span>
+            </div>
+            <div class="team-stat-item">
+              <span class="team-stat-label">Wins</span>
+              <span style="color: var(--win); font-weight: 700;">{team.wins}</span>
+            </div>
+            <div class="team-stat-item">
+              <span class="team-stat-label">Losses</span>
+              <span style="color: var(--loss); font-weight: 700;">{team.losses}</span>
+            </div>
+          </div>
+
+          <div class="team-players">
+            <div class="team-players-label">Roster ({team.playerCount})</div>
+            {team.players.map(p => (
+              <div class="player-row">
+                <span class="player-ign">{p.ign}</span>
+                <span class="player-uid">{p.uid}</span>
+                <span class={`player-status ${p.status === 'active' ? 'status-active' : 'status-inactive'}`}>
+                  {p.status === 'active' ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
 
-    <div class="table-wrap">
-      <table id="teamsTable">
-        <thead>
-          <tr>
-            <th class="sortable" data-key="name" style="cursor: pointer;">Team <span class="arrow"></span></th>
-            <th class="sortable" data-key="tag" style="cursor: pointer;">Tag <span class="arrow"></span></th>
-            <th class="sortable" data-key="wins" data-numeric="true" style="cursor: pointer;">Wins <span class="arrow"></span></th>
-            <th class="sortable" data-key="losses" data-numeric="true" style="cursor: pointer;">Losses <span class="arrow"></span></th>
-            <th class="sortable" data-key="players" data-numeric="true" style="cursor: pointer;">Players <span class="arrow"></span></th>
-            <th class="sortable" data-key="kills" data-numeric="true" style="cursor: pointer;">Kills <span class="arrow"></span></th>
-          </tr>
-        </thead>
-        <tbody id="teamsBody">
-          {teams.map(team => (
-            <tr data-name={team.name.toLowerCase()} data-tag={team.tag.toLowerCase()}
-                data-wins={team.wins} data-losses={team.losses} data-players={team.players} data-kills={team.kills}>
-              <td><a href={`/teams/${team.id}`}><strong>{team.name}</strong></a></td>
-              <td style="color: var(--text-muted);">[{team.tag}]</td>
-              <td style="color: var(--win); font-weight: 700;">{team.wins}</td>
-              <td style="color: var(--loss); font-weight: 700;">{team.losses}</td>
-              <td style="color: #f59e0b; font-weight: 700;">{team.players}</td>
-              <td class="kda"><span class="kill">{team.kills}</span></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
     <p id="noResults" style="text-align: center; color: var(--text-muted); display: none; padding: 2rem;">No teams found.</p>
   </div>
 
   <script>
     const searchInput = document.getElementById('searchInput');
-    const tbody = document.getElementById('teamsBody');
+    const sortSelect = document.getElementById('sortSelect');
+    const grid = document.getElementById('teamsGrid');
     const noResults = document.getElementById('noResults');
-    const rows = Array.from(tbody.querySelectorAll('tr'));
-    const headers = document.querySelectorAll('.sortable');
-    let sortKey = 'name';
-    let sortDir = 'asc';
-    let isNumeric = false;
-
-    function sortRows() {
-      rows.sort((a, b) => {
-        let valA, valB;
-        if (isNumeric) {
-          valA = parseFloat(a.dataset[sortKey]);
-          valB = parseFloat(b.dataset[sortKey]);
-        } else {
-          valA = a.dataset[sortKey];
-          valB = b.dataset[sortKey];
-        }
-        let result;
-        if (isNumeric) result = valA - valB;
-        else result = valA.localeCompare(valB);
-        return sortDir === 'asc' ? result : -result;
-      });
-      rows.forEach(row => tbody.appendChild(row));
-    }
+    const cards = Array.from(grid.querySelectorAll('.team-card'));
 
     function applyFilters() {
       const search = searchInput.value.toLowerCase();
-      let visible = 0;
-      rows.forEach(row => {
-        const matchesSearch = !search || row.dataset.name.includes(search) || row.dataset.tag.includes(search);
-        row.style.display = matchesSearch ? '' : 'none';
-        if (matchesSearch) visible++;
+      const sortValue = sortSelect.value;
+      const [key, dir] = sortValue.split('-');
+      const isNumeric = ['wins', 'losses', 'kills'].includes(key);
+      const asc = dir === 'asc';
+
+      // Sort
+      cards.sort((a, b) => {
+        let valA, valB;
+        if (isNumeric) {
+          valA = parseFloat(a.dataset[key]);
+          valB = parseFloat(b.dataset[key]);
+          return asc ? valA - valB : valB - valA;
+        } else {
+          valA = a.dataset[key];
+          valB = b.dataset[key];
+          return asc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        }
       });
+
+      // Filter + re-append
+      let visible = 0;
+      cards.forEach(card => {
+        const matchesSearch = !search || card.dataset.name.includes(search) || card.dataset.tag.includes(search);
+        card.style.display = matchesSearch ? '' : 'none';
+        if (matchesSearch) visible++;
+        grid.appendChild(card);
+      });
+
       noResults.style.display = visible === 0 ? 'block' : 'none';
     }
 
-    headers.forEach(header => {
-      const arrow = header.querySelector('.arrow');
-      header.addEventListener('click', () => {
-        const key = header.dataset.key;
-        isNumeric = header.dataset.numeric === 'true';
-        if (sortKey === key) {
-          sortDir = sortDir === 'asc' ? 'desc' : 'asc';
-        } else {
-          sortKey = key;
-          sortDir = isNumeric ? 'desc' : 'asc';
-        }
-        headers.forEach(h => {
-          h.style.color = '';
-          h.querySelector('.arrow').textContent = '';
-        });
-        header.style.color = 'var(--accent)';
-        arrow.textContent = sortDir === 'asc' ? ' ↑' : ' ↓';
-        sortRows();
-      });
-    });
-
-    // Default sort
-    const defaultHeader = document.querySelector('[data-key="name"]');
-    defaultHeader.style.color = 'var(--accent)';
-    defaultHeader.querySelector('.arrow').textContent = ' ↑';
-    sortRows();
-
     searchInput.addEventListener('input', applyFilters);
+    sortSelect.addEventListener('change', applyFilters);
+    applyFilters();
   </script>
 </Layout>
+
+<style>
+  .teams-toolbar {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .teams-search {
+    flex: 1;
+    min-width: 200px;
+    padding: 0.5rem 0.75rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+  }
+  .teams-sort {
+    padding: 0.5rem 0.75rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+  .teams-sort:focus, .teams-search:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .teams-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .team-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .team-card:hover {
+    border-color: var(--border-hover);
+    background: var(--bg-card-hover);
+  }
+
+  .team-card-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .team-card-header a {
+    font-size: 1.05rem;
+  }
+  .team-tag {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+  .team-region {
+    margin-left: auto;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    background: var(--accent-dim);
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+  }
+
+  .team-card-stats {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+  .team-stat-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+  .team-stat-label {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .team-players {
+    border-top: 1px solid var(--border);
+    padding-top: 0.75rem;
+  }
+  .team-players-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+  }
+  .player-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .player-row:last-child {
+    border-bottom: none;
+  }
+  .player-ign {
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+  }
+  .player-uid {
+    font-family: monospace;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+  .player-status {
+    margin-left: auto;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 0.15rem 0.5rem;
+    border-radius: 4px;
+  }
+  .status-active {
+    background: rgba(34, 197, 94, 0.15);
+    color: var(--win);
+  }
+  .status-inactive {
+    background: rgba(156, 163, 175, 0.15);
+    color: var(--text-muted);
+  }
+
+  @media (max-width: 640px) {
+    .teams-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

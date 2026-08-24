@@ -13,8 +13,29 @@ const completedMatches = matches.filter(m => m.data.status === 'completed');
 const upcomingMatches = matches.filter(m => m.data.status !== 'completed');
 const totalKills = players.reduce((sum, p) => sum + p.data.stats.kills, 0);
 
-// Tournament name — change this to your actual tournament name
-const tournamentName = 'Clash for Glory: Road to All-Star S1';
+// Group matches by tournament name (falls back to single tournament if no field)
+const tournamentNames = [...new Set(matches.map(m => m.data.tournament || 'CFL Esports ID Tournament'))];
+
+// Build tournament data with winners for each tournament
+const tournaments = tournamentNames.map(tName => {
+  const tMatches = matches.filter(m => (m.data.tournament || 'CFL Esports ID Tournament') === tName);
+  const finalMatch = tMatches.find(m => m.data.round === 'Final' && m.data.status === 'completed');
+  const bronzeMatch = tMatches.find(m => m.data.round === 'Bronze Match' && m.data.status === 'completed');
+
+  let winnerTeams = [];
+
+  if (finalMatch) {
+    const winner = teams.find(t => t.id === finalMatch.data.winner);
+    const runnerUp = teams.find(t => t.id === (finalMatch.data.team1 === finalMatch.data.winner ? finalMatch.data.team2 : finalMatch.data.team1));
+    const thirdPlace = bronzeMatch ? teams.find(t => t.id === bronzeMatch.data.winner) : null;
+
+    if (winner) winnerTeams.push({ team: winner, place: 1 });
+    if (runnerUp) winnerTeams.push({ team: runnerUp, place: 2 });
+    if (thirdPlace) winnerTeams.push({ team: thirdPlace, place: 3 });
+  }
+
+  return { name: tName, winnerTeams };
+});
 
 // Calculate placement points from Final and Bronze Match
 function getPlacementPoints(teamId) {
@@ -31,12 +52,10 @@ function getPlacementPoints(teamId) {
   return 0;
 }
 
-// Calculate kill points (sum of player kills)
 function getTeamKillPoints(teamId) {
   return players.filter(p => p.data.team === teamId).reduce((sum, p) => sum + p.data.stats.kills, 0);
 }
 
-// Calculate team record from matches
 function getTeamRecord(teamId) {
   let wins = 0, losses = 0;
   completedMatches.forEach(m => {
@@ -51,7 +70,6 @@ function getTeamRecord(teamId) {
   return { wins, losses };
 }
 
-// Team standings
 const standings = teams.map(team => {
   const killPoints = getTeamKillPoints(team.id);
   const placementPoints = getPlacementPoints(team.id);
@@ -65,27 +83,8 @@ const standings = teams.map(team => {
   };
 }).sort((a, b) => b.totalScore - a.totalScore);
 
-// Top 5 fraggers (kills only)
 const topFraggers = [...players].sort((a, b) => b.data.stats.kills - a.data.stats.kills).slice(0, 5);
-
-// Top 5 assists
 const topAssistsPlayers = [...players].sort((a, b) => b.data.stats.assists - a.data.stats.assists).slice(0, 5);
-
-// Tournament winner (1st-3rd from Final and Bronze Match)
-const finalMatch = matches.find(m => m.data.round === 'Final' && m.data.status === 'completed');
-const bronzeMatch = matches.find(m => m.data.round === 'Bronze Match' && m.data.status === 'completed');
-
-let winnerTeams = [];
-
-if (finalMatch) {
-  const winner = teams.find(t => t.id === finalMatch.data.winner);
-  const runnerUp = teams.find(t => t.id === (finalMatch.data.team1 === finalMatch.data.winner ? finalMatch.data.team2 : finalMatch.data.team1));
-  const thirdPlace = bronzeMatch ? teams.find(t => t.id === bronzeMatch.data.winner) : null;
-
-  if (winner) winnerTeams.push({ team: winner, place: 1 });
-  if (runnerUp) winnerTeams.push({ team: runnerUp, place: 2 });
-  if (thirdPlace) winnerTeams.push({ team: thirdPlace, place: 3 });
-}
 ---
 
 <Layout title="CFL Esports ID Tournament Hub - Home" current="Home">
@@ -183,24 +182,33 @@ if (finalMatch) {
 
       <div class="card">
         <h3 style="margin-bottom: 1rem; color: var(--accent);">Tournament Winner</h3>
-        {winnerTeams.length > 0 ? (
-          <div class="winner-list">
-            <div style="text-align: center; margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border);">
-              <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.25rem;">Tournament</div>
-              <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">{tournamentName}</div>
-            </div>
-            {winnerTeams.map((wt) => (
-              <div class={`top-list-item ${wt.place === 1 ? 'rank-gold' : wt.place === 2 ? 'rank-silver' : 'rank-bronze'}`}>
-                <span class="top-rank">{wt.place === 1 ? '🥇' : wt.place === 2 ? '🥈' : '🥉'}</span>
-                <div class="avatar">{wt.team.data.tag.charAt(0)}</div>
-                <div class="top-info">
-                  <a href={`/teams/${wt.team.id}`}><strong>{wt.team.data.name}</strong></a>
-                  <div style="color: var(--text-secondary); font-size: 0.85rem;">
-                    {wt.place === 1 ? 'Champion' : wt.place === 2 ? 'Runner-up' : 'Third Place'}
+        {tournaments.length > 0 && tournaments.some(t => t.winnerTeams.length > 0) ? (
+          <div class="carousel" id="tournament-carousel">
+            <div class="carousel-track" id="carousel-track">
+              {tournaments.filter(t => t.winnerTeams.length > 0).map((t) => (
+                <div class="carousel-slide">
+                  <div class="tournament-name">
+                    <div class="tournament-label">Tournament</div>
+                    <div class="tournament-title">{t.name}</div>
                   </div>
+                  {t.winnerTeams.map((wt) => (
+                    <div class={`top-list-item ${wt.place === 1 ? 'rank-gold' : wt.place === 2 ? 'rank-silver' : 'rank-bronze'}`}>
+                      <span class="top-rank">{wt.place === 1 ? '🥇' : wt.place === 2 ? '🥈' : '🥉'}</span>
+                      <div class="avatar">{wt.team.data.tag.charAt(0)}</div>
+                      <div class="top-info">
+                        <a href={`/teams/${wt.team.id}`}><strong>{wt.team.data.name}</strong></a>
+                        <div style="color: var(--text-secondary); font-size: 0.85rem;">
+                          {wt.place === 1 ? 'Champion' : wt.place === 2 ? 'Runner-up' : 'Third Place'}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
+            <button class="carousel-btn carousel-prev" id="carousel-prev" aria-label="Previous tournament">‹</button>
+            <button class="carousel-btn carousel-next" id="carousel-next" aria-label="Next tournament">›</button>
+            <div class="carousel-dots" id="carousel-dots"></div>
           </div>
         ) : (
           <div style="color: var(--text-muted); text-align: center; padding: 1rem;">Tournament in progress</div>
@@ -208,41 +216,22 @@ if (finalMatch) {
       </div>
     </div>
   </div>
-</template>
+</Layout>
 
 <style>
-  /* Stat grid — different color per box */
-  .stat-teams {
-    background: rgba(59, 130, 246, 0.12);
-    border-color: rgba(59, 130, 246, 0.3);
-  }
+  /* Stat grid colors */
+  .stat-teams { background: rgba(59, 130, 246, 0.12); border-color: rgba(59, 130, 246, 0.3); }
   .stat-teams .stat-value { color: #60a5fa; }
-
-  .stat-players {
-    background: rgba(34, 197, 94, 0.12);
-    border-color: rgba(34, 197, 94, 0.3);
-  }
+  .stat-players { background: rgba(34, 197, 94, 0.12); border-color: rgba(34, 197, 94, 0.3); }
   .stat-players .stat-value { color: #4ade80; }
-
-  .stat-fixtures {
-    background: rgba(168, 85, 247, 0.12);
-    border-color: rgba(168, 85, 247, 0.3);
-  }
+  .stat-fixtures { background: rgba(168, 85, 247, 0.12); border-color: rgba(168, 85, 247, 0.3); }
   .stat-fixtures .stat-value { color: #c084fc; }
-
-  .stat-upcoming {
-    background: rgba(245, 158, 11, 0.12);
-    border-color: rgba(245, 158, 11, 0.3);
-  }
+  .stat-upcoming { background: rgba(245, 158, 11, 0.12); border-color: rgba(245, 158, 11, 0.3); }
   .stat-upcoming .stat-value { color: #fbbf24; }
-
-  .stat-kills {
-    background: rgba(255, 77, 46, 0.12);
-    border-color: rgba(255, 77, 46, 0.3);
-  }
+  .stat-kills { background: rgba(255, 77, 46, 0.12); border-color: rgba(255, 77, 46, 0.3); }
   .stat-kills .stat-value { color: var(--accent); }
 
-  /* Top list item layout */
+  /* Top list */
   .top-list-item {
     display: flex;
     align-items: center;
@@ -260,7 +249,6 @@ if (finalMatch) {
   }
   .top-info { flex: 1; }
 
-  /* Highlight #1 fragger and #1 assist */
   .top-highlight {
     background: var(--accent-dim);
     border: 1px solid var(--accent);
@@ -269,16 +257,216 @@ if (finalMatch) {
     margin: 0 -0.5rem 0.5rem;
   }
   .top-highlight .top-rank { color: var(--accent); }
-  .top-highlight .avatar {
-    box-shadow: 0 0 0 2px var(--accent);
+  .top-highlight .avatar { box-shadow: 0 0 0 2px var(--accent); }
+
+  /* Rank colors */
+  .rank-gold { background: rgba(250, 204, 21, 0.08); }
+  .rank-gold .top-rank { color: #facc15; }
+  .rank-silver { background: rgba(203, 213, 225, 0.06); }
+  .rank-silver .top-rank { color: #cbd5e1; }
+  .rank-bronze { background: rgba(217, 119, 6, 0.08); }
+  .rank-bronze .top-rank { color: #d97706; }
+
+  /* Tournament carousel */
+  .carousel {
+    position: relative;
+    overflow: hidden;
+  }
+  .carousel-track {
+    display: flex;
+    transition: transform 0.35s ease;
+    will-change: transform;
+  }
+  .carousel-slide {
+    flex: 0 0 100%;
+    min-width: 100%;
+    padding: 0 0.25rem;
+  }
+  .tournament-name {
+    text-align: center;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .tournament-label {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.25rem;
+  }
+  .tournament-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-primary);
   }
 
-  /* Rank colors for standings + tournament winner */
-  .rank-gold { background: rgba(250, 204, 21, 0.08); }
-  .rank-gold td:first-child { color: #facc15 !important; }
-  .rank-silver { background: rgba(203, 213, 225, 0.06); }
-  .rank-silver td:first-child { color: #cbd5e1 !important; }
-  .rank-bronze { background: rgba(217, 119, 6, 0.08); }
-  .rank-bronze td:first-child { color: #d97706 !important; }
+  /* Arrow buttons */
+  .carousel-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--bg-card-hover);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .carousel-btn:hover {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .carousel-prev { left: 4px; }
+  .carousel-next { right: 4px; }
+
+  /* Dot indicators */
+  .carousel-dots {
+    display: flex;
+    justify-content: center;
+    gap: 0.4rem;
+    margin-top: 0.75rem;
+  }
+  .carousel-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--border-hover);
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+  }
+  .carousel-dot.active {
+    background: var(--accent);
+    transform: scale(1.3);
+  }
 </style>
-</Layout>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const carousel = document.getElementById('tournament-carousel');
+    if (!carousel) return;
+
+    const track = document.getElementById('carousel-track');
+    const slides = track.querySelectorAll('.carousel-slide');
+    const prevBtn = document.getElementById('carousel-prev');
+    const nextBtn = document.getElementById('carousel-next');
+    const dotsContainer = document.getElementById('carousel-dots');
+
+    const totalSlides = slides.length;
+    let current = 0;
+
+    // Only show controls if more than 1 tournament
+    if (totalSlides <= 1) {
+      prevBtn.style.display = 'none';
+      nextBtn.style.display = 'none';
+      dotsContainer.style.display = 'none';
+      return;
+    }
+
+    // Create dots
+    for (let i = 0; i < totalSlides; i++) {
+      const dot = document.createElement('span');
+      dot.className = 'carousel-dot' + (i === 0 ? ' active' : '');
+      dot.addEventListener('click', () => goTo(i));
+      dotsContainer.appendChild(dot);
+    }
+
+    const dots = dotsContainer.querySelectorAll('.carousel-dot');
+
+    function goTo(index) {
+      current = (index + totalSlides) % totalSlides;
+      track.style.transform = `translateX(-${current * 100}%)`;
+      dots.forEach((d, i) => d.classList.toggle('active', i === current));
+    }
+
+    prevBtn.addEventListener('click', () => goTo(current - 1));
+    nextBtn.addEventListener('click', () => goTo(current + 1));
+
+    // Touch / swipe support
+    let startX = 0;
+    let currentX = 0;
+    let isSwiping = false;
+
+    carousel.addEventListener('touchstart', (e) => {
+      startX = e.touches[0].clientX;
+      currentX = startX;
+      isSwiping = true;
+      track.style.transition = 'none';
+    }, { passive: true });
+
+    carousel.addEventListener('touchmove', (e) => {
+      if (!isSwiping) return;
+      currentX = e.touches[0].clientX;
+      const diff = currentX - startX;
+      const offset = -current * 100 + (diff / carousel.offsetWidth) * 100;
+      track.style.transform = `translateX(${offset}%)`;
+    }, { passive: true });
+
+    carousel.addEventListener('touchend', () => {
+      if (!isSwiping) return;
+      isSwiping = false;
+      track.style.transition = 'transform 0.35s ease';
+      const diff = currentX - startX;
+      const threshold = carousel.offsetWidth * 0.2;
+      if (diff > threshold) {
+        goTo(current - 1);
+      } else if (diff < -threshold) {
+        goTo(current + 1);
+      } else {
+        goTo(current);
+      }
+    });
+
+    // Mouse drag support (desktop)
+    let mouseStartX = 0;
+    let mouseCurrentX = 0;
+    let isMouseDragging = false;
+
+    carousel.addEventListener('mousedown', (e) => {
+      mouseStartX = e.clientX;
+      mouseCurrentX = mouseStartX;
+      isMouseDragging = true;
+      track.style.transition = 'none';
+      e.preventDefault();
+    });
+
+    carousel.addEventListener('mousemove', (e) => {
+      if (!isMouseDragging) return;
+      mouseCurrentX = e.clientX;
+      const diff = mouseCurrentX - mouseStartX;
+      const offset = -current * 100 + (diff / carousel.offsetWidth) * 100;
+      track.style.transform = `translateX(${offset}%)`;
+    });
+
+    carousel.addEventListener('mouseup', () => {
+      if (!isMouseDragging) return;
+      isMouseDragging = false;
+      track.style.transition = 'transform 0.35s ease';
+      const diff = mouseCurrentX - mouseStartX;
+      const threshold = carousel.offsetWidth * 0.2;
+      if (diff > threshold) {
+        goTo(current - 1);
+      } else if (diff < -threshold) {
+        goTo(current + 1);
+      } else {
+        goTo(current);
+      }
+    });
+
+    carousel.addEventListener('mouseleave', () => {
+      if (!isMouseDragging) return;
+      isMouseDragging = false;
+      track.style.transition = 'transform 0.35s ease';
+      goTo(current);
+    });
+  });
+</script>
