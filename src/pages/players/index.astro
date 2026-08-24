@@ -69,7 +69,7 @@ const teamNames = [...new Set(players.map(p => p.teamName).filter(t => t !== '�
                 data-kills={p.kills} data-deaths={p.deaths} data-assists={p.assists}
                 data-kd={p.kd} data-matches={p.matches}>
               <td><a href={`/players/${p.id}`}><strong>{p.ign}</strong></a></td>
-              <td>{p.teamId ? <a href={`/teams/${p.teamId}`}>{p.teamName}</a> : '—'}</td>
+              <td>{p.teamId ? <a href={`/teams/${p.teamId}`} style="color: var(--accent-orange);">{p.teamName}</a> : '—'}</td>
               <td class="kda"><span class="kill">{p.kills}</span></td>
               <td class="kda"><span class="death">{p.deaths}</span></td>
               <td class="kda"><span class="assist">{p.assists}</span></td>
