@@ -103,39 +103,82 @@ const numRounds = Math.max(...playerStats.map(p => p.rounds.length), 0);
           </div>
         </div>
 
-        <h2 style="margin-bottom: 1rem;">Player Stats</h2>
+                <h2 style="margin-bottom: 1rem;">Player Stats</h2>
 
-        {numRounds > 1 && (
-          <div class="table-wrap" style="margin-bottom: 2rem;">
-            <table>
-              <thead>
-                <tr>
-                  <th>Player</th>
-                  <th>Team</th>
-                  {Array.from({ length: numRounds }, (_, i) => (
-                    <th>Round {i + 1}</th>
-                  ))}
-                  <th>Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {playerStats.map(p => (
+        {/* Team 1 players */}
+        {team1Players.length > 0 && (
+          <div style="margin-bottom: 2rem;">
+            <h3 style="margin-bottom: 0.75rem; color: {t1Color};">
+              <a href={`/teams/${m.data.team1}`} style={`color: ${t1Color};`}>{team1Name}</a>
+              <span style="font-size: 0.85rem; color: var(--text-muted);"> [{team1Tag}]</span>
+            </h3>
+            <div class="table-wrap">
+              <table>
+                <thead>
                   <tr>
-                    <td><a href={`/players/${playersMap.get(p.uid)?.id || ''}`}><strong>{p.ign}</strong></a></td>
-                    <td style="color: var(--text-muted);">{p.teamTag}</td>
-                    {p.rounds.map(r => (
-                      <td class="kda"><span class="kill">{r.kills || 0}</span>/<span class="death">{r.deaths || 0}</span>/<span class="assist">{r.assists || 0}</span></td>
+                    <th>Player</th>
+                    {numRounds > 1 && Array.from({ length: numRounds }, (_, i) => (
+                      <th>Round {i + 1}</th>
                     ))}
-                    {Array.from({ length: numRounds - p.rounds.length }, () => (
-                      <td style="color: var(--text-muted);">—</td>
-                    ))}
-                    <td class="kda" style="font-weight: 700;"><span class="kill">{p.totalKills}</span>/<span class="death">{p.totalDeaths}</span>/<span class="assist">{p.totalAssists}</span></td>
+                    <th>Total</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {team1Players.map(p => (
+                    <tr>
+                      <td><a href={`/players/${playersMap.get(p.uid)?.id || ''}`}><strong>{p.ign}</strong></a></td>
+                      {numRounds > 1 && p.rounds.map(r => (
+                        <td class="kda"><span class="kill">{r.kills || 0}</span>/<span class="death">{r.deaths || 0}</span>/<span class="assist">{r.assists || 0}</span></td>
+                      ))}
+                      {numRounds > 1 && Array.from({ length: numRounds - p.rounds.length }, () => (
+                        <td style="color: var(--text-muted);">—</td>
+                      ))}
+                      <td class="kda" style="font-weight: 700;"><span class="kill">{p.totalKills}</span>/<span class="death">{p.totalDeaths}</span>/<span class="assist">{p.totalAssists}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
+
+        {/* Team 2 players */}
+        {team2Players.length > 0 && (
+          <div style="margin-bottom: 2rem;">
+            <h3 style="margin-bottom: 0.75rem; color: {t2Color};">
+              <a href={`/teams/${m.data.team2}`} style={`color: ${t2Color};`}>{team2Name}</a>
+              <span style="font-size: 0.85rem; color: var(--text-muted);"> [{team2Tag}]</span>
+            </h3>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Player</th>
+                    {numRounds > 1 && Array.from({ length: numRounds }, (_, i) => (
+                      <th>Round {i + 1}</th>
+                    ))}
+                    <th>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {team2Players.map(p => (
+                    <tr>
+                      <td><a href={`/players/${playersMap.get(p.uid)?.id || ''}`}><strong>{p.ign}</strong></a></td>
+                      {numRounds > 1 && p.rounds.map(r => (
+                        <td class="kda"><span class="kill">{r.kills || 0}</span>/<span class="death">{r.deaths || 0}</span>/<span class="assist">{r.assists || 0}</span></td>
+                      ))}
+                      {numRounds > 1 && Array.from({ length: numRounds - p.rounds.length }, () => (
+                        <td style="color: var(--text-muted);">—</td>
+                      ))}
+                      <td class="kda" style="font-weight: 700;"><span class="kill">{p.totalKills}</span>/<span class="death">{p.totalDeaths}</span>/<span class="assist">{p.totalAssists}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
 
         {numRounds <= 1 && (
           <div class="table-wrap" style="margin-bottom: 2rem;">
