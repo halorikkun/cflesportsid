@@ -42,9 +42,30 @@ teamPlayers.forEach(p => {
   totalDeaths += p.data.stats.deaths;
   totalAssists += p.data.stats.assists;
 });
+
+// Round priority for sorting (Final first)
+const roundPriority = {
+  'Final': 1,
+  'Semifinal': 2,
+  'Quarter Final': 3,
+  'Top 16': 4,
+  'Round 3': 5,
+  'Round 2': 6,
+  'Round 1': 7,
+};
+
+// Sort match history: by date first (newest first), then by round priority
+const sortedMatches = [...teamMatches].sort((a, b) => {
+  const dateA = new Date(a.data.date).getTime() || 0;
+  const dateB = new Date(b.data.date).getTime() || 0;
+  if (dateB !== dateA) return dateB - dateA;
+  const prioA = roundPriority[a.data.round] || 99;
+  const prioB = roundPriority[b.data.round] || 99;
+  return prioA - prioB;
+});
 ---
 
-<Layout title={`${team.data.name} - CFL Tournament Hub`} current="Teams">
+<Layout title={`${team.data.name} - CFL Esports ID Tournament Hub`} current="Teams">
   <div class="container">
     <div class="page-header">
       <h1>{team.data.name} <span style="color: var(--text-muted); font-size: 1rem;">[{team.data.tag}]</span></h1>
@@ -70,7 +91,7 @@ teamPlayers.forEach(p => {
       </div>
     </div>
 
-    <h3 style="margin-bottom: 1rem; color: var(--accent);">Match Stats</h3>
+    <h2 style="margin-bottom: 1rem;">Match Stats</h2>
     <div class="stat-grid" style="margin-bottom: 2rem;">
       <div class="stat-box">
         <div class="stat-value">{totalKills}</div>
@@ -89,35 +110,38 @@ teamPlayers.forEach(p => {
     <h2 style="margin-bottom: 1rem;">Roster</h2>
     <div class="grid grid-3" style="margin-bottom: 2rem;">
       {teamPlayers.map(player => (
-        <a href={`/players/${player.id}`} class="card" style="text-decoration: none; color: inherit;">
+        <div class="card" style="text-decoration: none; color: inherit;">
           <div style="display: flex; align-items: center; gap: 1rem;">
             <div class="avatar">{player.data.ign.charAt(0).toUpperCase()}</div>
-            <div>
+            <div style="flex: 1;">
               <strong>{player.data.ign}</strong>
               <div style="color: var(--text-muted); font-size: 0.8rem;">{player.data.role}</div>
             </div>
+            <span class={`badge ${player.data.status === 'inactive' ? 'badge-upcoming' : 'badge-completed'}`}>
+              {player.data.status === 'inactive' ? 'Inactive' : 'Active'}
+            </span>
           </div>
-        </a>
+        </div>
       ))}
     </div>
 
-    {teamMatches.length > 0 && (
+    {sortedMatches.length > 0 && (
       <div>
         <h2 style="margin-bottom: 1rem;">Match History</h2>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
+                <th>Date</th>
                 <th>Tournament</th>
                 <th>Round</th>
                 <th>Opponent</th>
                 <th>Score</th>
                 <th>Result</th>
-                <th>Date</th>
               </tr>
             </thead>
             <tbody>
-              {teamMatches.map(m => {
+              {sortedMatches.map(m => {
                 const isTeam1 = m.data.team1 === team.id;
                 const opponentId = isTeam1 ? m.data.team2 : m.data.team1;
                 const opponent = teamsMap.get(opponentId);
@@ -132,12 +156,12 @@ teamPlayers.forEach(p => {
                   : m.data.status;
                 return (
                   <tr>
+                    <td style="color: var(--text-muted);">{m.data.date}</td>
                     <td>{m.data.tournament}</td>
                     <td>{m.data.round}</td>
                     <td><a href={`/teams/${opponentId}`}>{opponent ? opponent.data.name : opponentId}</a></td>
                     <td>{myScore} - {oppScore}</td>
                     <td><span class={`badge ${resultBadge}`}>{resultText}</span></td>
-                    <td style="color: var(--text-muted);">{m.data.date}</td>
                   </tr>
                 );
               })}
