@@ -21,7 +21,6 @@ function getTeamRecord(teamId) {
 
 const allPlayers = await getCollection('players');
 
-// Lookup players by uid
 const playersByUid = {};
 allPlayers.forEach(p => {
   if (p.data.uid) playersByUid[p.data.uid] = p;
@@ -29,20 +28,15 @@ allPlayers.forEach(p => {
 
 const teams = (await getCollection('teams')).map(team => {
   const record = getTeamRecord(team.id);
-
-  // Find players by uid array, fall back to team field
   let teamPlayers = team.data.players
     .map(uid => playersByUid[uid])
     .filter(Boolean);
-
   if (teamPlayers.length === 0) {
     teamPlayers = allPlayers.filter(p => p.data.team === team.id);
   }
-
   const totalKills = teamPlayers.reduce((sum, p) => sum + (p.data.stats?.kills || 0), 0);
   const totalDeaths = teamPlayers.reduce((sum, p) => sum + (p.data.stats?.deaths || 0), 0);
   const totalAssists = teamPlayers.reduce((sum, p) => sum + (p.data.stats?.assists || 0), 0);
-
   return {
     id: team.id,
     name: team.data.name,
@@ -100,24 +94,23 @@ const teams = (await getCollection('teams')).map(team => {
           </div>
 
           <div class="team-card-stats">
-          <div class="team-stat-group team-stat-kda">
-            <span class="team-stat-label">K/D/A</span>
-            <span class="kda">
-              <span class="kill">{team.totalKills}</span>/<span class="death">{team.totalDeaths}</span>/<span class="assist">{team.totalAssists}</span>
-            </span>
-          </div>
-          <div class="team-stat-group team-stat-wl">
-            <div class="team-stat-item">
-              <span class="team-stat-label">Wins</span>
-              <span style="color: var(--win); font-weight: 700;">{team.wins}</span>
+            <div class="team-stat-group team-stat-kda">
+              <span class="team-stat-label">K/D/A</span>
+              <span class="kda">
+                <span class="kill">{team.totalKills}</span>/<span class="death">{team.totalDeaths}</span>/<span class="assist">{team.totalAssists}</span>
+              </span>
             </div>
-            <div class="team-stat-item">
-              <span class="team-stat-label">Losses</span>
-              <span style="color: var(--loss); font-weight: 700;">{team.losses}</span>
+            <div class="team-stat-group team-stat-wl">
+              <div class="team-stat-item">
+                <span class="team-stat-label">Wins</span>
+                <span style="color: var(--win); font-weight: 700;">{team.wins}</span>
+              </div>
+              <div class="team-stat-item">
+                <span class="team-stat-label">Losses</span>
+                <span style="color: var(--loss); font-weight: 700;">{team.losses}</span>
+              </div>
             </div>
           </div>
-        </div>
-
 
           <div class="team-players">
             <div class="team-players-label">Roster ({team.playerCount})</div>
@@ -136,6 +129,7 @@ const teams = (await getCollection('teams')).map(team => {
     </div>
 
     <p id="noResults" style="text-align: center; color: var(--text-muted); display: none; padding: 2rem;">No teams found.</p>
+    <div class="pagination" id="pagination"></div>
   </div>
 
   <script>
@@ -143,17 +137,25 @@ const teams = (await getCollection('teams')).map(team => {
     const sortSelect = document.getElementById('sortSelect');
     const grid = document.getElementById('teamsGrid');
     const noResults = document.getElementById('noResults');
+    const pagination = document.getElementById('pagination');
     const cards = Array.from(grid.querySelectorAll('.team-card'));
+    const perPage = 10;
+    let currentPage = 1;
 
-    function applyFilters() {
+    function getVisibleCards() {
       const search = searchInput.value.toLowerCase();
+      return cards.filter(card => {
+        const matchesSearch = !search || card.dataset.name.includes(search) || card.dataset.tag.includes(search);
+        return matchesSearch;
+      });
+    }
+
+    function sortCards(visible) {
       const sortValue = sortSelect.value;
       const [key, dir] = sortValue.split('-');
       const isNumeric = ['wins', 'losses', 'kills'].includes(key);
       const asc = dir === 'asc';
-
-      // Sort
-      cards.sort((a, b) => {
+      visible.sort((a, b) => {
         let valA, valB;
         if (isNumeric) {
           valA = parseFloat(a.dataset[key]);
@@ -165,22 +167,55 @@ const teams = (await getCollection('teams')).map(team => {
           return asc ? valA.localeCompare(valB) : valB.localeCompare(valA);
         }
       });
-
-      // Filter + re-append
-      let visible = 0;
-      cards.forEach(card => {
-        const matchesSearch = !search || card.dataset.name.includes(search) || card.dataset.tag.includes(search);
-        card.style.display = matchesSearch ? '' : 'none';
-        if (matchesSearch) visible++;
-        grid.appendChild(card);
-      });
-
-      noResults.style.display = visible === 0 ? 'block' : 'none';
     }
 
-    searchInput.addEventListener('input', applyFilters);
-    sortSelect.addEventListener('change', applyFilters);
-    applyFilters();
+    function render() {
+      const visible = getVisibleCards();
+      sortCards(visible);
+
+      cards.forEach(card => { card.style.display = 'none'; grid.appendChild(card); });
+
+      const totalPages = Math.ceil(visible.length / perPage);
+      if (currentPage > totalPages) currentPage = 1;
+
+      const start = (currentPage - 1) * perPage;
+      const end = start + perPage;
+      visible.slice(start, end).forEach(card => { card.style.display = ''; grid.appendChild(card); });
+
+      noResults.style.display = visible.length === 0 ? 'block' : 'none';
+      renderPagination(totalPages);
+    }
+
+    function renderPagination(totalPages) {
+      pagination.innerHTML = '';
+      if (totalPages <= 1) return;
+
+      const prev = document.createElement('button');
+      prev.className = 'page-btn';
+      prev.textContent = '‹';
+      prev.disabled = currentPage === 1;
+      prev.addEventListener('click', () => { currentPage--; render(); window.scrollTo(0, 0); });
+      pagination.appendChild(prev);
+
+      for (let i = 1; i <= totalPages; i++) {
+        const btn = document.createElement('button');
+        btn.className = `page-btn ${i === currentPage ? 'active' : ''}`;
+        btn.textContent = i;
+        btn.addEventListener('click', () => { currentPage = i; render(); window.scrollTo(0, 0); });
+        pagination.appendChild(btn);
+      }
+
+      const next = document.createElement('button');
+      next.className = 'page-btn';
+      next.textContent = '›';
+      next.disabled = currentPage === totalPages;
+      next.addEventListener('click', () => { currentPage++; render(); window.scrollTo(0, 0); });
+      pagination.appendChild(next);
+    }
+
+    searchInput.addEventListener('input', () => { currentPage = 1; render(); });
+    sortSelect.addEventListener('change', () => { currentPage = 1; render(); });
+    render();
   </script>
 </Layout>
 
@@ -217,10 +252,10 @@ const teams = (await getCollection('teams')).map(team => {
 
   .teams-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: 1fr;
     gap: 1.5rem;
   }
- 
+
   .team-card-header {
     display: flex;
     align-items: center;
@@ -328,11 +363,5 @@ const teams = (await getCollection('teams')).map(team => {
   .status-inactive {
     background: rgba(156, 163, 175, 0.15);
     color: var(--text-muted);
-  }
-
-  @media (max-width: 640px) {
-    .teams-grid {
-      grid-template-columns: 1fr;
-    }
   }
 </style>

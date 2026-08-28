@@ -25,7 +25,6 @@ const matches = (await getCollection('matches')).sort((a, b) => {
   return rB - rA;
 });
 
-// Use team's player list to determine which players belong to which team
 function getTeamKDA(match, teamId) {
   const team = teamsMap.get(teamId);
   if (!team || !team.data.players) return { kills: 0, deaths: 0, assists: 0 };
@@ -78,7 +77,7 @@ const rounds = [...new Set(matches.map(m => m.data.round))];
       <button class="sort-btn" data-column="status">Status ↓</button>
     </div>
 
-    <div id="matchesGrid" class="grid grid-2">
+    <div id="matchesGrid" class="matches-grid">
       {matches.map(m => {
         const t1 = teamsMap.get(m.data.team1);
         const t2 = teamsMap.get(m.data.team2);
@@ -138,6 +137,7 @@ const rounds = [...new Set(matches.map(m => m.data.round))];
     </div>
 
     <p id="noResults" style="text-align: center; color: var(--text-muted); display: none; padding: 2rem;">No matches found.</p>
+    <div class="pagination" id="pagination"></div>
   </div>
 
   <script>
@@ -148,22 +148,25 @@ const rounds = [...new Set(matches.map(m => m.data.round))];
     const noResults = document.getElementById('noResults');
     const cards = Array.from(grid.querySelectorAll('.match-card'));
     const sortBtns = document.querySelectorAll('.sort-btn');
-
+    const pagination = document.getElementById('pagination');
+    const perPage = 10;
+    let currentPage = 1;
     let sortColumn = 'default';
     let sortDirection = 'desc';
 
-    function applyFilters() {
+    function getVisibleCards() {
       const search = searchInput.value.toLowerCase();
       const status = statusFilter.value;
       const round = roundFilter.value;
-
-      let visible = cards.filter(card => {
+      return cards.filter(card => {
         const matchesSearch = !search || card.dataset.search.includes(search);
         const matchesStatus = !status || card.dataset.status === status;
         const matchesRound = !round || card.dataset.round === round;
         return matchesSearch && matchesStatus && matchesRound;
       });
+    }
 
+    function sortCards(visible) {
       visible.sort((a, b) => {
         let result = 0;
         switch(sortColumn) {
@@ -193,13 +196,50 @@ const rounds = [...new Set(matches.map(m => m.data.round))];
         }
         return sortDirection === 'desc' ? result : -result;
       });
+    }
 
-      cards.forEach(card => { card.style.display = 'none'; });
-      visible.forEach(card => {
-        card.style.display = '';
-        grid.appendChild(card);
-      });
+    function render() {
+      const visible = getVisibleCards();
+      sortCards(visible);
+
+      cards.forEach(card => { card.style.display = 'none'; grid.appendChild(card); });
+
+      const totalPages = Math.ceil(visible.length / perPage);
+      if (currentPage > totalPages) currentPage = 1;
+
+      const start = (currentPage - 1) * perPage;
+      const end = start + perPage;
+      visible.slice(start, end).forEach(card => { card.style.display = ''; grid.appendChild(card); });
+
       noResults.style.display = visible.length === 0 ? 'block' : 'none';
+      renderPagination(totalPages);
+    }
+
+    function renderPagination(totalPages) {
+      pagination.innerHTML = '';
+      if (totalPages <= 1) return;
+
+      const prev = document.createElement('button');
+      prev.className = 'page-btn';
+      prev.textContent = '‹';
+      prev.disabled = currentPage === 1;
+      prev.addEventListener('click', () => { currentPage--; render(); window.scrollTo(0, 0); });
+      pagination.appendChild(prev);
+
+      for (let i = 1; i <= totalPages; i++) {
+        const btn = document.createElement('button');
+        btn.className = `page-btn ${i === currentPage ? 'active' : ''}`;
+        btn.textContent = i;
+        btn.addEventListener('click', () => { currentPage = i; render(); window.scrollTo(0, 0); });
+        pagination.appendChild(btn);
+      }
+
+      const next = document.createElement('button');
+      next.className = 'page-btn';
+      next.textContent = '›';
+      next.disabled = currentPage === totalPages;
+      next.addEventListener('click', () => { currentPage++; render(); window.scrollTo(0, 0); });
+      pagination.appendChild(next);
     }
 
     sortBtns.forEach(btn => {
@@ -217,14 +257,14 @@ const rounds = [...new Set(matches.map(m => m.data.round))];
         });
         btn.classList.add('active');
         btn.textContent = btn.textContent.replace(/ [↑↓]$/, '') + ' ' + (sortDirection === 'desc' ? '↓' : '↑');
-        applyFilters();
+        render();
       });
     });
 
-    searchInput.addEventListener('input', applyFilters);
-    statusFilter.addEventListener('change', applyFilters);
-    roundFilter.addEventListener('change', applyFilters);
-    applyFilters();
+    searchInput.addEventListener('input', () => { currentPage = 1; render(); });
+    statusFilter.addEventListener('change', () => { currentPage = 1; render(); });
+    roundFilter.addEventListener('change', () => { currentPage = 1; render(); });
+    render();
   </script>
 </Layout>
 
@@ -282,5 +322,10 @@ const rounds = [...new Set(matches.map(m => m.data.round))];
     background: var(--accent-dim);
     border-color: var(--accent);
     color: var(--accent);
+  }
+  .matches-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
   }
 </style>
