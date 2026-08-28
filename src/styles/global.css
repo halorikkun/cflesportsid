@@ -13,6 +13,7 @@
   --border-hover: #3a4258;
   --win: #22c55e;
   --loss: #ef4444;
+  --assist: #eab308;
   --live: #f59e0b;
   --radius: 8px;
   --accent-hover: #ff6b50;  /* keep as is */
@@ -216,7 +217,7 @@ tr:hover td {
 .kda { font-family: monospace; font-size: 0.85rem; }
 .kda .kill { color: var(--win); }
 .kda .death { color: var(--loss); }
-.kda .assist { color: var(--text-secondary); }
+.kda .assist { color: var(--assist); } 
 
 .score-display {
   display: flex;
