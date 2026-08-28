@@ -83,27 +83,27 @@ const sortedMatches = [...teamMatches].sort((a, b) => {
         <div class="stat-value">{matchesPlayed}</div>
         <div class="stat-label">Matches</div>
       </div>
-      <div class="stat-box">
-        <div class="stat-value" style="color: var(--win);">{wins}</div>
+      <div class="stat-box stat-box-win">
+        <div class="stat-value">{wins}</div>
         <div class="stat-label">Wins</div>
       </div>
-      <div class="stat-box">
-        <div class="stat-value" style="color: var(--loss);">{losses}</div>
+      <div class="stat-box stat-box-loss">
+        <div class="stat-value">{losses}</div>
         <div class="stat-label">Losses</div>
       </div>
     </div>
 
     <h2 style="margin-bottom: 1rem;">Match Stats</h2>
     <div class="stat-grid" style="margin-bottom: 2rem;">
-      <div class="stat-box">
+      <div class="stat-box stat-box-kill">
         <div class="stat-value">{totalKills}</div>
         <div class="stat-label">Kills</div>
       </div>
-      <div class="stat-box">
+      <div class="stat-box stat-box-death">
         <div class="stat-value">{totalDeaths}</div>
         <div class="stat-label">Deaths</div>
       </div>
-      <div class="stat-box">
+      <div class="stat-box stat-box-assist">
         <div class="stat-value">{totalAssists}</div>
         <div class="stat-label">Assists</div>
       </div>

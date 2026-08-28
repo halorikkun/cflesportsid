@@ -214,6 +214,37 @@ tr:hover td {
   letter-spacing: 0.05em;
 }
 
+/* Colored stat-box variants — Team Record & Match Stats only */
+.stat-box-win {
+  border-color: var(--win);
+  background: rgba(34, 197, 94, 0.08);
+}
+.stat-box-win .stat-value { color: var(--win); }
+
+.stat-box-loss {
+  border-color: var(--loss);
+  background: rgba(239, 68, 68, 0.08);
+}
+.stat-box-loss .stat-value { color: var(--loss); }
+
+.stat-box-kill {
+  border-color: var(--win);
+  background: rgba(34, 197, 94, 0.08);
+}
+.stat-box-kill .stat-value { color: var(--win); }
+
+.stat-box-death {
+  border-color: var(--loss);
+  background: rgba(239, 68, 68, 0.08);
+}
+.stat-box-death .stat-value { color: var(--loss); }
+
+.stat-box-assist {
+  border-color: var(--assist);
+  background: rgba(234, 179, 8, 0.08);
+}
+.stat-box-assist .stat-value { color: var(--assist); }
+
 .kda { font-family: monospace; font-size: 0.85rem; }
 .kda .kill { color: var(--win); }
 .kda .death { color: var(--loss); }
