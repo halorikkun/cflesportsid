@@ -47,23 +47,23 @@ const hasSocials = Object.values(player.data.socials).some(v => v);
     )}
 
     <div class="stat-grid" style="margin-bottom: 2rem;">
-      <div class="stat-box">
+      <div class="stat-box stat-kills">
         <div class="stat-value">{player.data.stats.kills}</div>
         <div class="stat-label">Kills</div>
       </div>
-      <div class="stat-box">
+      <div class="stat-box stat-deaths">
         <div class="stat-value">{player.data.stats.deaths}</div>
         <div class="stat-label">Deaths</div>
       </div>
-      <div class="stat-box">
+      <div class="stat-box stat-assists">
         <div class="stat-value">{player.data.stats.assists}</div>
         <div class="stat-label">Assists</div>
       </div>
-      <div class="stat-box">
+      <div class="stat-box stat-kd">
         <div class="stat-value" class={kdClass}>{kd}</div>
         <div class="stat-label">K/D Ratio</div>
       </div>
-      <div class="stat-box">
+      <div class="stat-box stat-matches">
         <div class="stat-value">{matchesPlayed}</div>
         <div class="stat-label">Matches</div>
       </div>
@@ -131,3 +131,36 @@ const hasSocials = Object.values(player.data.socials).some(v => v);
     )}
   </div>
 </Layout>
+
+<style>
+  .stat-kills {
+    background: rgba(34, 197, 94, 0.12);
+    border-color: rgba(34, 197, 94, 0.3);
+  }
+  .stat-kills .stat-value { color: #4ade80; }
+
+  .stat-deaths {
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.3);
+  }
+  .stat-deaths .stat-value { color: #f87171; }
+
+  .stat-assists {
+    background: rgba(168, 85, 247, 0.12);
+    border-color: rgba(168, 85, 247, 0.3);
+  }
+  .stat-assists .stat-value { color: #c084fc; }
+
+  .stat-kd {
+    background: rgba(245, 158, 11, 0.12);
+    border-color: rgba(245, 158, 11, 0.3);
+  }
+  .stat-kd .stat-value { color: #fbbf24; }
+
+  .stat-matches {
+    background: rgba(59, 130, 246, 0.12);
+    border-color: rgba(59, 130, 246, 0.3);
+  }
+  .stat-matches .stat-value { color: #60a5fa; }
+</style>
+
