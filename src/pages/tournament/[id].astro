@@ -2,26 +2,24 @@
 import Layout from '../../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
 
-const matches = await getCollection('matches');
-const teams = await getCollection('teams');
-
-const tournamentNames = [...new Set(matches.map(m => m.data.tournament || 'CFL Esports ID Tournament'))];
-
-const tournaments = tournamentNames.map((name, i) => ({
-  name,
-  id: i + 1,
-}));
-
 export async function getStaticPaths() {
-  return tournaments.map(t => ({
-    params: { id: String(t.id) },
-    props: { tournamentName: t.name },
+  const matches = await getCollection('matches');
+  const tournamentNames = [...new Set(matches.map(m => m.data.tournament || 'CFL Esports ID Tournament'))];
+  return tournamentNames.map((name, i) => ({
+    params: { id: String(i + 1) },
+    props: { tournamentName: name },
   }));
 }
 
 const { tournamentName } = Astro.props;
 
+const matches = await getCollection('matches');
+const teams = await getCollection('teams');
+
 const tMatches = matches.filter(m => (m.data.tournament || 'CFL Esports ID Tournament') === tournamentName);
+
+const tournamentNames = [...new Set(matches.map(m => m.data.tournament || 'CFL Esports ID Tournament'))];
+const tournaments = tournamentNames.map((name, i) => ({ name, id: i + 1 }));
 
 const ROUND_ORDER = [
   'First Round', 'Second Round', 'Third Round',
