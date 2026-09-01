@@ -1,0 +1,238 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+
+const matches = await getCollection('matches');
+const teams = await getCollection('teams');
+
+const tournamentNames = [...new Set(matches.map(m => m.data.tournament || 'CFL Esports ID Tournament'))];
+
+const tournaments = tournamentNames.map((name, i) => ({
+  name,
+  id: i + 1,
+}));
+
+export async function getStaticPaths() {
+  return tournaments.map(t => ({
+    params: { id: String(t.id) },
+    props: { tournamentName: t.name },
+  }));
+}
+
+const { tournamentName } = Astro.props;
+
+const tMatches = matches.filter(m => (m.data.tournament || 'CFL Esports ID Tournament') === tournamentName);
+
+const ROUND_ORDER = [
+  'First Round', 'Second Round', 'Third Round',
+  'Top 16', 'Quarter Final', 'Semi Final', 'Bronze Match', 'Final'
+];
+
+// Group matches by round
+const byRound = {};
+tMatches.forEach(m => {
+  const round = m.data.round || 'Other';
+  if (!byRound[round]) byRound[round] = [];
+  byRound[round].push(m);
+});
+
+const rounds = Object.keys(byRound).sort((a, b) => {
+  const ia = ROUND_ORDER.indexOf(a);
+  const ib = ROUND_ORDER.indexOf(b);
+  if (ia === -1 && ib === -1) return a.localeCompare(b);
+  if (ia === -1) return 1;
+  if (ib === -1) return -1;
+  return ia - ib;
+});
+
+const completedCount = tMatches.filter(m => m.data.status === 'completed').length;
+
+function getTeam(teamId) {
+  return teams.find(t => t.id === teamId);
+}
+
+function formatDate(d) {
+  if (!d) return null;
+  const date = new Date(d);
+  if (isNaN(date)) return d;
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+}
+---
+
+<Layout title={`CFL Esports ID - ${tournamentName}`} current="Tournaments">
+  <div class="container">
+    <div class="bracket-nav">
+      <a href="/tournament" class="back-link">← All Tournaments</a>
+      <select id="tourney-select">
+        {tournaments.map(t => (
+          <option value={t.id} selected={t.name === tournamentName}>{t.name}</option>
+        ))}
+      </select>
+    </div>
+
+    <div class="page-header">
+      <h1>{tournamentName}</h1>
+      <p>{completedCount} / {tMatches.length} matches played</p>
+    </div>
+
+    <div class="bracket-scroll">
+      <div class="bracket">
+        {rounds.map(round => {
+          const roundMatches = byRound[round].sort((a, b) => {
+            const da = a.data.date || '';
+            const db = b.data.date || '';
+            return da.localeCompare(db);
+          });
+          const dates = [...new Set(roundMatches.map(m => m.data.date).filter(Boolean))];
+          const dateStr = dates.length > 0 ? dates.map(formatDate).join(' & ') : '';
+          return (
+            <div class="bracket-round">
+              <div class="bracket-round-title">{round}</div>
+              {dateStr && <div class="bracket-round-date">{dateStr}</div>}
+              {roundMatches.map(m => {
+                const isCompleted = m.data.status === 'completed';
+                const team1 = getTeam(m.data.team1);
+                const team2 = getTeam(m.data.team2);
+                const win1 = isCompleted && m.data.winner === m.data.team1;
+                const win2 = isCompleted && m.data.winner === m.data.team2;
+                return (
+                  <div class={`bracket-match ${isCompleted ? '' : 'upcoming'}`}>
+                    <div class={`bracket-team-row ${win1 ? 'winner' : (win2 ? 'loser' : '')}`}>
+                      <div class="bracket-team-info">
+                        <span class="bracket-team-tag">{team1?.data.tag || 'TBD'}</span>
+                        <span class="bracket-team-name">{team1?.data.name || 'TBD'}</span>
+                      </div>
+                      <span class="bracket-team-score">{isCompleted ? m.data.score1 : '–'}</span>
+                    </div>
+                    <div class={`bracket-team-row ${win2 ? 'winner' : (win1 ? 'loser' : '')}`}>
+                      <div class="bracket-team-info">
+                        <span class="bracket-team-tag">{team2?.data.tag || 'TBD'}</span>
+                        <span class="bracket-team-name">{team2?.data.name || 'TBD'}</span>
+                      </div>
+                      <span class="bracket-team-score">{isCompleted ? m.data.score2 : '–'}</span>
+                    </div>
+                    {isCompleted && (
+                      <div class="bracket-link">
+                        <a href={`/matches/${m.id}`}>Details →</a>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .bracket-nav {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .back-link {
+    color: var(--accent);
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .back-link:hover { color: var(--accent-hover); text-decoration: underline; }
+  #tourney-select {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius);
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  #tourney-select:focus { outline: none; border-color: var(--accent); }
+
+  .bracket-scroll { overflow-x: auto; padding-bottom: 1rem; }
+  .bracket { display: flex; gap: 3rem; min-width: max-content; align-items: stretch; }
+  .bracket-round {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    min-width: 200px;
+  }
+  .bracket-round-title {
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--accent);
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .bracket-round-date {
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-bottom: 0.75rem;
+  }
+  .bracket-match {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .bracket-match:hover { border-color: var(--accent); }
+  .bracket-match.upcoming { border-style: dashed; }
+  .bracket-team-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6rem 0.85rem;
+    font-size: 0.88rem;
+  }
+  .bracket-team-row + .bracket-team-row { border-top: 1px solid var(--border); }
+  .bracket-team-row.winner { background: rgba(250, 204, 21, 0.06); }
+  .bracket-team-row.loser { opacity: 0.5; }
+  .bracket-team-info { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
+  .bracket-team-tag {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--accent);
+    background: var(--bg-card-hover);
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+  .bracket-team-row.winner .bracket-team-tag { background: rgba(250, 204, 21, 0.2); color: #facc15; }
+  .bracket-team-name {
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .bracket-team-score { font-weight: 800; font-size: 1rem; min-width: 24px; text-align: right; }
+  .bracket-team-row.winner .bracket-team-score { color: #facc15; }
+  .bracket-team-row.loser .bracket-team-score { color: var(--text-muted); }
+  .bracket-link { text-align: center; margin-top: 0.4rem; padding-bottom: 0.3rem; }
+  .bracket-link a {
+    font-size: 0.75rem;
+    color: var(--accent);
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .bracket-link a:hover { color: var(--accent-hover); text-decoration: underline; }
+
+  @media (max-width: 768px) {
+    .bracket-round { min-width: 170px; }
+  }
+</style>
+
+<script>
+  document.getElementById('tourney-select')?.addEventListener('change', (e) => {
+    window.location.href = '/tournament/' + e.target.value;
+  });
+</script>

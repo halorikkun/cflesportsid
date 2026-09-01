@@ -1,0 +1,137 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+
+const matches = await getCollection('matches');
+const teams = await getCollection('teams');
+
+const tournamentNames = [...new Set(matches.map(m => m.data.tournament || 'CFL Esports ID Tournament'))];
+
+const tournaments = tournamentNames.map((name, i) => {
+  const tMatches = matches.filter(m => (m.data.tournament || 'CFL Esports ID Tournament') === name);
+  const completed = tMatches.filter(m => m.data.status === 'completed');
+  const upcoming = tMatches.filter(m => m.data.status !== 'completed');
+  const rounds = [...new Set(tMatches.map(m => m.data.round).filter(Boolean))];
+
+  let status = 'upcoming';
+  let statusLabel = 'Upcoming';
+  if (tMatches.length > 0 && completed.length === tMatches.length) {
+    status = 'completed';
+    statusLabel = 'Completed';
+  } else if (completed.length > 0) {
+    status = 'ongoing';
+    statusLabel = 'Ongoing';
+  }
+
+  const dates = tMatches.map(m => m.data.date).filter(Boolean).sort();
+
+  const finalMatch = tMatches.find(m => m.data.round === 'Final' && m.data.status === 'completed');
+  const winner = finalMatch ? teams.find(t => t.id === finalMatch.data.winner) : null;
+
+  return {
+    name,
+    id: i + 1,
+    totalMatches: tMatches.length,
+    completedMatches: completed.length,
+    upcomingMatches: upcoming.length,
+    rounds,
+    status,
+    statusLabel,
+    startDate: dates[0] || null,
+    endDate: dates[dates.length - 1] || null,
+    winner,
+  };
+});
+
+const statusOrder = { ongoing: 0, upcoming: 1, completed: 2 };
+tournaments.sort((a, b) => statusOrder[a.status] - statusOrder[b.status]);
+
+function formatDate(d) {
+  if (!d) return null;
+  const date = new Date(d);
+  if (isNaN(date)) return d;
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+---
+
+<Layout title="CFL Esports ID Tournament Hub - Tournaments" current="Tournaments">
+  <div class="container">
+    <div class="page-header">
+      <h1>Tournaments</h1>
+      <p>Choose a tournament to view its bracket and results</p>
+    </div>
+
+    <div class="tourney-grid">
+      {tournaments.map(t => (
+        <a href={`/tournament/${t.id}`} class="tourney-card">
+          <div class="tourney-icon">🏆</div>
+          <h3>{t.name}</h3>
+          {t.startDate && (
+            <div class="tourney-date">
+              {t.endDate && t.endDate !== t.startDate
+                ? `${formatDate(t.startDate)} – ${formatDate(t.endDate)}`
+                : formatDate(t.startDate)}
+            </div>
+          )}
+          <div class="tourney-meta">
+            <span class={`tourney-badge ${t.status}`}>{t.statusLabel}</span>
+            <span class="tourney-badge rounds">{t.rounds.length} Rounds</span>
+            <span class="tourney-badge rounds">{t.completedMatches}/{t.totalMatches} Matches</span>
+          </div>
+          {t.winner && (
+            <div class="tourney-winner">
+              🥇 Champion: <strong>{t.winner.data.name}</strong>
+            </div>
+          )}
+          <div class="tourney-cta">View Bracket →</div>
+        </a>
+      ))}
+    </div>
+  </div>
+</Layout>
+
+<style>
+  .tourney-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.25rem;
+  }
+  .tourney-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.75rem;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+  }
+  .tourney-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--accent);
+    box-shadow: 0 8px 24px rgba(255, 77, 46, 0.12);
+  }
+  .tourney-icon { font-size: 2rem; line-height: 1; }
+  .tourney-card h3 { font-size: 1.15rem; font-weight: 800; }
+  .tourney-date { color: var(--text-secondary); font-size: 0.85rem; }
+  .tourney-meta { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.25rem; }
+  .tourney-badge {
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.2rem 0.6rem;
+    border-radius: 6px;
+  }
+  .tourney-badge.ongoing { background: rgba(239, 68, 68, 0.15); color: var(--loss); }
+  .tourney-badge.upcoming { background: var(--accent-dim); color: var(--accent); }
+  .tourney-badge.completed { background: rgba(34, 197, 94, 0.15); color: var(--win); }
+  .tourney-badge.rounds { background: var(--bg-card-hover); color: var(--text-secondary); }
+  .tourney-winner { font-size: 0.85rem; color: var(--text-secondary); }
+  .tourney-winner strong { color: var(--accent-orange); }
+  .tourney-cta { margin-top: 0.5rem; color: var(--accent); font-weight: 700; font-size: 0.9rem; }
+
+  @media (max-width: 768px) {
+    .tourney-grid { grid-template-columns: 1fr; }
+  }
+</style>
