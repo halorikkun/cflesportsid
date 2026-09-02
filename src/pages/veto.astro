@@ -8,9 +8,9 @@ const teamsMap = new Map(teams.map(t => [t.id, t]));
 
 // ===== EDIT: Your competitive map pool =====
 const MAPS = [
-  'Black Widow', 'Port', 'Mexico', 'Ankara',
-  'Bazaar', 'Desert', 'Factory', 'Graveyard',
-  'Kasaba', 'Ruins', 'Seaside', 'Temple'
+  'Desert', 'Sub Base', 'Satellite', 'Island',
+  'Ankara', 'Eagle Eye', 'Power Supply', 'Greece',
+  'Black Widow', 'Port', 'Festival'
 ];
 
 const matchData = matches.map(m => {
@@ -326,9 +326,16 @@ const matchData = matches.map(m => {
     min-height: 90px;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.4rem;
   }
-  .veto-map-card:hover:not(.banned):not(.picked):not(.disabled) {
-    border-color: var(--accent); transform: translateY(-3px);
-    box-shadow: 0 6px 20px rgba(255,77,46,0.12);
+  /* Team-aware hover: blue for Team A, orange for Team B */
+  .veto-maps.turn-a .veto-map-card:hover:not(.banned):not(.picked):not(.disabled) {
+    border-color: #3b82f6; transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(59,130,246,0.18);
+    background: rgba(59,130,246,0.06);
+  }
+  .veto-maps.turn-b .veto-map-card:hover:not(.banned):not(.picked):not(.disabled) {
+    border-color: #f97316; transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(249,115,22,0.18);
+    background: rgba(249,115,22,0.06);
   }
   .veto-map-card.disabled { cursor: not-allowed; opacity: 0.4; }
   .veto-map-card.banned {
@@ -352,21 +359,47 @@ const matchData = matches.map(m => {
   .veto-map-card.banned .veto-map-status { color: var(--loss); }
   .veto-map-card.picked .veto-map-status { color: var(--win); }
   .veto-map-card.decider .veto-map-status { color: #facc15; }
+  /* Team-colored status badges on map cards */
+  .veto-map-card.banned .veto-map-status::before { content: '✕ '; }
+  .veto-map-card.picked .veto-map-status::before { content: '✓ '; }
+  .veto-map-card.decider .veto-map-status::before { content: '★ '; }
 
   /* ===== Veto history ===== */
   .veto-history { margin-bottom: 2rem; }
-  .veto-history h3 { font-size: 1rem; margin-bottom: 0.75rem; }
-  .veto-history-item {
-    display: flex; align-items: center; gap: 0.5rem;
-    padding: 0.5rem 0.75rem; margin-bottom: 0.4rem;
-    background: var(--bg-card); border: 1px solid var(--border);
-    border-radius: 6px; font-size: 0.85rem;
+  .veto-history h3 { font-size: 1rem; margin-bottom: 0.75rem; color: var(--text-secondary); }
+  .veto-history-list {
+    display: flex; flex-direction: column; gap: 0.5rem;
   }
-  .veto-history-item.voided { opacity: 0.6; border-color: rgba(239,68,68,0.2); }
+  .veto-history-item {
+    display: flex; align-items: center; gap: 0.75rem;
+    padding: 0.65rem 1rem; margin-bottom: 0;
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); font-size: 0.85rem;
+    transition: all 0.2s;
+    border-left: 3px solid transparent;
+  }
+  .veto-history-item:hover { transform: translateX(4px); }
+  .veto-history-item.team-a-row { border-left-color: #3b82f6; background: rgba(59,130,246,0.04); }
+  .veto-history-item.team-b-row { border-left-color: #f97316; background: rgba(249,115,22,0.04); }
+  .veto-history-item.voided { opacity: 0.55; border-left-color: var(--loss) !important; background: rgba(239,68,68,0.04) !important; }
+  .veto-history-item .h-step-num {
+    width: 24px; height: 24px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.7rem; font-weight: 800; flex-shrink: 0;
+    background: rgba(255,255,255,0.06); color: var(--text-muted);
+  }
+  .veto-history-item.team-a-row .h-step-num { background: rgba(59,130,246,0.15); color: #60a5fa; }
+  .veto-history-item.team-b-row .h-step-num { background: rgba(249,115,22,0.15); color: #fb923c; }
   .veto-history-item .h-team { font-weight: 800; }
   .veto-history-item .h-team.a { color: #60a5fa; }
   .veto-history-item .h-team.b { color: #fb923c; }
-  .veto-history-item .h-action { color: var(--text-secondary); }
+  .veto-history-item .h-action {
+    color: var(--text-secondary); font-size: 0.8rem;
+    padding: 0.1rem 0.4rem; border-radius: 4px;
+    background: rgba(255,255,255,0.04);
+  }
+  .veto-history-item .h-action.ban { color: var(--loss); }
+  .veto-history-item .h-action.pick { color: var(--win); }
   .veto-history-item .h-map { font-weight: 700; color: var(--accent); }
   .veto-history-item .h-void { color: var(--loss); font-weight: 600; font-style: italic; }
 
@@ -423,9 +456,11 @@ const matchData = matches.map(m => {
     padding: 1.25rem 1.5rem; border-radius: var(--radius);
     background: var(--bg-card); border: 1px solid var(--border);
     border-left: 4px solid var(--border);
+    transition: all 0.2s;
   }
-  .result-map-card.team-a-pick { border-left-color: #3b82f6; }
-  .result-map-card.team-b-pick { border-left-color: #f97316; }
+  .result-map-card:hover { transform: translateX(4px); box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+  .result-map-card.team-a-pick { border-left-color: #3b82f6; background: rgba(59,130,246,0.04); }
+  .result-map-card.team-b-pick { border-left-color: #f97316; background: rgba(249,115,22,0.04); }
   .result-map-card.decider { border-color: #facc15; background: rgba(250,204,21,0.06); border-left: 4px solid #facc15; }
   .result-map-card.voided-pick {
     border-left-color: var(--loss);
@@ -439,6 +474,8 @@ const matchData = matches.map(m => {
     font-weight: 800; font-size: 1.15rem; flex-shrink: 0;
     background: var(--accent-dim); color: var(--accent);
   }
+  .result-map-card.team-a-pick .result-map-num { background: rgba(59,130,246,0.15); color: #60a5fa; }
+  .result-map-card.team-b-pick .result-map-num { background: rgba(249,115,22,0.15); color: #fb923c; }
   .result-map-card.decider .result-map-num { background: rgba(250,204,21,0.15); color: #facc15; }
   .result-map-info { flex: 1; }
   .result-map-name { font-weight: 700; font-size: 1.1rem; }
@@ -449,13 +486,21 @@ const matchData = matches.map(m => {
   .result-map-label .void-tag { color: var(--loss); font-weight: 600; }
 
   .results-banned { margin-bottom: 2rem; }
-  .results-banned h3 { font-size: 1rem; margin-bottom: 0.75rem; }
+  .results-banned h3 { font-size: 1rem; margin-bottom: 0.75rem; color: var(--text-secondary); }
+  .results-banned-list {
+    display: flex; flex-wrap: wrap; gap: 0.5rem;
+  }
   .banned-map-item {
     display: inline-flex; align-items: center; gap: 0.4rem;
-    padding: 0.3rem 0.7rem; margin: 0.25rem;
+    padding: 0.4rem 0.8rem; margin: 0;
     background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2);
-    border-radius: 6px; font-size: 0.82rem;
+    border-radius: var(--radius); font-size: 0.82rem;
+    transition: all 0.2s;
+    border-left: 3px solid transparent;
   }
+  .banned-map-item:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(239,68,68,0.15); }
+  .banned-map-item.team-a-ban { border-left-color: #3b82f6; }
+  .banned-map-item.team-b-ban { border-left-color: #f97316; }
   .banned-map-item .b-team { font-weight: 700; }
   .banned-map-item .b-team.a { color: #60a5fa; }
   .banned-map-item .b-team.b { color: #fb923c; }
@@ -761,6 +806,18 @@ const matchData = matches.map(m => {
 
     function renderMaps() {
       const interactive = state.phase === 'veto';
+      const mapsEl = $('veto-maps');
+      // Set team-aware hover class
+      if (interactive) {
+        const step = VETO_STEPS[state.currentStep];
+        if (step) {
+          mapsEl.className = `veto-maps turn-${step.team.toLowerCase()}`;
+        } else {
+          mapsEl.className = 'veto-maps';
+        }
+      } else {
+        mapsEl.className = 'veto-maps';
+      }
       const html = MAPS.map(map => {
         const st = state.mapStates[map] || 'available';
         const isAvail = st === 'available';
@@ -776,7 +833,7 @@ const matchData = matches.map(m => {
           ${statusLabel ? `<div class="veto-map-status">${statusLabel}</div>` : ''}
         </div>`;
       }).join('');
-      $('veto-maps').innerHTML = html;
+      mapsEl.innerHTML = html;
       if (interactive) {
         document.querySelectorAll('.veto-map-card[data-map]').forEach(card => {
           card.addEventListener('click', () => onMapClick(card.dataset.map));
@@ -817,9 +874,10 @@ const matchData = matches.map(m => {
     function renderHistory() {
       if (state.vetoHistory.length === 0) { $('veto-history').style.display = 'none'; return; }
       $('veto-history').style.display = '';
-      const html = state.vetoHistory.map(h => `<div class="veto-history-item${h.voided ? ' voided' : ''}">
+      const html = state.vetoHistory.map((h, i) => `<div class="veto-history-item team-${h.team.toLowerCase()}-row${h.voided ? ' voided' : ''}">
+        <span class="h-step-num">${i + 1}</span>
         <span class="h-team ${h.team.toLowerCase()}">${h.team === 'A' ? state.match.team1.tag : state.match.team2.tag}</span>
-        <span class="h-action">${h.voided ? 'voided' : (h.action === 'ban' ? 'banned' : 'picked')}</span>
+        <span class="h-action ${h.action}${h.voided ? ' ban' : ''}">${h.voided ? 'voided' : (h.action === 'ban' ? 'banned' : 'picked')}</span>
         ${h.voided ? '<span class="h-void">No choice (time expired)</span>' : `<span class="h-map">${h.map}</span>`}
       </div>`).join('');
       $('veto-history-list').innerHTML = html;
@@ -936,7 +994,7 @@ const matchData = matches.map(m => {
       $('results-maps').innerHTML = mapsHtml;
 
       const bannedHtml = state.vetoHistory.filter(h => h.action === 'ban' && !h.voided).map(h =>
-        `<div class="banned-map-item">
+        `<div class="banned-map-item team-${h.team.toLowerCase()}-ban">
           <span class="b-team ${h.team.toLowerCase()}">${h.team === 'A' ? state.match.team1.tag : state.match.team2.tag}</span>
           <span class="b-map">${h.map}</span>
         </div>`
