@@ -104,11 +104,6 @@ const matchData = matches.map(m => {
       </div>
 
       <div class="veto-maps" id="veto-maps"></div>
-
-      <div class="veto-history" id="veto-history" style="display:none;">
-        <h3>Veto History</h3>
-        <div id="veto-history-list"></div>
-      </div>
     </div>
 
     <div id="veto-wheel-section" style="display:none;">
@@ -139,16 +134,17 @@ const matchData = matches.map(m => {
 <script type="application/json" id="match-data" set:html={JSON.stringify(matchData)} />
 <script type="application/json" id="maps-data" set:html={JSON.stringify(MAPS)} />
 
-<style>
+<style is:global>
+  /* ===== Hardcoded color palette (no dependency on external CSS vars) ===== */
   .veto-select-wrap { margin-bottom: 2rem; }
   .veto-select {
     width: 100%; max-width: 500px;
-    background: var(--bg-card); border: 1px solid var(--border);
-    color: var(--text-primary);
-    padding: 0.6rem 0.85rem; border-radius: var(--radius);
+    background: #1a1f2e; border: 1px solid #2a3142;
+    color: #e4e7eb;
+    padding: 0.6rem 0.85rem; border-radius: 8px;
     font-size: 0.95rem; font-weight: 600; cursor: pointer;
   }
-  .veto-select:focus { outline: none; border-color: var(--accent); }
+  .veto-select:focus { outline: none; border-color: #ff4d2e; }
 
   /* ===== Team banners ===== */
   .veto-teams {
@@ -157,7 +153,7 @@ const matchData = matches.map(m => {
   }
   .veto-team {
     display: flex; flex-direction: column; align-items: center; gap: 0.25rem;
-    padding: 1rem 1.5rem; border-radius: var(--radius);
+    padding: 1rem 1.5rem; border-radius: 8px;
     min-width: 160px;
   }
   .veto-team.team-a { background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.3); }
@@ -165,8 +161,8 @@ const matchData = matches.map(m => {
   .veto-team-tag { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
   .team-a .veto-team-tag { color: #60a5fa; }
   .team-b .veto-team-tag { color: #fb923c; }
-  .veto-team-name { font-size: 1rem; font-weight: 700; }
-  .veto-vs { font-size: 1.25rem; font-weight: 800; color: var(--text-muted); }
+  .veto-team-name { font-size: 1rem; font-weight: 700; color: #e4e7eb; }
+  .veto-vs { font-size: 1.25rem; font-weight: 800; color: #6b7280; }
 
   /* ===== Team pick cards ===== */
   .veto-picks {
@@ -176,7 +172,7 @@ const matchData = matches.map(m => {
     margin-bottom: 2rem;
   }
   .pick-card {
-    border-radius: var(--radius);
+    border-radius: 8px;
     padding: 1.25rem;
     border: 2px solid;
     transition: all 0.25s;
@@ -218,20 +214,20 @@ const matchData = matches.map(m => {
   .pick-card.team-b .pick-team-tag { color: #fb923c; }
   .pick-card-label {
     font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.05em; color: var(--text-muted);
+    letter-spacing: 0.05em; color: #6b7280;
   }
   .pick-map-name {
     font-size: 1.3rem; font-weight: 800; margin-bottom: 0.4rem;
-    color: var(--text-primary);
+    color: #e4e7eb;
   }
   .pick-card.team-a.filled .pick-map-name { color: #60a5fa; }
   .pick-card.team-b.filled .pick-map-name { color: #fb923c; }
-  .pick-card.voided .pick-map-name { color: var(--loss); }
+  .pick-card.voided .pick-map-name { color: #ef4444; }
   .pick-card-status {
-    font-size: 0.75rem; font-weight: 600; color: var(--text-muted);
+    font-size: 0.75rem; font-weight: 600; color: #6b7280;
   }
-  .pick-card.filled .pick-card-status { color: var(--win); }
-  .pick-card.voided .pick-card-status { color: var(--loss); }
+  .pick-card.filled .pick-card-status { color: #22c55e; }
+  .pick-card.voided .pick-card-status { color: #ef4444; }
 
   /* ===== Veto step pills ===== */
   .veto-steps {
@@ -239,40 +235,50 @@ const matchData = matches.map(m => {
     margin-bottom: 1.5rem;
   }
   .veto-step {
-    display: flex; align-items: center; gap: 0.35rem;
-    padding: 0.35rem 0.7rem; border-radius: 6px;
+    display: flex; align-items: center; gap: 0.4rem;
+    padding: 0.4rem 0.8rem; border-radius: 8px;
     font-size: 0.8rem; font-weight: 600;
-    border: 1px solid var(--border); background: var(--bg-card);
+    border: 1px solid #2a3142; background: #1a1f2e;
+    color: #e4e7eb;
     transition: all 0.2s;
   }
-  .veto-step.team-a { border-color: rgba(59,130,246,0.3); }
-  .veto-step.team-b { border-color: rgba(249,115,22,0.3); }
+  .veto-step.team-a { border-color: rgba(59,130,246,0.3); background: rgba(59,130,246,0.06); }
+  .veto-step.team-b { border-color: rgba(249,115,22,0.3); background: rgba(249,115,22,0.06); }
   .veto-step.active {
     transform: scale(1.05);
-    box-shadow: 0 0 0 2px var(--accent);
-    border-color: var(--accent);
+    box-shadow: 0 0 0 2px #ff4d2e;
+    border-color: #ff4d2e;
   }
-  .veto-step.done { opacity: 0.6; }
-  .veto-step .step-team { font-weight: 800; }
+  .veto-step.done { opacity: 0.5; }
+  .veto-step .step-team {
+    font-weight: 800; font-size: 0.75rem;
+    padding: 0.1rem 0.35rem; border-radius: 4px;
+    background: rgba(255,255,255,0.06);
+  }
   .veto-step.team-a .step-team { color: #60a5fa; }
   .veto-step.team-b .step-team { color: #fb923c; }
-  .veto-step .step-action { color: var(--text-secondary); }
-  .veto-step .step-map { color: var(--accent); font-weight: 700; }
-  .veto-step .step-void { color: var(--loss); font-weight: 700; font-size: 0.7rem; }
+  .veto-step .step-action {
+    color: #9ca3af; font-size: 0.75rem;
+    padding: 0.1rem 0.35rem; border-radius: 4px;
+    background: rgba(255,255,255,0.04);
+  }
+  .veto-step .step-action.ban { color: #ef4444; }
+  .veto-step .step-action.pick { color: #22c55e; }
+  .veto-step .step-map { color: #ff4d2e; font-weight: 700; }
+  .veto-step .step-void { color: #ef4444; font-weight: 700; font-size: 0.7rem; }
 
   .veto-action-prompt {
     text-align: center; margin-bottom: 1rem;
     font-size: 1.1rem; font-weight: 700;
+    color: #e4e7eb;
   }
   .veto-action-prompt .prompt-team { font-size: 1.2rem; }
   .veto-action-prompt .prompt-team.a { color: #60a5fa; }
   .veto-action-prompt .prompt-team.b { color: #fb923c; }
-  .veto-action-prompt .prompt-action { color: var(--accent); }
+  .veto-action-prompt .prompt-action { color: #ff4d2e; }
 
   /* ===== Timer ===== */
-  .veto-timer {
-    margin-bottom: 1.5rem;
-  }
+  .veto-timer { margin-bottom: 1.5rem; }
   .timer-row {
     display: flex; gap: 1.5rem; justify-content: center; flex-wrap: wrap;
   }
@@ -282,7 +288,7 @@ const matchData = matches.map(m => {
   }
   .timer-label {
     font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-    color: var(--text-muted); white-space: nowrap;
+    color: #6b7280; white-space: nowrap;
   }
   .timer-bar-wrap {
     flex: 1; height: 10px; background: rgba(255,255,255,0.06);
@@ -300,15 +306,15 @@ const matchData = matches.map(m => {
   @keyframes timer-pulse { from { opacity: 0.5; } to { opacity: 1; } }
   .timer-value {
     font-size: 0.85rem; font-weight: 700; min-width: 38px; text-align: right;
-    color: var(--text-primary);
+    color: #e4e7eb;
   }
   .timer-status {
     text-align: center; font-size: 0.82rem; font-weight: 600; margin-top: 0.5rem;
     min-height: 1.2rem;
   }
-  .timer-status.pick { color: var(--text-secondary); }
+  .timer-status.pick { color: #9ca3af; }
   .timer-status.reserve { color: #f59e0b; }
-  .timer-status.void { color: var(--loss); }
+  .timer-status.void { color: #ef4444; }
 
   /* ===== Map cards grid ===== */
   .veto-maps {
@@ -318,107 +324,79 @@ const matchData = matches.map(m => {
     margin-bottom: 2rem;
   }
   .veto-map-card {
-    background: var(--bg-card); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 1.25rem 1rem;
-    cursor: pointer; transition: all 0.2s;
-    text-align: center; position: relative;
+    background: #1a1f2e;
+    border: 2px solid #2a3142;
+    border-radius: 8px;
+    padding: 1.25rem 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    position: relative;
     overflow: hidden;
     min-height: 90px;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.4rem;
+    color: #e4e7eb;
   }
   /* Team-aware hover: blue for Team A, orange for Team B */
   .veto-maps.turn-a .veto-map-card:hover:not(.banned):not(.picked):not(.disabled) {
-    border-color: #3b82f6; transform: translateY(-3px);
-    box-shadow: 0 6px 20px rgba(59,130,246,0.18);
-    background: rgba(59,130,246,0.06);
+    border-color: #3b82f6 !important;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(59,130,246,0.25);
+    background: rgba(59,130,246,0.08);
   }
   .veto-maps.turn-b .veto-map-card:hover:not(.banned):not(.picked):not(.disabled) {
-    border-color: #f97316; transform: translateY(-3px);
-    box-shadow: 0 6px 20px rgba(249,115,22,0.18);
-    background: rgba(249,115,22,0.06);
+    border-color: #f97316 !important;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(249,115,22,0.25);
+    background: rgba(249,115,22,0.08);
   }
   .veto-map-card.disabled { cursor: not-allowed; opacity: 0.4; }
   .veto-map-card.banned {
-    cursor: default; border-color: rgba(239,68,68,0.3);
-    background: rgba(239,68,68,0.08);
+    cursor: default;
+    border-color: rgba(239,68,68,0.4);
+    background: rgba(239,68,68,0.1);
   }
   .veto-map-card.picked {
-    cursor: default; border-color: rgba(34,197,94,0.3);
-    background: rgba(34,197,94,0.08);
+    cursor: default;
+    border-color: rgba(34,197,94,0.4);
+    background: rgba(34,197,94,0.1);
   }
   .veto-map-card.decider {
-    cursor: default; border-color: #facc15;
-    background: rgba(250,204,21,0.08);
+    cursor: default;
+    border-color: #facc15;
+    background: rgba(250,204,21,0.1);
   }
-  .veto-map-name { font-weight: 700; font-size: 1rem; }
+  .veto-map-name { font-weight: 700; font-size: 1rem; color: #e4e7eb; }
   .veto-map-card.banned .veto-map-name { text-decoration: line-through; opacity: 0.6; }
   .veto-map-status {
     font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
     letter-spacing: 0.03em;
   }
-  .veto-map-card.banned .veto-map-status { color: var(--loss); }
-  .veto-map-card.picked .veto-map-status { color: var(--win); }
+  .veto-map-card.banned .veto-map-status { color: #ef4444; }
+  .veto-map-card.picked .veto-map-status { color: #22c55e; }
   .veto-map-card.decider .veto-map-status { color: #facc15; }
-  /* Team-colored status badges on map cards */
   .veto-map-card.banned .veto-map-status::before { content: '✕ '; }
   .veto-map-card.picked .veto-map-status::before { content: '✓ '; }
   .veto-map-card.decider .veto-map-status::before { content: '★ '; }
 
-  /* ===== Veto history ===== */
-  .veto-history { margin-bottom: 2rem; }
-  .veto-history h3 { font-size: 1rem; margin-bottom: 0.75rem; color: var(--text-secondary); }
-  .veto-history-list {
-    display: flex; flex-direction: column; gap: 0.5rem;
-  }
-  .veto-history-item {
-    display: flex; align-items: center; gap: 0.75rem;
-    padding: 0.65rem 1rem; margin-bottom: 0;
-    background: var(--bg-card); border: 1px solid var(--border);
-    border-radius: var(--radius); font-size: 0.85rem;
-    transition: all 0.2s;
-    border-left: 3px solid transparent;
-  }
-  .veto-history-item:hover { transform: translateX(4px); }
-  .veto-history-item.team-a-row { border-left-color: #3b82f6; background: rgba(59,130,246,0.04); }
-  .veto-history-item.team-b-row { border-left-color: #f97316; background: rgba(249,115,22,0.04); }
-  .veto-history-item.voided { opacity: 0.55; border-left-color: var(--loss) !important; background: rgba(239,68,68,0.04) !important; }
-  .veto-history-item .h-step-num {
-    width: 24px; height: 24px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 0.7rem; font-weight: 800; flex-shrink: 0;
-    background: rgba(255,255,255,0.06); color: var(--text-muted);
-  }
-  .veto-history-item.team-a-row .h-step-num { background: rgba(59,130,246,0.15); color: #60a5fa; }
-  .veto-history-item.team-b-row .h-step-num { background: rgba(249,115,22,0.15); color: #fb923c; }
-  .veto-history-item .h-team { font-weight: 800; }
-  .veto-history-item .h-team.a { color: #60a5fa; }
-  .veto-history-item .h-team.b { color: #fb923c; }
-  .veto-history-item .h-action {
-    color: var(--text-secondary); font-size: 0.8rem;
-    padding: 0.1rem 0.4rem; border-radius: 4px;
-    background: rgba(255,255,255,0.04);
-  }
-  .veto-history-item .h-action.ban { color: var(--loss); }
-  .veto-history-item .h-action.pick { color: var(--win); }
-  .veto-history-item .h-map { font-weight: 700; color: var(--accent); }
-  .veto-history-item .h-void { color: var(--loss); font-weight: 600; font-style: italic; }
-
   /* ===== Buttons ===== */
   .veto-btn {
-    background: var(--accent); color: #fff; border: none;
-    padding: 0.6rem 1.5rem; border-radius: var(--radius);
+    background: #ff4d2e; color: #fff; border: none;
+    padding: 0.6rem 1.5rem; border-radius: 8px;
     font-size: 0.95rem; font-weight: 700; cursor: pointer;
     transition: background 0.2s;
   }
-  .veto-btn:hover { background: var(--accent-hover); }
-  .veto-btn-secondary { background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border); }
-  .veto-btn-secondary:hover { border-color: var(--accent); background: var(--bg-card-hover); }
+  .veto-btn:hover { background: #ff6b50; }
+  .veto-btn-secondary {
+    background: #1a1f2e; color: #e4e7eb; border: 1px solid #2a3142;
+  }
+  .veto-btn-secondary:hover { border-color: #ff4d2e; background: #222938; }
 
   /* ===== Toast ===== */
   .veto-toast {
     position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
     background: rgba(239,68,68,0.95); color: #fff;
-    padding: 0.75rem 1.5rem; border-radius: var(--radius);
+    padding: 0.75rem 1.5rem; border-radius: 8px;
     font-weight: 700; font-size: 0.9rem; z-index: 1000;
     box-shadow: 0 4px 20px rgba(0,0,0,0.3);
     opacity: 0; transition: opacity 0.3s;
@@ -427,8 +405,8 @@ const matchData = matches.map(m => {
   .veto-toast.show { opacity: 1; }
 
   /* ===== Wheel ===== */
-  .wheel-title { text-align: center; margin-bottom: 0.5rem; }
-  .wheel-subtitle { text-align: center; color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9rem; }
+  .wheel-title { text-align: center; margin-bottom: 0.5rem; color: #e4e7eb; }
+  .wheel-subtitle { text-align: center; color: #9ca3af; margin-bottom: 1.5rem; font-size: 0.9rem; }
   .wheel-container {
     position: relative; width: 320px; height: 320px;
     margin: 0 auto 1.5rem;
@@ -437,7 +415,7 @@ const matchData = matches.map(m => {
     position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
     width: 0; height: 0;
     border-left: 12px solid transparent; border-right: 12px solid transparent;
-    border-top: 20px solid var(--accent);
+    border-top: 20px solid #ff4d2e;
     z-index: 10; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
   }
   #wheel-canvas {
@@ -446,59 +424,90 @@ const matchData = matches.map(m => {
   .wheel-btn { display: block; margin: 0 auto; }
 
   /* ===== Results ===== */
-  .results-title { text-align: center; margin-bottom: 1.5rem; }
+  .results-title {
+    text-align: center; margin-bottom: 1.5rem;
+    color: #e4e7eb;
+  }
   .results-maps {
     display: flex; flex-direction: column; gap: 1rem;
     margin-bottom: 2rem;
   }
   .result-map-card {
     display: flex; align-items: center; gap: 1rem;
-    padding: 1.25rem 1.5rem; border-radius: var(--radius);
-    background: var(--bg-card); border: 1px solid var(--border);
-    border-left: 4px solid var(--border);
+    padding: 1.25rem 1.5rem; border-radius: 8px;
+    background: #1a1f2e;
+    border: 1px solid #2a3142;
+    border-left: 4px solid #2a3142;
     transition: all 0.2s;
+    color: #e4e7eb;
   }
-  .result-map-card:hover { transform: translateX(4px); box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
-  .result-map-card.team-a-pick { border-left-color: #3b82f6; background: rgba(59,130,246,0.04); }
-  .result-map-card.team-b-pick { border-left-color: #f97316; background: rgba(249,115,22,0.04); }
-  .result-map-card.decider { border-color: #facc15; background: rgba(250,204,21,0.06); border-left: 4px solid #facc15; }
+  .result-map-card:hover { transform: translateX(4px); box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
+  .result-map-card.team-a-pick {
+    border-left-color: #3b82f6;
+    background: linear-gradient(90deg, rgba(59,130,246,0.08), #1a1f2e 60%);
+  }
+  .result-map-card.team-b-pick {
+    border-left-color: #f97316;
+    background: linear-gradient(90deg, rgba(249,115,22,0.08), #1a1f2e 60%);
+  }
+  .result-map-card.decider {
+    border-color: rgba(250,204,21,0.3);
+    border-left: 4px solid #facc15;
+    background: linear-gradient(90deg, rgba(250,204,21,0.08), #1a1f2e 60%);
+  }
   .result-map-card.voided-pick {
-    border-left-color: var(--loss);
+    border-left-color: #ef4444;
     opacity: 0.65;
+    background: linear-gradient(90deg, rgba(239,68,68,0.08), #1a1f2e 60%);
   }
-  .result-map-card.voided-pick .result-map-name { color: var(--loss); }
-  .result-map-card.voided-pick .result-map-num { background: rgba(239,68,68,0.15); color: var(--loss); }
+  .result-map-card.voided-pick .result-map-name { color: #ef4444; }
+  .result-map-card.voided-pick .result-map-num {
+    background: rgba(239,68,68,0.15); color: #ef4444;
+  }
   .result-map-num {
     width: 40px; height: 40px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
     font-weight: 800; font-size: 1.15rem; flex-shrink: 0;
-    background: var(--accent-dim); color: var(--accent);
+    background: rgba(255,77,46,0.15); color: #ff4d2e;
   }
-  .result-map-card.team-a-pick .result-map-num { background: rgba(59,130,246,0.15); color: #60a5fa; }
-  .result-map-card.team-b-pick .result-map-num { background: rgba(249,115,22,0.15); color: #fb923c; }
-  .result-map-card.decider .result-map-num { background: rgba(250,204,21,0.15); color: #facc15; }
+  .result-map-card.team-a-pick .result-map-num {
+    background: rgba(59,130,246,0.15); color: #60a5fa;
+  }
+  .result-map-card.team-b-pick .result-map-num {
+    background: rgba(249,115,22,0.15); color: #fb923c;
+  }
+  .result-map-card.decider .result-map-num {
+    background: rgba(250,204,21,0.15); color: #facc15;
+  }
   .result-map-info { flex: 1; }
-  .result-map-name { font-weight: 700; font-size: 1.1rem; }
-  .result-map-label { font-size: 0.8rem; color: var(--text-secondary); }
+  .result-map-name { font-weight: 700; font-size: 1.1rem; color: #e4e7eb; }
+  .result-map-label { font-size: 0.8rem; color: #9ca3af; }
   .result-map-label .pick-team { font-weight: 700; }
   .result-map-label .pick-team.a { color: #60a5fa; }
   .result-map-label .pick-team.b { color: #fb923c; }
-  .result-map-label .void-tag { color: var(--loss); font-weight: 600; }
+  .result-map-label .void-tag { color: #ef4444; font-weight: 600; }
 
   .results-banned { margin-bottom: 2rem; }
-  .results-banned h3 { font-size: 1rem; margin-bottom: 0.75rem; color: var(--text-secondary); }
+  .results-banned h3 {
+    font-size: 1rem; margin-bottom: 0.75rem; color: #9ca3af;
+  }
   .results-banned-list {
     display: flex; flex-wrap: wrap; gap: 0.5rem;
   }
   .banned-map-item {
     display: inline-flex; align-items: center; gap: 0.4rem;
-    padding: 0.4rem 0.8rem; margin: 0;
-    background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2);
-    border-radius: var(--radius); font-size: 0.82rem;
+    padding: 0.4rem 0.8rem;
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.25);
+    border-radius: 8px; font-size: 0.82rem;
     transition: all 0.2s;
     border-left: 3px solid transparent;
+    color: #e4e7eb;
   }
-  .banned-map-item:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(239,68,68,0.15); }
+  .banned-map-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(239,68,68,0.2);
+  }
   .banned-map-item.team-a-ban { border-left-color: #3b82f6; }
   .banned-map-item.team-b-ban { border-left-color: #f97316; }
   .banned-map-item .b-team { font-weight: 700; }
@@ -519,7 +528,7 @@ const matchData = matches.map(m => {
   }
 </style>
 
-<script is:global>
+<script is:inline>
   (function() {
     const matchData = JSON.parse(document.getElementById('match-data').textContent);
     const MAPS = JSON.parse(document.getElementById('maps-data').textContent);
@@ -621,7 +630,6 @@ const matchData = matches.map(m => {
       renderPicks();
       renderSteps();
       renderMaps();
-      renderHistory();
 
       if (state.currentStep >= VETO_STEPS.length) {
         state.phase = 'wheel';
@@ -717,7 +725,6 @@ const matchData = matches.map(m => {
       renderPrompt();
       renderMaps();
       renderTimer();
-      $('veto-history').style.display = 'none';
       $('veto-wheel-section').style.display = 'none';
       $('veto-results').style.display = 'none';
       startTimer();
@@ -772,11 +779,14 @@ const matchData = matches.map(m => {
     }
 
     function renderSteps() {
+      const tagA = state.match ? state.match.team1.tag : 'A';
+      const tagB = state.match ? state.match.team2.tag : 'B';
       const html = VETO_STEPS.map((step, i) => {
         const done = i < state.currentStep;
         const active = i === state.currentStep;
         const history = state.vetoHistory[i];
         const cls = `veto-step team-${step.team.toLowerCase()} ${active && state.phase === 'veto' ? 'active' : ''} ${done ? 'done' : ''}`;
+        const tag = step.team === 'A' ? tagA : tagB;
         let mapHtml = '';
         if (history) {
           mapHtml = history.voided
@@ -784,8 +794,8 @@ const matchData = matches.map(m => {
             : `<span class="step-map">${history.map}</span>`;
         }
         return `<div class="${cls}">
-          <span class="step-team">${step.team}</span>
-          <span class="step-action">${step.action === 'ban' ? 'Ban' : 'Pick'}</span>
+          <span class="step-team">${tag}</span>
+          <span class="step-action ${step.action}">${step.action === 'ban' ? 'Ban' : 'Pick'}</span>
           ${mapHtml}
         </div>`;
       }).join('') + `<div class="veto-step ${state.phase === 'wheel' ? 'active' : ''} ${state.phase === 'result' ? 'done' : ''}">
@@ -856,7 +866,6 @@ const matchData = matches.map(m => {
       renderPicks();
       renderSteps();
       renderMaps();
-      renderHistory();
 
       if (state.currentStep >= VETO_STEPS.length) {
         state.phase = 'wheel';
@@ -869,18 +878,6 @@ const matchData = matches.map(m => {
         renderPrompt();
         startTimer();
       }
-    }
-
-    function renderHistory() {
-      if (state.vetoHistory.length === 0) { $('veto-history').style.display = 'none'; return; }
-      $('veto-history').style.display = '';
-      const html = state.vetoHistory.map((h, i) => `<div class="veto-history-item team-${h.team.toLowerCase()}-row${h.voided ? ' voided' : ''}">
-        <span class="h-step-num">${i + 1}</span>
-        <span class="h-team ${h.team.toLowerCase()}">${h.team === 'A' ? state.match.team1.tag : state.match.team2.tag}</span>
-        <span class="h-action ${h.action}${h.voided ? ' ban' : ''}">${h.voided ? 'voided' : (h.action === 'ban' ? 'banned' : 'picked')}</span>
-        ${h.voided ? '<span class="h-void">No choice (time expired)</span>' : `<span class="h-map">${h.map}</span>`}
-      </div>`).join('');
-      $('veto-history-list').innerHTML = html;
     }
 
     function getRemainingMaps() {
