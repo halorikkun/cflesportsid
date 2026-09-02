@@ -67,38 +67,6 @@ function formatDate(d) {
   if (isNaN(date)) return d;
   return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
-
-// Build match card HTML as a reusable function
-function renderMatch(m) {
-  const isCompleted = m.data.status === 'completed';
-  const team1 = getTeam(m.data.team1);
-  const team2 = getTeam(m.data.team2);
-  const win1 = isCompleted && m.data.winner === m.data.team1;
-  const win2 = isCompleted && m.data.winner === m.data.team2;
-  return (
-    <div class={`bracket-match ${isCompleted ? '' : 'upcoming'}`} data-slot={m.data.bracketSlot || 0} data-round={m.data.round} data-match-id={m.id}>
-      <div class={`bracket-team-row ${win1 ? 'winner' : (win2 ? 'loser' : '')}`}>
-        <div class="bracket-team-info">
-          <span class="bracket-team-tag">{team1?.data.tag || 'TBD'}</span>
-          <span class="bracket-team-name">{team1?.data.name || 'TBD'}</span>
-        </div>
-        <span class="bracket-team-score">{isCompleted ? m.data.score1 : '–'}</span>
-      </div>
-      <div class={`bracket-team-row ${win2 ? 'winner' : (win1 ? 'loser' : '')}`}>
-        <div class="bracket-team-info">
-          <span class="bracket-team-tag">{team2?.data.tag || 'TBD'}</span>
-          <span class="bracket-team-name">{team2?.data.name || 'TBD'}</span>
-        </div>
-        <span class="bracket-team-score">{isCompleted ? m.data.score2 : '–'}</span>
-      </div>
-      {isCompleted && (
-        <div class="bracket-link">
-          <a href={`/matches/${m.id}`}>Details →</a>
-        </div>
-      )}
-    </div>
-  );
-}
 ---
 
 <Layout title={`CFL Esports ID - ${tournamentName}`} current="Tournaments">
@@ -131,7 +99,36 @@ function renderMatch(m) {
                   {dateStr && <div class="bracket-round-date">{dateStr}</div>}
                 </div>
                 <div class="bracket-round-matches">
-                  {roundMatches.map(m => renderMatch(m))}
+                  {roundMatches.map(m => {
+                    const isCompleted = m.data.status === 'completed';
+                    const team1 = getTeam(m.data.team1);
+                    const team2 = getTeam(m.data.team2);
+                    const win1 = isCompleted && m.data.winner === m.data.team1;
+                    const win2 = isCompleted && m.data.winner === m.data.team2;
+                    return (
+                      <div class={`bracket-match ${isCompleted ? '' : 'upcoming'}`} data-slot={m.data.bracketSlot || 0} data-round={m.data.round} data-match-id={m.id}>
+                        <div class={`bracket-team-row ${win1 ? 'winner' : (win2 ? 'loser' : '')}`}>
+                          <div class="bracket-team-info">
+                            <span class="bracket-team-tag">{team1?.data.tag || 'TBD'}</span>
+                            <span class="bracket-team-name">{team1?.data.name || 'TBD'}</span>
+                          </div>
+                          <span class="bracket-team-score">{isCompleted ? m.data.score1 : '–'}</span>
+                        </div>
+                        <div class={`bracket-team-row ${win2 ? 'winner' : (win1 ? 'loser' : '')}`}>
+                          <div class="bracket-team-info">
+                            <span class="bracket-team-tag">{team2?.data.tag || 'TBD'}</span>
+                            <span class="bracket-team-name">{team2?.data.name || 'TBD'}</span>
+                          </div>
+                          <span class="bracket-team-score">{isCompleted ? m.data.score2 : '–'}</span>
+                        </div>
+                        {isCompleted && (
+                          <div class="bracket-link">
+                            <a href={`/matches/${m.id}`}>Details →</a>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );
@@ -147,7 +144,36 @@ function renderMatch(m) {
           <div class="bracket-round-title">Bronze Match</div>
         </div>
         <div class="bracket-special-matches">
-          {specialMatches.map(m => renderMatch(m))}
+          {specialMatches.map(m => {
+            const isCompleted = m.data.status === 'completed';
+            const team1 = getTeam(m.data.team1);
+            const team2 = getTeam(m.data.team2);
+            const win1 = isCompleted && m.data.winner === m.data.team1;
+            const win2 = isCompleted && m.data.winner === m.data.team2;
+            return (
+              <div class={`bracket-match ${isCompleted ? '' : 'upcoming'}`} data-slot={m.data.bracketSlot || 0} data-round={m.data.round} data-match-id={m.id}>
+                <div class={`bracket-team-row ${win1 ? 'winner' : (win2 ? 'loser' : '')}`}>
+                  <div class="bracket-team-info">
+                    <span class="bracket-team-tag">{team1?.data.tag || 'TBD'}</span>
+                    <span class="bracket-team-name">{team1?.data.name || 'TBD'}</span>
+                  </div>
+                  <span class="bracket-team-score">{isCompleted ? m.data.score1 : '–'}</span>
+                </div>
+                <div class={`bracket-team-row ${win2 ? 'winner' : (win1 ? 'loser' : '')}`}>
+                  <div class="bracket-team-info">
+                    <span class="bracket-team-tag">{team2?.data.tag || 'TBD'}</span>
+                    <span class="bracket-team-name">{team2?.data.name || 'TBD'}</span>
+                  </div>
+                  <span class="bracket-team-score">{isCompleted ? m.data.score2 : '–'}</span>
+                </div>
+                {isCompleted && (
+                  <div class="bracket-link">
+                    <a href={`/matches/${m.id}`}>Details →</a>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     )}
@@ -358,7 +384,7 @@ function renderMatch(m) {
         // Draw path: horizontal → vertical → horizontal
         const path = document.createElementNS(NS, 'path');
         path.setAttribute('d', `M ${startX} ${startY} L ${midX} ${startY} L ${midX} ${endY} L ${endX} ${endY}`);
-        path.setAttribute('stroke', 'var(--border, #2a3142)');
+        path.setAttribute('stroke', '#2a3142');
         path.setAttribute('stroke-width', '2');
         path.setAttribute('fill', 'none');
         path.setAttribute('opacity', '0.6');
