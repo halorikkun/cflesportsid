@@ -43,6 +43,8 @@ const matchData = matches.map(m => {
       </select>
     </div>
 
+    <div class="veto-toast" id="veto-toast"></div>
+
     <div id="veto-interface" style="display:none;">
       <div class="veto-teams">
         <div class="veto-team team-a">
@@ -56,9 +58,50 @@ const matchData = matches.map(m => {
         </div>
       </div>
 
+      <!-- Team pick cards -->
+      <div class="veto-picks" id="veto-picks">
+        <div class="pick-card team-a" id="pick-card-a">
+          <div class="pick-card-top">
+            <span class="pick-team-tag" id="pick-tag-a"></span>
+            <span class="pick-card-label">Map Pick</span>
+          </div>
+          <div class="pick-map-name" id="pick-map-a">—</div>
+          <div class="pick-card-status" id="pick-status-a">Waiting…</div>
+        </div>
+        <div class="pick-card team-b" id="pick-card-b">
+          <div class="pick-card-top">
+            <span class="pick-team-tag" id="pick-tag-b"></span>
+            <span class="pick-card-label">Map Pick</span>
+          </div>
+          <div class="pick-map-name" id="pick-map-b">—</div>
+          <div class="pick-card-status" id="pick-status-b">Waiting…</div>
+        </div>
+      </div>
+
       <div class="veto-steps" id="veto-steps"></div>
 
       <div class="veto-action-prompt" id="veto-prompt"></div>
+
+      <!-- Timer -->
+      <div class="veto-timer" id="veto-timer" style="display:none;">
+        <div class="timer-row">
+          <div class="timer-block">
+            <span class="timer-label">Pick</span>
+            <div class="timer-bar-wrap">
+              <div class="timer-bar" id="pick-timer-bar"></div>
+            </div>
+            <span class="timer-value" id="pick-timer-value">20s</span>
+          </div>
+          <div class="timer-block">
+            <span class="timer-label">Reserve</span>
+            <div class="timer-bar-wrap">
+              <div class="timer-bar reserve" id="reserve-timer-bar"></div>
+            </div>
+            <span class="timer-value" id="reserve-timer-value">120s</span>
+          </div>
+        </div>
+        <div class="timer-status" id="timer-status"></div>
+      </div>
 
       <div class="veto-maps" id="veto-maps"></div>
 
@@ -107,9 +150,10 @@ const matchData = matches.map(m => {
   }
   .veto-select:focus { outline: none; border-color: var(--accent); }
 
+  /* ===== Team banners ===== */
   .veto-teams {
     display: flex; align-items: center; justify-content: center;
-    gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap;
+    gap: 1.5rem; margin-bottom: 1.5rem; flex-wrap: wrap;
   }
   .veto-team {
     display: flex; flex-direction: column; align-items: center; gap: 0.25rem;
@@ -117,13 +161,79 @@ const matchData = matches.map(m => {
     min-width: 160px;
   }
   .veto-team.team-a { background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.3); }
-  .veto-team.team-b { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); }
+  .veto-team.team-b { background: rgba(249,115,22,0.12); border: 1px solid rgba(249,115,22,0.3); }
   .veto-team-tag { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
   .team-a .veto-team-tag { color: #60a5fa; }
-  .team-b .veto-team-tag { color: #f87171; }
+  .team-b .veto-team-tag { color: #fb923c; }
   .veto-team-name { font-size: 1rem; font-weight: 700; }
   .veto-vs { font-size: 1.25rem; font-weight: 800; color: var(--text-muted); }
 
+  /* ===== Team pick cards ===== */
+  .veto-picks {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .pick-card {
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    border: 2px solid;
+    transition: all 0.25s;
+    text-align: center;
+  }
+  .pick-card.team-a {
+    border-color: rgba(59,130,246,0.25);
+    background: rgba(59,130,246,0.06);
+  }
+  .pick-card.team-b {
+    border-color: rgba(249,115,22,0.25);
+    background: rgba(249,115,22,0.06);
+  }
+  .pick-card.team-a.filled {
+    border-color: #3b82f6;
+    background: rgba(59,130,246,0.12);
+    box-shadow: 0 4px 20px rgba(59,130,246,0.15);
+  }
+  .pick-card.team-b.filled {
+    border-color: #f97316;
+    background: rgba(249,115,22,0.12);
+    box-shadow: 0 4px 20px rgba(249,115,22,0.15);
+  }
+  .pick-card.voided {
+    border-color: rgba(239,68,68,0.4) !important;
+    background: rgba(239,68,68,0.06) !important;
+    box-shadow: none !important;
+  }
+  .pick-card-top {
+    display: flex; align-items: center; justify-content: center;
+    gap: 0.5rem; margin-bottom: 0.75rem;
+  }
+  .pick-team-tag {
+    font-size: 0.75rem; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 0.05em; padding: 0.15rem 0.5rem; border-radius: 4px;
+    background: rgba(255,255,255,0.06);
+  }
+  .pick-card.team-a .pick-team-tag { color: #60a5fa; }
+  .pick-card.team-b .pick-team-tag { color: #fb923c; }
+  .pick-card-label {
+    font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--text-muted);
+  }
+  .pick-map-name {
+    font-size: 1.3rem; font-weight: 800; margin-bottom: 0.4rem;
+    color: var(--text-primary);
+  }
+  .pick-card.team-a.filled .pick-map-name { color: #60a5fa; }
+  .pick-card.team-b.filled .pick-map-name { color: #fb923c; }
+  .pick-card.voided .pick-map-name { color: var(--loss); }
+  .pick-card-status {
+    font-size: 0.75rem; font-weight: 600; color: var(--text-muted);
+  }
+  .pick-card.filled .pick-card-status { color: var(--win); }
+  .pick-card.voided .pick-card-status { color: var(--loss); }
+
+  /* ===== Veto step pills ===== */
   .veto-steps {
     display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center;
     margin-bottom: 1.5rem;
@@ -136,7 +246,7 @@ const matchData = matches.map(m => {
     transition: all 0.2s;
   }
   .veto-step.team-a { border-color: rgba(59,130,246,0.3); }
-  .veto-step.team-b { border-color: rgba(239,68,68,0.3); }
+  .veto-step.team-b { border-color: rgba(249,115,22,0.3); }
   .veto-step.active {
     transform: scale(1.05);
     box-shadow: 0 0 0 2px var(--accent);
@@ -145,35 +255,80 @@ const matchData = matches.map(m => {
   .veto-step.done { opacity: 0.6; }
   .veto-step .step-team { font-weight: 800; }
   .veto-step.team-a .step-team { color: #60a5fa; }
-  .veto-step.team-b .step-team { color: #f87171; }
+  .veto-step.team-b .step-team { color: #fb923c; }
   .veto-step .step-action { color: var(--text-secondary); }
   .veto-step .step-map { color: var(--accent); font-weight: 700; }
+  .veto-step .step-void { color: var(--loss); font-weight: 700; font-size: 0.7rem; }
 
   .veto-action-prompt {
-    text-align: center; margin-bottom: 1.5rem;
+    text-align: center; margin-bottom: 1rem;
     font-size: 1.1rem; font-weight: 700;
   }
   .veto-action-prompt .prompt-team { font-size: 1.2rem; }
   .veto-action-prompt .prompt-team.a { color: #60a5fa; }
-  .veto-action-prompt .prompt-team.b { color: #f87171; }
+  .veto-action-prompt .prompt-team.b { color: #fb923c; }
   .veto-action-prompt .prompt-action { color: var(--accent); }
 
+  /* ===== Timer ===== */
+  .veto-timer {
+    margin-bottom: 1.5rem;
+  }
+  .timer-row {
+    display: flex; gap: 1.5rem; justify-content: center; flex-wrap: wrap;
+  }
+  .timer-block {
+    display: flex; align-items: center; gap: 0.5rem;
+    flex: 1; max-width: 280px; min-width: 180px;
+  }
+  .timer-label {
+    font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+    color: var(--text-muted); white-space: nowrap;
+  }
+  .timer-bar-wrap {
+    flex: 1; height: 10px; background: rgba(255,255,255,0.06);
+    border-radius: 5px; overflow: hidden;
+  }
+  .timer-bar {
+    height: 100%; border-radius: 5px; width: 100%;
+    transition: width 1s linear, background 0.3s;
+  }
+  .timer-bar.green { background: #22c55e; }
+  .timer-bar.amber { background: #f59e0b; }
+  .timer-bar.red { background: #ef4444; }
+  .timer-bar.inactive { background: rgba(255,255,255,0.12); }
+  .timer-bar.red.active { animation: timer-pulse 0.5s infinite alternate; }
+  @keyframes timer-pulse { from { opacity: 0.5; } to { opacity: 1; } }
+  .timer-value {
+    font-size: 0.85rem; font-weight: 700; min-width: 38px; text-align: right;
+    color: var(--text-primary);
+  }
+  .timer-status {
+    text-align: center; font-size: 0.82rem; font-weight: 600; margin-top: 0.5rem;
+    min-height: 1.2rem;
+  }
+  .timer-status.pick { color: var(--text-secondary); }
+  .timer-status.reserve { color: #f59e0b; }
+  .timer-status.void { color: var(--loss); }
+
+  /* ===== Map cards grid ===== */
   .veto-maps {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    gap: 0.75rem;
+    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    gap: 1rem;
     margin-bottom: 2rem;
   }
   .veto-map-card {
     background: var(--bg-card); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 1rem;
+    border-radius: var(--radius); padding: 1.25rem 1rem;
     cursor: pointer; transition: all 0.2s;
     text-align: center; position: relative;
     overflow: hidden;
+    min-height: 90px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.4rem;
   }
   .veto-map-card:hover:not(.banned):not(.picked):not(.disabled) {
-    border-color: var(--accent); transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(255,77,46,0.12);
+    border-color: var(--accent); transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(255,77,46,0.12);
   }
   .veto-map-card.disabled { cursor: not-allowed; opacity: 0.4; }
   .veto-map-card.banned {
@@ -188,16 +343,17 @@ const matchData = matches.map(m => {
     cursor: default; border-color: #facc15;
     background: rgba(250,204,21,0.08);
   }
-  .veto-map-name { font-weight: 700; font-size: 0.95rem; }
+  .veto-map-name { font-weight: 700; font-size: 1rem; }
   .veto-map-card.banned .veto-map-name { text-decoration: line-through; opacity: 0.6; }
   .veto-map-status {
     font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-    margin-top: 0.4rem; letter-spacing: 0.03em;
+    letter-spacing: 0.03em;
   }
   .veto-map-card.banned .veto-map-status { color: var(--loss); }
   .veto-map-card.picked .veto-map-status { color: var(--win); }
   .veto-map-card.decider .veto-map-status { color: #facc15; }
 
+  /* ===== Veto history ===== */
   .veto-history { margin-bottom: 2rem; }
   .veto-history h3 { font-size: 1rem; margin-bottom: 0.75rem; }
   .veto-history-item {
@@ -206,12 +362,15 @@ const matchData = matches.map(m => {
     background: var(--bg-card); border: 1px solid var(--border);
     border-radius: 6px; font-size: 0.85rem;
   }
+  .veto-history-item.voided { opacity: 0.6; border-color: rgba(239,68,68,0.2); }
   .veto-history-item .h-team { font-weight: 800; }
   .veto-history-item .h-team.a { color: #60a5fa; }
-  .veto-history-item .h-team.b { color: #f87171; }
+  .veto-history-item .h-team.b { color: #fb923c; }
   .veto-history-item .h-action { color: var(--text-secondary); }
   .veto-history-item .h-map { font-weight: 700; color: var(--accent); }
+  .veto-history-item .h-void { color: var(--loss); font-weight: 600; font-style: italic; }
 
+  /* ===== Buttons ===== */
   .veto-btn {
     background: var(--accent); color: #fff; border: none;
     padding: 0.6rem 1.5rem; border-radius: var(--radius);
@@ -222,6 +381,19 @@ const matchData = matches.map(m => {
   .veto-btn-secondary { background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border); }
   .veto-btn-secondary:hover { border-color: var(--accent); background: var(--bg-card-hover); }
 
+  /* ===== Toast ===== */
+  .veto-toast {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+    background: rgba(239,68,68,0.95); color: #fff;
+    padding: 0.75rem 1.5rem; border-radius: var(--radius);
+    font-weight: 700; font-size: 0.9rem; z-index: 1000;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    opacity: 0; transition: opacity 0.3s;
+    pointer-events: none; display: none;
+  }
+  .veto-toast.show { opacity: 1; }
+
+  /* ===== Wheel ===== */
   .wheel-title { text-align: center; margin-bottom: 0.5rem; }
   .wheel-subtitle { text-align: center; color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9rem; }
   .wheel-container {
@@ -240,30 +412,41 @@ const matchData = matches.map(m => {
   }
   .wheel-btn { display: block; margin: 0 auto; }
 
+  /* ===== Results ===== */
   .results-title { text-align: center; margin-bottom: 1.5rem; }
   .results-maps {
-    display: flex; flex-direction: column; gap: 0.75rem;
+    display: flex; flex-direction: column; gap: 1rem;
     margin-bottom: 2rem;
   }
   .result-map-card {
     display: flex; align-items: center; gap: 1rem;
-    padding: 1rem 1.5rem; border-radius: var(--radius);
+    padding: 1.25rem 1.5rem; border-radius: var(--radius);
     background: var(--bg-card); border: 1px solid var(--border);
+    border-left: 4px solid var(--border);
   }
-  .result-map-card.decider { border-color: #facc15; background: rgba(250,204,21,0.06); }
+  .result-map-card.team-a-pick { border-left-color: #3b82f6; }
+  .result-map-card.team-b-pick { border-left-color: #f97316; }
+  .result-map-card.decider { border-color: #facc15; background: rgba(250,204,21,0.06); border-left: 4px solid #facc15; }
+  .result-map-card.voided-pick {
+    border-left-color: var(--loss);
+    opacity: 0.65;
+  }
+  .result-map-card.voided-pick .result-map-name { color: var(--loss); }
+  .result-map-card.voided-pick .result-map-num { background: rgba(239,68,68,0.15); color: var(--loss); }
   .result-map-num {
-    width: 36px; height: 36px; border-radius: 50%;
+    width: 40px; height: 40px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-weight: 800; font-size: 1.1rem; flex-shrink: 0;
+    font-weight: 800; font-size: 1.15rem; flex-shrink: 0;
     background: var(--accent-dim); color: var(--accent);
   }
   .result-map-card.decider .result-map-num { background: rgba(250,204,21,0.15); color: #facc15; }
   .result-map-info { flex: 1; }
-  .result-map-name { font-weight: 700; font-size: 1.05rem; }
+  .result-map-name { font-weight: 700; font-size: 1.1rem; }
   .result-map-label { font-size: 0.8rem; color: var(--text-secondary); }
   .result-map-label .pick-team { font-weight: 700; }
   .result-map-label .pick-team.a { color: #60a5fa; }
-  .result-map-label .pick-team.b { color: #f87171; }
+  .result-map-label .pick-team.b { color: #fb923c; }
+  .result-map-label .void-tag { color: var(--loss); font-weight: 600; }
 
   .results-banned { margin-bottom: 2rem; }
   .results-banned h3 { font-size: 1rem; margin-bottom: 0.75rem; }
@@ -275,15 +458,17 @@ const matchData = matches.map(m => {
   }
   .banned-map-item .b-team { font-weight: 700; }
   .banned-map-item .b-team.a { color: #60a5fa; }
-  .banned-map-item .b-team.b { color: #f87171; }
+  .banned-map-item .b-team.b { color: #fb923c; }
   .banned-map-item .b-map { text-decoration: line-through; opacity: 0.7; }
 
   .results-actions { display: flex; gap: 1rem; justify-content: center; }
 
   @media (max-width: 768px) {
+    .veto-picks { grid-template-columns: 1fr; }
     .veto-maps { grid-template-columns: repeat(2, 1fr); }
     .veto-teams { gap: 0.75rem; }
     .veto-team { min-width: 120px; padding: 0.75rem 1rem; }
+    .timer-block { max-width: 100%; min-width: 140px; }
     .wheel-container { width: 280px; height: 280px; }
     #wheel-canvas { width: 280px; height: 280px; }
   }
@@ -293,6 +478,10 @@ const matchData = matches.map(m => {
   (function() {
     const matchData = JSON.parse(document.getElementById('match-data').textContent);
     const MAPS = JSON.parse(document.getElementById('maps-data').textContent);
+
+    // ===== Timer config =====
+    const PICK_TIME = 20;       // seconds per turn
+    const RESERVE_TIME = 120;   // shared reserve pool
 
     const VETO_STEPS = [
       { team: 'A', action: 'ban' },
@@ -314,7 +503,12 @@ const matchData = matches.map(m => {
       mapStates: {},
       vetoHistory: [],
       picks: { A: null, B: null, decider: null },
+      voidedPicks: { A: false, B: false },
       phase: 'select',
+      pickTimer: PICK_TIME,
+      reserveTimer: RESERVE_TIME,
+      timerPhase: null,
+      timerInterval: null,
     };
 
     const $ = id => document.getElementById(id);
@@ -326,9 +520,137 @@ const matchData = matches.map(m => {
       $('reset-btn').addEventListener('click', resetVeto);
     }
 
+    // ===== Timer functions =====
+    function startTimer() {
+      stopTimer();
+      if (state.phase !== 'veto') return;
+      state.pickTimer = PICK_TIME;
+      state.timerPhase = 'pick';
+      renderTimer();
+      state.timerInterval = setInterval(tick, 1000);
+    }
+
+    function stopTimer() {
+      if (state.timerInterval) {
+        clearInterval(state.timerInterval);
+        state.timerInterval = null;
+      }
+    }
+
+    function tick() {
+      if (state.timerPhase === 'pick') {
+        state.pickTimer--;
+        if (state.pickTimer <= 0) {
+          state.pickTimer = 0;
+          if (state.reserveTimer > 0) {
+            state.timerPhase = 'reserve';
+          } else {
+            voidCurrentStep();
+            return;
+          }
+        }
+      } else if (state.timerPhase === 'reserve') {
+        state.reserveTimer--;
+        if (state.reserveTimer <= 0) {
+          state.reserveTimer = 0;
+          voidCurrentStep();
+          return;
+        }
+      }
+      renderTimer();
+    }
+
+    function voidCurrentStep() {
+      stopTimer();
+      const step = VETO_STEPS[state.currentStep];
+      if (!step) return;
+      const teamName = step.team === 'A' ? state.match.team1.name : state.match.team2.name;
+
+      state.vetoHistory.push({ map: null, team: step.team, action: step.action, voided: true });
+      if (step.action === 'pick') {
+        state.voidedPicks[step.team] = true;
+      }
+      state.currentStep++;
+
+      showToast(`⏱️ Time up — ${teamName}'s ${step.action} voided`);
+      renderPicks();
+      renderSteps();
+      renderMaps();
+      renderHistory();
+
+      if (state.currentStep >= VETO_STEPS.length) {
+        state.phase = 'wheel';
+        state.timerPhase = null;
+        renderSteps();
+        renderPrompt();
+        renderTimer();
+        showWheel();
+      } else {
+        renderPrompt();
+        startTimer();
+      }
+    }
+
+    function renderTimer() {
+      const timerEl = $('veto-timer');
+      if (state.phase !== 'veto') {
+        timerEl.style.display = 'none';
+        return;
+      }
+      timerEl.style.display = '';
+
+      // Pick timer bar
+      const pickPct = (state.pickTimer / PICK_TIME) * 100;
+      const pickBar = $('pick-timer-bar');
+      pickBar.style.width = pickPct + '%';
+      pickBar.className = 'timer-bar ' + getTimerColorClass(pickPct, state.timerPhase === 'pick');
+      $('pick-timer-value').textContent = state.pickTimer + 's';
+
+      // Reserve timer bar
+      const reservePct = (state.reserveTimer / RESERVE_TIME) * 100;
+      const reserveBar = $('reserve-timer-bar');
+      reserveBar.style.width = reservePct + '%';
+      reserveBar.className = 'timer-bar reserve ' + getTimerColorClass(reservePct, state.timerPhase === 'reserve');
+      $('reserve-timer-value').textContent = state.reserveTimer + 's';
+
+      // Status text
+      const status = $('timer-status');
+      if (state.timerPhase === 'pick') {
+        status.textContent = 'Pick phase — choose now!';
+        status.className = 'timer-status pick';
+      } else if (state.timerPhase === 'reserve') {
+        status.textContent = '⚠ Reserve phase — hurry!';
+        status.className = 'timer-status reserve';
+      } else {
+        status.textContent = '';
+        status.className = 'timer-status';
+      }
+    }
+
+    function getTimerColorClass(pct, active) {
+      if (!active) return 'inactive';
+      if (pct > 50) return 'green';
+      if (pct > 25) return 'amber';
+      return 'red';
+    }
+
+    function showToast(msg) {
+      const toast = $('veto-toast');
+      toast.textContent = msg;
+      toast.style.display = '';
+      requestAnimationFrame(() => toast.classList.add('show'));
+      clearTimeout(toast._timeout);
+      toast._timeout = setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => { toast.style.display = 'none'; }, 300);
+      }, 2500);
+    }
+
+    // ===== Veto flow =====
     function onMatchSelect(e) {
       const id = e.target.value;
       if (!id) return;
+      stopTimer();
       state = {
         matchId: id,
         match: matchData.find(m => m.id === id),
@@ -336,16 +658,24 @@ const matchData = matches.map(m => {
         mapStates: {},
         vetoHistory: [],
         picks: { A: null, B: null, decider: null },
+        voidedPicks: { A: false, B: false },
         phase: 'veto',
+        pickTimer: PICK_TIME,
+        reserveTimer: RESERVE_TIME,
+        timerPhase: null,
+        timerInterval: null,
       };
       MAPS.forEach(m => state.mapStates[m] = 'available');
       showVetoInterface();
+      renderPicks();
       renderSteps();
       renderPrompt();
       renderMaps();
+      renderTimer();
       $('veto-history').style.display = 'none';
       $('veto-wheel-section').style.display = 'none';
       $('veto-results').style.display = 'none';
+      startTimer();
     }
 
     function showVetoInterface() {
@@ -354,6 +684,46 @@ const matchData = matches.map(m => {
       $('team-a-name').textContent = state.match.team1.name;
       $('team-b-tag').textContent = state.match.team2.tag;
       $('team-b-name').textContent = state.match.team2.name;
+      $('pick-tag-a').textContent = state.match.team1.tag;
+      $('pick-tag-b').textContent = state.match.team2.tag;
+    }
+
+    function renderPicks() {
+      // Team A pick card
+      const cardA = $('pick-card-a');
+      const mapA = $('pick-map-a');
+      const statusA = $('pick-status-a');
+      cardA.classList.remove('filled', 'voided');
+      if (state.voidedPicks.A) {
+        cardA.classList.add('voided');
+        mapA.textContent = 'VOID';
+        statusA.textContent = '⏱ No pick (time expired)';
+      } else if (state.picks.A) {
+        cardA.classList.add('filled');
+        mapA.textContent = state.picks.A;
+        statusA.textContent = '✓ Picked';
+      } else {
+        mapA.textContent = '—';
+        statusA.textContent = 'Waiting…';
+      }
+
+      // Team B pick card
+      const cardB = $('pick-card-b');
+      const mapB = $('pick-map-b');
+      const statusB = $('pick-status-b');
+      cardB.classList.remove('filled', 'voided');
+      if (state.voidedPicks.B) {
+        cardB.classList.add('voided');
+        mapB.textContent = 'VOID';
+        statusB.textContent = '⏱ No pick (time expired)';
+      } else if (state.picks.B) {
+        cardB.classList.add('filled');
+        mapB.textContent = state.picks.B;
+        statusB.textContent = '✓ Picked';
+      } else {
+        mapB.textContent = '—';
+        statusB.textContent = 'Waiting…';
+      }
     }
 
     function renderSteps() {
@@ -361,8 +731,13 @@ const matchData = matches.map(m => {
         const done = i < state.currentStep;
         const active = i === state.currentStep;
         const history = state.vetoHistory[i];
-        const cls = `veto-step team-${step.team.toLowerCase()} ${active ? 'active' : ''} ${done ? 'done' : ''}`;
-        const mapHtml = history ? `<span class="step-map">${history.map}</span>` : '';
+        const cls = `veto-step team-${step.team.toLowerCase()} ${active && state.phase === 'veto' ? 'active' : ''} ${done ? 'done' : ''}`;
+        let mapHtml = '';
+        if (history) {
+          mapHtml = history.voided
+            ? `<span class="step-void">VOID</span>`
+            : `<span class="step-map">${history.map}</span>`;
+        }
         return `<div class="${cls}">
           <span class="step-team">${step.team}</span>
           <span class="step-action">${step.action === 'ban' ? 'Ban' : 'Pick'}</span>
@@ -415,32 +790,37 @@ const matchData = matches.map(m => {
       const step = VETO_STEPS[state.currentStep];
       if (!step) return;
 
+      stopTimer();
       state.mapStates[map] = step.action === 'ban' ? 'banned' : 'picked';
-      state.vetoHistory.push({ map, team: step.team, action: step.action });
+      state.vetoHistory.push({ map, team: step.team, action: step.action, voided: false });
       if (step.action === 'pick') state.picks[step.team] = map;
       state.currentStep++;
 
+      renderPicks();
       renderSteps();
       renderMaps();
       renderHistory();
 
       if (state.currentStep >= VETO_STEPS.length) {
         state.phase = 'wheel';
+        state.timerPhase = null;
         renderSteps();
         renderPrompt();
+        renderTimer();
         showWheel();
       } else {
         renderPrompt();
+        startTimer();
       }
     }
 
     function renderHistory() {
       if (state.vetoHistory.length === 0) { $('veto-history').style.display = 'none'; return; }
       $('veto-history').style.display = '';
-      const html = state.vetoHistory.map(h => `<div class="veto-history-item">
+      const html = state.vetoHistory.map(h => `<div class="veto-history-item${h.voided ? ' voided' : ''}">
         <span class="h-team ${h.team.toLowerCase()}">${h.team === 'A' ? state.match.team1.tag : state.match.team2.tag}</span>
-        <span class="h-action">${h.action === 'ban' ? 'banned' : 'picked'}</span>
-        <span class="h-map">${h.map}</span>
+        <span class="h-action">${h.voided ? 'voided' : (h.action === 'ban' ? 'banned' : 'picked')}</span>
+        ${h.voided ? '<span class="h-void">No choice (time expired)</span>' : `<span class="h-map">${h.map}</span>`}
       </div>`).join('');
       $('veto-history-list').innerHTML = html;
     }
@@ -522,6 +902,7 @@ const matchData = matches.map(m => {
         state.mapStates[winner] = 'decider';
         state.picks.decider = winner;
         state.phase = 'result';
+        renderPicks();
         renderSteps();
         renderMaps();
         showResults();
@@ -532,20 +913,29 @@ const matchData = matches.map(m => {
       $('veto-wheel-section').style.display = 'none';
       $('veto-results').style.display = '';
 
-      const mapsHtml = [
-        { num: 1, map: state.picks.A, label: `<span class="pick-team a">${state.match.team1.name}</span>'s Pick`, cls: '' },
-        { num: 2, map: state.picks.B, label: `<span class="pick-team b">${state.match.team2.name}</span>'s Pick`, cls: '' },
-        { num: 3, map: state.picks.decider, label: 'Decider (Wheel)', cls: 'decider' },
-      ].map(r => `<div class="result-map-card ${r.cls}">
-        <div class="result-map-num">${r.num}</div>
-        <div class="result-map-info">
-          <div class="result-map-name">${r.map || '—'}</div>
-          <div class="result-map-label">${r.label}</div>
-        </div>
-      </div>`).join('');
+      const pickResults = [
+        { num: 1, map: state.picks.A, voided: state.voidedPicks.A, labelHtml: `<span class="pick-team a">${state.match.team1.name}</span>'s Pick`, cls: 'team-a-pick' },
+        { num: 2, map: state.picks.B, voided: state.voidedPicks.B, labelHtml: `<span class="pick-team b">${state.match.team2.name}</span>'s Pick`, cls: 'team-b-pick' },
+        { num: 3, map: state.picks.decider, voided: false, labelHtml: 'Decider (Wheel)', cls: 'decider' },
+      ];
+
+      const mapsHtml = pickResults.map(r => {
+        const cls = r.voided ? 'voided-pick' : r.cls;
+        const name = r.voided ? 'Void' : (r.map || '—');
+        const label = r.voided
+          ? `${r.labelHtml} — <span class="void-tag">No pick (time expired)</span>`
+          : r.labelHtml;
+        return `<div class="result-map-card ${cls}">
+          <div class="result-map-num">${r.num}</div>
+          <div class="result-map-info">
+            <div class="result-map-name">${name}</div>
+            <div class="result-map-label">${label}</div>
+          </div>
+        </div>`;
+      }).join('');
       $('results-maps').innerHTML = mapsHtml;
 
-      const bannedHtml = state.vetoHistory.filter(h => h.action === 'ban').map(h =>
+      const bannedHtml = state.vetoHistory.filter(h => h.action === 'ban' && !h.voided).map(h =>
         `<div class="banned-map-item">
           <span class="b-team ${h.team.toLowerCase()}">${h.team === 'A' ? state.match.team1.tag : state.match.team2.tag}</span>
           <span class="b-map">${h.map}</span>
@@ -555,36 +945,50 @@ const matchData = matches.map(m => {
     }
 
     function copyResult() {
+      const voidedSteps = state.vetoHistory.filter(h => h.voided);
       const lines = [
         `Map Veto Result`,
         `${state.match.tournament} — ${state.match.round}`,
         `${state.match.team1.name} vs ${state.match.team2.name}`,
         '',
         'Maps to Play:',
-        `1. ${state.picks.A} — ${state.match.team1.name}'s Pick`,
-        `2. ${state.picks.B} — ${state.match.team2.name}'s Pick`,
-        `3. ${state.picks.decider} — Decider`,
+        `1. ${state.voidedPicks.A ? 'VOID (no pick)' : state.picks.A || '—'} — ${state.match.team1.name}'s Pick${state.voidedPicks.A ? ' (time expired)' : ''}`,
+        `2. ${state.voidedPicks.B ? 'VOID (no pick)' : state.picks.B || '—'} — ${state.match.team2.name}'s Pick${state.voidedPicks.B ? ' (time expired)' : ''}`,
+        `3. ${state.picks.decider || '—'} — Decider`,
         '',
         'Banned Maps:',
-        ...state.vetoHistory.filter(h => h.action === 'ban').map(h =>
+        ...state.vetoHistory.filter(h => h.action === 'ban' && !h.voided).map(h =>
           `- ${h.map} (${h.team === 'A' ? state.match.team1.name : state.match.team2.name})`
         ),
-      ].join('\n');
-      navigator.clipboard.writeText(lines).then(() => {
+      ];
+      if (voidedSteps.length > 0) {
+        lines.push('', 'Voided Steps:');
+        lines.push(...voidedSteps.map(h =>
+          `- ${h.team === 'A' ? state.match.team1.name : state.match.team2.name} ${h.action} (time expired)`
+        ));
+      }
+      navigator.clipboard.writeText(lines.join('\n')).then(() => {
         $('copy-btn').textContent = '✓ Copied!';
         setTimeout(() => { $('copy-btn').textContent = '📋 Copy Result'; }, 2000);
       });
     }
 
     function resetVeto() {
+      stopTimer();
       state = {
         matchId: null, match: null, currentStep: 0,
         mapStates: {}, vetoHistory: [],
         picks: { A: null, B: null, decider: null },
+        voidedPicks: { A: false, B: false },
         phase: 'select',
+        pickTimer: PICK_TIME,
+        reserveTimer: RESERVE_TIME,
+        timerPhase: null,
+        timerInterval: null,
       };
       $('match-select').value = '';
       $('veto-interface').style.display = 'none';
+      $('veto-timer').style.display = 'none';
       $('veto-wheel-section').style.display = 'none';
       $('veto-results').style.display = 'none';
       $('wheel-canvas').style.transform = '';
