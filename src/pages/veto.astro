@@ -1,0 +1,597 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+
+const matches = await getCollection('matches');
+const teams = await getCollection('teams');
+const teamsMap = new Map(teams.map(t => [t.id, t]));
+
+// ===== EDIT: Your competitive map pool =====
+const MAPS = [
+  'Black Widow', 'Port', 'Mexico', 'Ankara',
+  'Bazaar', 'Desert', 'Factory', 'Graveyard',
+  'Kasaba', 'Ruins', 'Seaside', 'Temple'
+];
+
+const matchData = matches.map(m => {
+  const t1 = teamsMap.get(m.data.team1);
+  const t2 = teamsMap.get(m.data.team2);
+  return {
+    id: m.id,
+    tournament: m.data.tournament,
+    round: m.data.round,
+    team1: { name: t1?.data.name || m.data.team1, tag: t1?.data.tag || '?' },
+    team2: { name: t2?.data.name || m.data.team2, tag: t2?.data.tag || '?' },
+    status: m.data.status,
+  };
+});
+---
+
+<Layout title="CFL Esports ID - Map Veto Tool" current="Veto">
+  <div class="container">
+    <div class="page-header">
+      <h1>Map Veto Tool</h1>
+      <p>Select a match and run the map veto process</p>
+    </div>
+
+    <div class="veto-select-wrap">
+      <select id="match-select" class="veto-select">
+        <option value="">— Select a match —</option>
+        {matchData.map(m => (
+          <option value={m.id}>{m.tournament} · {m.round} · {m.team1.name} vs {m.team2.name}</option>
+        ))}
+      </select>
+    </div>
+
+    <div id="veto-interface" style="display:none;">
+      <div class="veto-teams">
+        <div class="veto-team team-a">
+          <span class="veto-team-tag" id="team-a-tag"></span>
+          <span class="veto-team-name" id="team-a-name"></span>
+        </div>
+        <div class="veto-vs">VS</div>
+        <div class="veto-team team-b">
+          <span class="veto-team-tag" id="team-b-tag"></span>
+          <span class="veto-team-name" id="team-b-name"></span>
+        </div>
+      </div>
+
+      <div class="veto-steps" id="veto-steps"></div>
+
+      <div class="veto-action-prompt" id="veto-prompt"></div>
+
+      <div class="veto-maps" id="veto-maps"></div>
+
+      <div class="veto-history" id="veto-history" style="display:none;">
+        <h3>Veto History</h3>
+        <div id="veto-history-list"></div>
+      </div>
+    </div>
+
+    <div id="veto-wheel-section" style="display:none;">
+      <h2 class="wheel-title">Decider Map — Spin the Wheel!</h2>
+      <p class="wheel-subtitle">Remaining maps go into the wheel. The one it lands on will be the decider.</p>
+      <div class="wheel-container">
+        <div class="wheel-pointer"></div>
+        <canvas id="wheel-canvas" width="320" height="320"></canvas>
+      </div>
+      <button id="spin-btn" class="veto-btn wheel-btn">🎡 Spin the Wheel</button>
+    </div>
+
+    <div id="veto-results" style="display:none;">
+      <h2 class="results-title">Veto Results</h2>
+      <div class="results-maps" id="results-maps"></div>
+      <div class="results-banned">
+        <h3>Banned Maps</h3>
+        <div id="results-banned-list"></div>
+      </div>
+      <div class="results-actions">
+        <button id="copy-btn" class="veto-btn">📋 Copy Result</button>
+        <button id="reset-btn" class="veto-btn veto-btn-secondary">↻ New Veto</button>
+      </div>
+    </div>
+  </div>
+</Layout>
+
+<script type="application/json" id="match-data" set:html={JSON.stringify(matchData)} />
+<script type="application/json" id="maps-data" set:html={JSON.stringify(MAPS)} />
+
+<style>
+  .veto-select-wrap { margin-bottom: 2rem; }
+  .veto-select {
+    width: 100%; max-width: 500px;
+    background: var(--bg-card); border: 1px solid var(--border);
+    color: var(--text-primary);
+    padding: 0.6rem 0.85rem; border-radius: var(--radius);
+    font-size: 0.95rem; font-weight: 600; cursor: pointer;
+  }
+  .veto-select:focus { outline: none; border-color: var(--accent); }
+
+  .veto-teams {
+    display: flex; align-items: center; justify-content: center;
+    gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap;
+  }
+  .veto-team {
+    display: flex; flex-direction: column; align-items: center; gap: 0.25rem;
+    padding: 1rem 1.5rem; border-radius: var(--radius);
+    min-width: 160px;
+  }
+  .veto-team.team-a { background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.3); }
+  .veto-team.team-b { background: rgba(239,68,68,0.12); border: 1px solid rgba(239,68,68,0.3); }
+  .veto-team-tag { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
+  .team-a .veto-team-tag { color: #60a5fa; }
+  .team-b .veto-team-tag { color: #f87171; }
+  .veto-team-name { font-size: 1rem; font-weight: 700; }
+  .veto-vs { font-size: 1.25rem; font-weight: 800; color: var(--text-muted); }
+
+  .veto-steps {
+    display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center;
+    margin-bottom: 1.5rem;
+  }
+  .veto-step {
+    display: flex; align-items: center; gap: 0.35rem;
+    padding: 0.35rem 0.7rem; border-radius: 6px;
+    font-size: 0.8rem; font-weight: 600;
+    border: 1px solid var(--border); background: var(--bg-card);
+    transition: all 0.2s;
+  }
+  .veto-step.team-a { border-color: rgba(59,130,246,0.3); }
+  .veto-step.team-b { border-color: rgba(239,68,68,0.3); }
+  .veto-step.active {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 2px var(--accent);
+    border-color: var(--accent);
+  }
+  .veto-step.done { opacity: 0.6; }
+  .veto-step .step-team { font-weight: 800; }
+  .veto-step.team-a .step-team { color: #60a5fa; }
+  .veto-step.team-b .step-team { color: #f87171; }
+  .veto-step .step-action { color: var(--text-secondary); }
+  .veto-step .step-map { color: var(--accent); font-weight: 700; }
+
+  .veto-action-prompt {
+    text-align: center; margin-bottom: 1.5rem;
+    font-size: 1.1rem; font-weight: 700;
+  }
+  .veto-action-prompt .prompt-team { font-size: 1.2rem; }
+  .veto-action-prompt .prompt-team.a { color: #60a5fa; }
+  .veto-action-prompt .prompt-team.b { color: #f87171; }
+  .veto-action-prompt .prompt-action { color: var(--accent); }
+
+  .veto-maps {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+  }
+  .veto-map-card {
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1rem;
+    cursor: pointer; transition: all 0.2s;
+    text-align: center; position: relative;
+    overflow: hidden;
+  }
+  .veto-map-card:hover:not(.banned):not(.picked):not(.disabled) {
+    border-color: var(--accent); transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(255,77,46,0.12);
+  }
+  .veto-map-card.disabled { cursor: not-allowed; opacity: 0.4; }
+  .veto-map-card.banned {
+    cursor: default; border-color: rgba(239,68,68,0.3);
+    background: rgba(239,68,68,0.08);
+  }
+  .veto-map-card.picked {
+    cursor: default; border-color: rgba(34,197,94,0.3);
+    background: rgba(34,197,94,0.08);
+  }
+  .veto-map-card.decider {
+    cursor: default; border-color: #facc15;
+    background: rgba(250,204,21,0.08);
+  }
+  .veto-map-name { font-weight: 700; font-size: 0.95rem; }
+  .veto-map-card.banned .veto-map-name { text-decoration: line-through; opacity: 0.6; }
+  .veto-map-status {
+    font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+    margin-top: 0.4rem; letter-spacing: 0.03em;
+  }
+  .veto-map-card.banned .veto-map-status { color: var(--loss); }
+  .veto-map-card.picked .veto-map-status { color: var(--win); }
+  .veto-map-card.decider .veto-map-status { color: #facc15; }
+
+  .veto-history { margin-bottom: 2rem; }
+  .veto-history h3 { font-size: 1rem; margin-bottom: 0.75rem; }
+  .veto-history-item {
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.5rem 0.75rem; margin-bottom: 0.4rem;
+    background: var(--bg-card); border: 1px solid var(--border);
+    border-radius: 6px; font-size: 0.85rem;
+  }
+  .veto-history-item .h-team { font-weight: 800; }
+  .veto-history-item .h-team.a { color: #60a5fa; }
+  .veto-history-item .h-team.b { color: #f87171; }
+  .veto-history-item .h-action { color: var(--text-secondary); }
+  .veto-history-item .h-map { font-weight: 700; color: var(--accent); }
+
+  .veto-btn {
+    background: var(--accent); color: #fff; border: none;
+    padding: 0.6rem 1.5rem; border-radius: var(--radius);
+    font-size: 0.95rem; font-weight: 700; cursor: pointer;
+    transition: background 0.2s;
+  }
+  .veto-btn:hover { background: var(--accent-hover); }
+  .veto-btn-secondary { background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border); }
+  .veto-btn-secondary:hover { border-color: var(--accent); background: var(--bg-card-hover); }
+
+  .wheel-title { text-align: center; margin-bottom: 0.5rem; }
+  .wheel-subtitle { text-align: center; color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9rem; }
+  .wheel-container {
+    position: relative; width: 320px; height: 320px;
+    margin: 0 auto 1.5rem;
+  }
+  .wheel-pointer {
+    position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 12px solid transparent; border-right: 12px solid transparent;
+    border-top: 20px solid var(--accent);
+    z-index: 10; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+  }
+  #wheel-canvas {
+    transition: transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99);
+  }
+  .wheel-btn { display: block; margin: 0 auto; }
+
+  .results-title { text-align: center; margin-bottom: 1.5rem; }
+  .results-maps {
+    display: flex; flex-direction: column; gap: 0.75rem;
+    margin-bottom: 2rem;
+  }
+  .result-map-card {
+    display: flex; align-items: center; gap: 1rem;
+    padding: 1rem 1.5rem; border-radius: var(--radius);
+    background: var(--bg-card); border: 1px solid var(--border);
+  }
+  .result-map-card.decider { border-color: #facc15; background: rgba(250,204,21,0.06); }
+  .result-map-num {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 1.1rem; flex-shrink: 0;
+    background: var(--accent-dim); color: var(--accent);
+  }
+  .result-map-card.decider .result-map-num { background: rgba(250,204,21,0.15); color: #facc15; }
+  .result-map-info { flex: 1; }
+  .result-map-name { font-weight: 700; font-size: 1.05rem; }
+  .result-map-label { font-size: 0.8rem; color: var(--text-secondary); }
+  .result-map-label .pick-team { font-weight: 700; }
+  .result-map-label .pick-team.a { color: #60a5fa; }
+  .result-map-label .pick-team.b { color: #f87171; }
+
+  .results-banned { margin-bottom: 2rem; }
+  .results-banned h3 { font-size: 1rem; margin-bottom: 0.75rem; }
+  .banned-map-item {
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.3rem 0.7rem; margin: 0.25rem;
+    background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2);
+    border-radius: 6px; font-size: 0.82rem;
+  }
+  .banned-map-item .b-team { font-weight: 700; }
+  .banned-map-item .b-team.a { color: #60a5fa; }
+  .banned-map-item .b-team.b { color: #f87171; }
+  .banned-map-item .b-map { text-decoration: line-through; opacity: 0.7; }
+
+  .results-actions { display: flex; gap: 1rem; justify-content: center; }
+
+  @media (max-width: 768px) {
+    .veto-maps { grid-template-columns: repeat(2, 1fr); }
+    .veto-teams { gap: 0.75rem; }
+    .veto-team { min-width: 120px; padding: 0.75rem 1rem; }
+    .wheel-container { width: 280px; height: 280px; }
+    #wheel-canvas { width: 280px; height: 280px; }
+  }
+</style>
+
+<script is:inline>
+  (function() {
+    const matchData = JSON.parse(document.getElementById('match-data').textContent);
+    const MAPS = JSON.parse(document.getElementById('maps-data').textContent);
+
+    const VETO_STEPS = [
+      { team: 'A', action: 'ban' },
+      { team: 'B', action: 'ban' },
+      { team: 'A', action: 'ban' },
+      { team: 'B', action: 'ban' },
+      { team: 'A', action: 'pick' },
+      { team: 'B', action: 'pick' },
+      { team: 'A', action: 'ban' },
+      { team: 'B', action: 'ban' },
+    ];
+
+    const WHEEL_COLORS = ['#ff4d2e','#3b82f6','#22c55e','#eab308','#a855f7','#ec4899','#06b6d4','#f97316'];
+
+    let state = {
+      matchId: null,
+      match: null,
+      currentStep: 0,
+      mapStates: {},
+      vetoHistory: [],
+      picks: { A: null, B: null, decider: null },
+      phase: 'select',
+    };
+
+    const $ = id => document.getElementById(id);
+
+    function init() {
+      $('match-select').addEventListener('change', onMatchSelect);
+      $('spin-btn').addEventListener('click', spinWheel);
+      $('copy-btn').addEventListener('click', copyResult);
+      $('reset-btn').addEventListener('click', resetVeto);
+    }
+
+    function onMatchSelect(e) {
+      const id = e.target.value;
+      if (!id) return;
+      state = {
+        matchId: id,
+        match: matchData.find(m => m.id === id),
+        currentStep: 0,
+        mapStates: {},
+        vetoHistory: [],
+        picks: { A: null, B: null, decider: null },
+        phase: 'veto',
+      };
+      MAPS.forEach(m => state.mapStates[m] = 'available');
+      showVetoInterface();
+      renderSteps();
+      renderPrompt();
+      renderMaps();
+      $('veto-history').style.display = 'none';
+      $('veto-wheel-section').style.display = 'none';
+      $('veto-results').style.display = 'none';
+    }
+
+    function showVetoInterface() {
+      $('veto-interface').style.display = '';
+      $('team-a-tag').textContent = state.match.team1.tag;
+      $('team-a-name').textContent = state.match.team1.name;
+      $('team-b-tag').textContent = state.match.team2.tag;
+      $('team-b-name').textContent = state.match.team2.name;
+    }
+
+    function renderSteps() {
+      const html = VETO_STEPS.map((step, i) => {
+        const done = i < state.currentStep;
+        const active = i === state.currentStep;
+        const history = state.vetoHistory[i];
+        const cls = `veto-step team-${step.team.toLowerCase()} ${active ? 'active' : ''} ${done ? 'done' : ''}`;
+        const mapHtml = history ? `<span class="step-map">${history.map}</span>` : '';
+        return `<div class="${cls}">
+          <span class="step-team">${step.team}</span>
+          <span class="step-action">${step.action === 'ban' ? 'Ban' : 'Pick'}</span>
+          ${mapHtml}
+        </div>`;
+      }).join('') + `<div class="veto-step ${state.phase === 'wheel' ? 'active' : ''} ${state.phase === 'result' ? 'done' : ''}">
+        <span class="step-team" style="color:#facc15">★</span>
+        <span class="step-action">Wheel</span>
+        ${state.picks.decider ? `<span class="step-map">${state.picks.decider}</span>` : ''}
+      </div>`;
+      $('veto-steps').innerHTML = html;
+    }
+
+    function renderPrompt() {
+      if (state.phase !== 'veto') { $('veto-prompt').innerHTML = ''; return; }
+      const step = VETO_STEPS[state.currentStep];
+      if (!step) { $('veto-prompt').innerHTML = ''; return; }
+      const teamName = step.team === 'A' ? state.match.team1.name : state.match.team2.name;
+      $('veto-prompt').innerHTML = `<span class="prompt-team ${step.team.toLowerCase()}">${teamName}</span> — <span class="prompt-action">${step.action === 'ban' ? 'Ban a map' : 'Pick a map'}</span>`;
+    }
+
+    function renderMaps() {
+      const interactive = state.phase === 'veto';
+      const html = MAPS.map(map => {
+        const st = state.mapStates[map] || 'available';
+        const isAvail = st === 'available';
+        const clickable = interactive && isAvail;
+        let statusLabel = '';
+        let statusClass = '';
+        if (st === 'banned') { statusLabel = 'BANNED'; statusClass = 'banned'; }
+        else if (st === 'picked') { statusLabel = 'PICKED'; statusClass = 'picked'; }
+        else if (st === 'decider') { statusLabel = 'DECIDER'; statusClass = 'decider'; }
+        const cls = `veto-map-card ${statusClass} ${clickable ? '' : (isAvail ? 'disabled' : '')}`;
+        return `<div class="${cls}" data-map="${map}" ${clickable ? '' : 'style="pointer-events:none;"'}>
+          <div class="veto-map-name">${map}</div>
+          ${statusLabel ? `<div class="veto-map-status">${statusLabel}</div>` : ''}
+        </div>`;
+      }).join('');
+      $('veto-maps').innerHTML = html;
+      if (interactive) {
+        document.querySelectorAll('.veto-map-card[data-map]').forEach(card => {
+          card.addEventListener('click', () => onMapClick(card.dataset.map));
+        });
+      }
+    }
+
+    function onMapClick(map) {
+      if (state.phase !== 'veto') return;
+      if (state.mapStates[map] !== 'available') return;
+      const step = VETO_STEPS[state.currentStep];
+      if (!step) return;
+
+      state.mapStates[map] = step.action === 'ban' ? 'banned' : 'picked';
+      state.vetoHistory.push({ map, team: step.team, action: step.action });
+      if (step.action === 'pick') state.picks[step.team] = map;
+      state.currentStep++;
+
+      renderSteps();
+      renderMaps();
+      renderHistory();
+
+      if (state.currentStep >= VETO_STEPS.length) {
+        state.phase = 'wheel';
+        renderSteps();
+        renderPrompt();
+        showWheel();
+      } else {
+        renderPrompt();
+      }
+    }
+
+    function renderHistory() {
+      if (state.vetoHistory.length === 0) { $('veto-history').style.display = 'none'; return; }
+      $('veto-history').style.display = '';
+      const html = state.vetoHistory.map(h => `<div class="veto-history-item">
+        <span class="h-team ${h.team.toLowerCase()}">${h.team === 'A' ? state.match.team1.tag : state.match.team2.tag}</span>
+        <span class="h-action">${h.action === 'ban' ? 'banned' : 'picked'}</span>
+        <span class="h-map">${h.map}</span>
+      </div>`).join('');
+      $('veto-history-list').innerHTML = html;
+    }
+
+    function getRemainingMaps() {
+      return MAPS.filter(m => state.mapStates[m] === 'available');
+    }
+
+    function showWheel() {
+      $('veto-wheel-section').style.display = '';
+      const remaining = getRemainingMaps();
+      drawWheel(remaining);
+    }
+
+    function drawWheel(maps) {
+      const canvas = $('wheel-canvas');
+      const ctx = canvas.getContext('2d');
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      const radius = Math.min(cx, cy) - 8;
+      const segAngle = (2 * Math.PI) / maps.length;
+      const startOffset = -Math.PI / 2;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      maps.forEach((map, i) => {
+        const a1 = startOffset + i * segAngle;
+        const a2 = a1 + segAngle;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, radius, a1, a2);
+        ctx.closePath();
+        ctx.fillStyle = WHEEL_COLORS[i % WHEEL_COLORS.length];
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.2)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Draw text
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(a1 + segAngle / 2);
+        ctx.textAlign = 'right';
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 13px "Segoe UI", sans-serif';
+        ctx.shadowColor = 'rgba(0,0,0,0.5)';
+        ctx.shadowBlur = 3;
+        ctx.fillText(map, radius - 15, 5);
+        ctx.restore();
+      });
+
+      // Center circle
+      ctx.beginPath();
+      ctx.arc(cx, cy, 20, 0, 2 * Math.PI);
+      ctx.fillStyle = '#111827';
+      ctx.fill();
+      ctx.strokeStyle = '#2a3142';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    function spinWheel() {
+      const remaining = getRemainingMaps();
+      if (remaining.length === 0) return;
+      const canvas = $('wheel-canvas');
+      const spinBtn = $('spin-btn');
+      spinBtn.disabled = true;
+      spinBtn.textContent = 'Spinning...';
+
+      const winnerIdx = Math.floor(Math.random() * remaining.length);
+      const segAngle = 360 / remaining.length;
+      const segCenter = winnerIdx * segAngle + segAngle / 2;
+      const targetRotation = 360 * 5 + (360 - segCenter);
+
+      canvas.style.transform = `rotate(${targetRotation}deg)`;
+
+      setTimeout(() => {
+        const winner = remaining[winnerIdx];
+        state.mapStates[winner] = 'decider';
+        state.picks.decider = winner;
+        state.phase = 'result';
+        renderSteps();
+        renderMaps();
+        showResults();
+      }, 4200);
+    }
+
+    function showResults() {
+      $('veto-wheel-section').style.display = 'none';
+      $('veto-results').style.display = '';
+
+      const mapsHtml = [
+        { num: 1, map: state.picks.A, label: `<span class="pick-team a">${state.match.team1.name}</span>'s Pick`, cls: '' },
+        { num: 2, map: state.picks.B, label: `<span class="pick-team b">${state.match.team2.name}</span>'s Pick`, cls: '' },
+        { num: 3, map: state.picks.decider, label: 'Decider (Wheel)', cls: 'decider' },
+      ].map(r => `<div class="result-map-card ${r.cls}">
+        <div class="result-map-num">${r.num}</div>
+        <div class="result-map-info">
+          <div class="result-map-name">${r.map || '—'}</div>
+          <div class="result-map-label">${r.label}</div>
+        </div>
+      </div>`).join('');
+      $('results-maps').innerHTML = mapsHtml;
+
+      const bannedHtml = state.vetoHistory.filter(h => h.action === 'ban').map(h =>
+        `<div class="banned-map-item">
+          <span class="b-team ${h.team.toLowerCase()}">${h.team === 'A' ? state.match.team1.tag : state.match.team2.tag}</span>
+          <span class="b-map">${h.map}</span>
+        </div>`
+      ).join('');
+      $('results-banned-list').innerHTML = bannedHtml;
+    }
+
+    function copyResult() {
+      const lines = [
+        `Map Veto Result`,
+        `${state.match.tournament} — ${state.match.round}`,
+        `${state.match.team1.name} vs ${state.match.team2.name}`,
+        '',
+        'Maps to Play:',
+        `1. ${state.picks.A} — ${state.match.team1.name}'s Pick`,
+        `2. ${state.picks.B} — ${state.match.team2.name}'s Pick`,
+        `3. ${state.picks.decider} — Decider`,
+        '',
+        'Banned Maps:',
+        ...state.vetoHistory.filter(h => h.action === 'ban').map(h =>
+          `- ${h.map} (${h.team === 'A' ? state.match.team1.name : state.match.team2.name})`
+        ),
+      ].join('\n');
+      navigator.clipboard.writeText(lines).then(() => {
+        $('copy-btn').textContent = '✓ Copied!';
+        setTimeout(() => { $('copy-btn').textContent = '📋 Copy Result'; }, 2000);
+      });
+    }
+
+    function resetVeto() {
+      state = {
+        matchId: null, match: null, currentStep: 0,
+        mapStates: {}, vetoHistory: [],
+        picks: { A: null, B: null, decider: null },
+        phase: 'select',
+      };
+      $('match-select').value = '';
+      $('veto-interface').style.display = 'none';
+      $('veto-wheel-section').style.display = 'none';
+      $('veto-results').style.display = 'none';
+      $('wheel-canvas').style.transform = '';
+      $('spin-btn').disabled = false;
+      $('spin-btn').textContent = '🎡 Spin the Wheel';
+    }
+
+    init();
+  })();
+</script>
