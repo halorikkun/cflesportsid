@@ -29,7 +29,6 @@ const ROUND_ORDER = [
 const BRACKET_ROUNDS = ROUND_ORDER;
 const SPECIAL_ROUNDS = ['Bronze Match'];
 
-// Separate bracket rounds from special rounds (Bronze Match etc.)
 const bracketMatches = tMatches.filter(m => BRACKET_ROUNDS.includes(m.data.round));
 const specialMatches = tMatches.filter(m => SPECIAL_ROUNDS.includes(m.data.round));
 
@@ -53,6 +52,52 @@ const rounds = Object.keys(byRound).sort((a, b) => {
 // Sort matches within each round by bracketSlot
 rounds.forEach(r => {
   byRound[r].sort((a, b) => (a.data.bracketSlot || 0) - (b.data.bracketSlot || 0));
+});
+
+// Build combined entries (matches + byes) for each round
+// A "bye" is auto-detected when a slot is missing but the next round expects it
+const roundEntries = {};
+rounds.forEach((round, roundIdx) => {
+  const entries = [];
+  const existingSlots = new Set();
+
+  byRound[round].forEach(m => {
+    const slot = m.data.bracketSlot || 0;
+    existingSlots.add(slot);
+    entries.push({ type: 'match', slot, match: m });
+  });
+
+  // If not the last bracket round, detect byes
+  if (roundIdx < rounds.length - 1) {
+    const nextRound = rounds[roundIdx + 1];
+    const nextMatches = byRound[nextRound];
+    const expectedSlots = nextMatches.length * 2;
+
+    for (let slot = 1; slot <= expectedSlots; slot++) {
+      if (!existingSlots.has(slot)) {
+        // Find the bye team from the next round's match
+        const targetSlot = Math.ceil(slot / 2);
+        const targetMatch = nextMatches.find(m => (m.data.bracketSlot || 0) === targetSlot);
+
+        if (targetMatch) {
+          // The paired slot (sibling) has a winner
+          const pairedSlot = slot % 2 === 1 ? slot + 1 : slot - 1;
+          const pairedMatch = byRound[round].find(m => (m.data.bracketSlot || 0) === pairedSlot);
+          const pairedWinner = pairedMatch?.data.winner;
+
+          // Bye team = the QF participant that didn't come from the paired match
+          const byeTeam = pairedWinner === targetMatch.data.team1
+            ? targetMatch.data.team2
+            : targetMatch.data.team1;
+
+          entries.push({ type: 'bye', slot, team: byeTeam });
+        }
+      }
+    }
+  }
+
+  entries.sort((a, b) => a.slot - b.slot);
+  roundEntries[round] = entries;
 });
 
 const completedCount = tMatches.filter(m => m.data.status === 'completed').length;
@@ -88,7 +133,8 @@ function formatDate(d) {
     <div class="bracket-scroll">
       <div class="bracket-wrapper">
         <div class="bracket" id="bracket">
-          {rounds.map(round => {
+          {rounds.map((round, roundIdx) => {
+            const entries = roundEntries[round];
             const roundMatches = byRound[round];
             const dates = [...new Set(roundMatches.map(m => m.data.date).filter(Boolean))];
             const dateStr = dates.length > 0 ? dates.map(formatDate).join(' & ') : '';
@@ -99,14 +145,34 @@ function formatDate(d) {
                   {dateStr && <div class="bracket-round-date">{dateStr}</div>}
                 </div>
                 <div class="bracket-round-matches">
-                  {roundMatches.map(m => {
+                  {entries.map(entry => {
+                    if (entry.type === 'bye') {
+                      const team = getTeam(entry.team);
+                      return (
+                        <div class="bracket-match bye" data-slot={entry.slot} data-round={round}>
+                          <div class="bracket-team-row winner">
+                            <div class="bracket-team-info">
+                              <span class="bracket-team-tag">{team?.data.tag || 'TBD'}</span>
+                              <span class="bracket-team-name">{team?.data.name || 'TBD'}</span>
+                            </div>
+                            <span class="bracket-bye-label">BYE</span>
+                          </div>
+                          <div class="bracket-team-row empty">
+                            <div class="bracket-team-info">
+                              <span class="bracket-team-name" style="color: var(--text-muted); font-style: italic;">No opponent</span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+                    const m = entry.match;
                     const isCompleted = m.data.status === 'completed';
                     const team1 = getTeam(m.data.team1);
                     const team2 = getTeam(m.data.team2);
                     const win1 = isCompleted && m.data.winner === m.data.team1;
                     const win2 = isCompleted && m.data.winner === m.data.team2;
                     return (
-                      <div class={`bracket-match ${isCompleted ? '' : 'upcoming'}`} data-slot={m.data.bracketSlot || 0} data-round={m.data.round} data-match-id={m.id}>
+                      <div class={`bracket-match ${isCompleted ? '' : 'upcoming'}`} data-slot={entry.slot} data-round={round} data-match-id={m.id}>
                         <div class={`bracket-team-row ${win1 ? 'winner' : (win2 ? 'loser' : '')}`}>
                           <div class="bracket-team-info">
                             <span class="bracket-team-tag">{team1?.data.tag || 'TBD'}</span>
@@ -130,6 +196,44 @@ function formatDate(d) {
                     );
                   })}
                 </div>
+
+                {/* Bronze Match below Final in the last round column */}
+                {roundIdx === rounds.length - 1 && specialMatches.length > 0 && (
+                  <div class="bracket-bronze">
+                    <div class="bracket-bronze-divider"></div>
+                    <div class="bracket-round-title">Bronze Match</div>
+                    {specialMatches.map(m => {
+                      const isCompleted = m.data.status === 'completed';
+                      const team1 = getTeam(m.data.team1);
+                      const team2 = getTeam(m.data.team2);
+                      const win1 = isCompleted && m.data.winner === m.data.team1;
+                      const win2 = isCompleted && m.data.winner === m.data.team2;
+                      return (
+                        <div class={`bracket-match ${isCompleted ? '' : 'upcoming'}`} data-slot={m.data.bracketSlot || 0} data-round={m.data.round} data-match-id={m.id}>
+                          <div class={`bracket-team-row ${win1 ? 'winner' : (win2 ? 'loser' : '')}`}>
+                            <div class="bracket-team-info">
+                              <span class="bracket-team-tag">{team1?.data.tag || 'TBD'}</span>
+                              <span class="bracket-team-name">{team1?.data.name || 'TBD'}</span>
+                            </div>
+                            <span class="bracket-team-score">{isCompleted ? m.data.score1 : '–'}</span>
+                          </div>
+                          <div class={`bracket-team-row ${win2 ? 'winner' : (win1 ? 'loser' : '')}`}>
+                            <div class="bracket-team-info">
+                              <span class="bracket-team-tag">{team2?.data.tag || 'TBD'}</span>
+                              <span class="bracket-team-name">{team2?.data.name || 'TBD'}</span>
+                            </div>
+                            <span class="bracket-team-score">{isCompleted ? m.data.score2 : '–'}</span>
+                          </div>
+                          {isCompleted && (
+                            <div class="bracket-link">
+                              <a href={`/matches/${m.id}`}>Details →</a>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -137,46 +241,6 @@ function formatDate(d) {
         <svg class="bracket-connectors" id="bracket-connectors"></svg>
       </div>
     </div>
-
-    {specialMatches.length > 0 && (
-      <div class="bracket-special">
-        <div class="bracket-round-header">
-          <div class="bracket-round-title">Bronze Match</div>
-        </div>
-        <div class="bracket-special-matches">
-          {specialMatches.map(m => {
-            const isCompleted = m.data.status === 'completed';
-            const team1 = getTeam(m.data.team1);
-            const team2 = getTeam(m.data.team2);
-            const win1 = isCompleted && m.data.winner === m.data.team1;
-            const win2 = isCompleted && m.data.winner === m.data.team2;
-            return (
-              <div class={`bracket-match ${isCompleted ? '' : 'upcoming'}`} data-slot={m.data.bracketSlot || 0} data-round={m.data.round} data-match-id={m.id}>
-                <div class={`bracket-team-row ${win1 ? 'winner' : (win2 ? 'loser' : '')}`}>
-                  <div class="bracket-team-info">
-                    <span class="bracket-team-tag">{team1?.data.tag || 'TBD'}</span>
-                    <span class="bracket-team-name">{team1?.data.name || 'TBD'}</span>
-                  </div>
-                  <span class="bracket-team-score">{isCompleted ? m.data.score1 : '–'}</span>
-                </div>
-                <div class={`bracket-team-row ${win2 ? 'winner' : (win1 ? 'loser' : '')}`}>
-                  <div class="bracket-team-info">
-                    <span class="bracket-team-tag">{team2?.data.tag || 'TBD'}</span>
-                    <span class="bracket-team-name">{team2?.data.name || 'TBD'}</span>
-                  </div>
-                  <span class="bracket-team-score">{isCompleted ? m.data.score2 : '–'}</span>
-                </div>
-                {isCompleted && (
-                  <div class="bracket-link">
-                    <a href={`/matches/${m.id}`}>Details →</a>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    )}
   </div>
 </Layout>
 
@@ -255,6 +319,7 @@ function formatDate(d) {
   }
   .bracket-match:hover { border-color: var(--accent); }
   .bracket-match.upcoming { border-style: dashed; }
+  .bracket-match.bye { border-style: dashed; border-color: var(--border-hover); opacity: 0.75; }
 
   .bracket-team-row {
     display: flex;
@@ -266,6 +331,7 @@ function formatDate(d) {
   .bracket-team-row + .bracket-team-row { border-top: 1px solid var(--border); }
   .bracket-team-row.winner { background: rgba(250, 204, 21, 0.06); }
   .bracket-team-row.loser { opacity: 0.5; }
+  .bracket-team-row.empty { opacity: 0.4; }
   .bracket-team-info { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
   .bracket-team-tag {
     font-size: 0.7rem;
@@ -286,6 +352,14 @@ function formatDate(d) {
   .bracket-team-score { font-weight: 800; font-size: 1rem; min-width: 24px; text-align: right; }
   .bracket-team-row.winner .bracket-team-score { color: #facc15; }
   .bracket-team-row.loser .bracket-team-score { color: var(--text-muted); }
+  .bracket-bye-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    background: var(--bg-card-hover);
+    padding: 0.1rem 0.5rem;
+    border-radius: 4px;
+  }
   .bracket-link { text-align: center; margin-top: 0.4rem; padding-bottom: 0.3rem; }
   .bracket-link a {
     font-size: 0.75rem;
@@ -306,17 +380,24 @@ function formatDate(d) {
     overflow: visible;
   }
 
-  .bracket-special {
-    margin-top: 3rem;
-    padding-top: 2rem;
-    border-top: 1px solid var(--border);
+  .bracket-bronze {
+    margin-top: 2rem;
   }
-  .bracket-special-matches {
-    display: flex;
-    gap: 1.5rem;
-    flex-wrap: wrap;
+  .bracket-bronze-divider {
+    height: 1px;
+    background: var(--border);
+    margin-bottom: 1.5rem;
   }
-  .bracket-special .bracket-match { min-width: 200px; }
+  .bracket-bronze .bracket-round-title {
+    text-align: center;
+    font-size: 0.85rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--accent-orange);
+    margin-bottom: 1rem;
+  }
+  .bracket-bronze .bracket-match { margin-top: 1rem; }
 
   @media (max-width: 768px) {
     .bracket-round { min-width: 170px; }
@@ -369,7 +450,6 @@ function formatDate(d) {
       const nextRound = roundData[i + 1];
 
       currentRound.matches.forEach(match => {
-        // Target slot in next round = ceil(slot / 2)
         const targetSlot = Math.ceil(match.slot / 2);
         const targetMatch = nextRound.matches.find(m => m.slot === targetSlot);
 
@@ -381,7 +461,6 @@ function formatDate(d) {
         const endY = targetMatch.centerY;
         const midX = (startX + endX) / 2;
 
-        // Draw path: horizontal → vertical → horizontal
         const path = document.createElementNS(NS, 'path');
         path.setAttribute('d', `M ${startX} ${startY} L ${midX} ${startY} L ${midX} ${endY} L ${endX} ${endY}`);
         path.setAttribute('stroke', '#2a3142');
@@ -393,10 +472,7 @@ function formatDate(d) {
     }
   }
 
-  // Draw after load and on resize
   window.addEventListener('load', drawConnectors);
   window.addEventListener('resize', drawConnectors);
-
-  // Also redraw after a small delay to ensure layout is settled
   setTimeout(drawConnectors, 100);
 </script>
