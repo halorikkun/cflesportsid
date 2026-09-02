@@ -60,6 +60,7 @@ const matches = defineCollection({
     score2: z.number().default(0),
     winner: z.string().optional(),
     status: z.enum(['upcoming', 'live', 'completed']).default('upcoming'),
+    bracketSlot: z.number().optional(),
     map: z.string().optional(),
     duration: z.string().optional(),
     mvp: z.string().optional(),

@@ -23,13 +23,20 @@ const tournaments = tournamentNames.map((name, i) => ({ name, id: i + 1 }));
 
 const ROUND_ORDER = [
   'First Round', 'Second Round', 'Third Round',
-  'Top 16', 'Quarter Final', 'Semi Final', 'Bronze Match', 'Final'
+  'Top 16', 'Quarter Final', 'Semi Final', 'Final'
 ];
 
-// Group matches by round
+const BRACKET_ROUNDS = ROUND_ORDER;
+const SPECIAL_ROUNDS = ['Bronze Match'];
+
+// Separate bracket rounds from special rounds (Bronze Match etc.)
+const bracketMatches = tMatches.filter(m => BRACKET_ROUNDS.includes(m.data.round));
+const specialMatches = tMatches.filter(m => SPECIAL_ROUNDS.includes(m.data.round));
+
+// Group bracket matches by round
 const byRound = {};
-tMatches.forEach(m => {
-  const round = m.data.round || 'Other';
+bracketMatches.forEach(m => {
+  const round = m.data.round;
   if (!byRound[round]) byRound[round] = [];
   byRound[round].push(m);
 });
@@ -43,6 +50,11 @@ const rounds = Object.keys(byRound).sort((a, b) => {
   return ia - ib;
 });
 
+// Sort matches within each round by bracketSlot
+rounds.forEach(r => {
+  byRound[r].sort((a, b) => (a.data.bracketSlot || 0) - (b.data.bracketSlot || 0));
+});
+
 const completedCount = tMatches.filter(m => m.data.status === 'completed').length;
 
 function getTeam(teamId) {
@@ -54,6 +66,38 @@ function formatDate(d) {
   const date = new Date(d);
   if (isNaN(date)) return d;
   return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+}
+
+// Build match card HTML as a reusable function
+function renderMatch(m) {
+  const isCompleted = m.data.status === 'completed';
+  const team1 = getTeam(m.data.team1);
+  const team2 = getTeam(m.data.team2);
+  const win1 = isCompleted && m.data.winner === m.data.team1;
+  const win2 = isCompleted && m.data.winner === m.data.team2;
+  return (
+    <div class={`bracket-match ${isCompleted ? '' : 'upcoming'}`} data-slot={m.data.bracketSlot || 0} data-round={m.data.round} data-match-id={m.id}>
+      <div class={`bracket-team-row ${win1 ? 'winner' : (win2 ? 'loser' : '')}`}>
+        <div class="bracket-team-info">
+          <span class="bracket-team-tag">{team1?.data.tag || 'TBD'}</span>
+          <span class="bracket-team-name">{team1?.data.name || 'TBD'}</span>
+        </div>
+        <span class="bracket-team-score">{isCompleted ? m.data.score1 : '–'}</span>
+      </div>
+      <div class={`bracket-team-row ${win2 ? 'winner' : (win1 ? 'loser' : '')}`}>
+        <div class="bracket-team-info">
+          <span class="bracket-team-tag">{team2?.data.tag || 'TBD'}</span>
+          <span class="bracket-team-name">{team2?.data.name || 'TBD'}</span>
+        </div>
+        <span class="bracket-team-score">{isCompleted ? m.data.score2 : '–'}</span>
+      </div>
+      {isCompleted && (
+        <div class="bracket-link">
+          <a href={`/matches/${m.id}`}>Details →</a>
+        </div>
+      )}
+    </div>
+  );
 }
 ---
 
@@ -74,58 +118,39 @@ function formatDate(d) {
     </div>
 
     <div class="bracket-scroll">
-      <div class="bracket">
-        {rounds.map(round => {
-          const roundMatches = byRound[round].sort((a, b) => {
-            const da = a.data.date || '';
-            const db = b.data.date || '';
-            return da.localeCompare(db);
-          });
-          const dates = [...new Set(roundMatches.map(m => m.data.date).filter(Boolean))];
-          const dateStr = dates.length > 0 ? dates.map(formatDate).join(' & ') : '';
-          return (
-            <div class="bracket-round">
-              <div class="bracket-round-header">
-                <div class="bracket-round-title">{round}</div>
-                {dateStr && <div class="bracket-round-date">{dateStr}</div>}
+      <div class="bracket-wrapper">
+        <div class="bracket" id="bracket">
+          {rounds.map(round => {
+            const roundMatches = byRound[round];
+            const dates = [...new Set(roundMatches.map(m => m.data.date).filter(Boolean))];
+            const dateStr = dates.length > 0 ? dates.map(formatDate).join(' & ') : '';
+            return (
+              <div class="bracket-round" data-round={round}>
+                <div class="bracket-round-header">
+                  <div class="bracket-round-title">{round}</div>
+                  {dateStr && <div class="bracket-round-date">{dateStr}</div>}
+                </div>
+                <div class="bracket-round-matches">
+                  {roundMatches.map(m => renderMatch(m))}
+                </div>
               </div>
-              <div class="bracket-round-matches">
-                {roundMatches.map(m => {
-                  const isCompleted = m.data.status === 'completed';
-                  const team1 = getTeam(m.data.team1);
-                  const team2 = getTeam(m.data.team2);
-                  const win1 = isCompleted && m.data.winner === m.data.team1;
-                  const win2 = isCompleted && m.data.winner === m.data.team2;
-                  return (
-                    <div class={`bracket-match ${isCompleted ? '' : 'upcoming'}`}>
-                      <div class={`bracket-team-row ${win1 ? 'winner' : (win2 ? 'loser' : '')}`}>
-                        <div class="bracket-team-info">
-                          <span class="bracket-team-tag">{team1?.data.tag || 'TBD'}</span>
-                          <span class="bracket-team-name">{team1?.data.name || 'TBD'}</span>
-                        </div>
-                        <span class="bracket-team-score">{isCompleted ? m.data.score1 : '–'}</span>
-                      </div>
-                      <div class={`bracket-team-row ${win2 ? 'winner' : (win1 ? 'loser' : '')}`}>
-                        <div class="bracket-team-info">
-                          <span class="bracket-team-tag">{team2?.data.tag || 'TBD'}</span>
-                          <span class="bracket-team-name">{team2?.data.name || 'TBD'}</span>
-                        </div>
-                        <span class="bracket-team-score">{isCompleted ? m.data.score2 : '–'}</span>
-                      </div>
-                      {isCompleted && (
-                        <div class="bracket-link">
-                          <a href={`/matches/${m.id}`}>Details →</a>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
+        <svg class="bracket-connectors" id="bracket-connectors"></svg>
       </div>
     </div>
+
+    {specialMatches.length > 0 && (
+      <div class="bracket-special">
+        <div class="bracket-round-header">
+          <div class="bracket-round-title">Bronze Match</div>
+        </div>
+        <div class="bracket-special-matches">
+          {specialMatches.map(m => renderMatch(m))}
+        </div>
+      </div>
+    )}
   </div>
 </Layout>
 
@@ -156,7 +181,11 @@ function formatDate(d) {
   #tourney-select:focus { outline: none; border-color: var(--accent); }
 
   .bracket-scroll { overflow-x: auto; padding-bottom: 1rem; }
-  .bracket { display: flex; gap: 3rem; min-width: max-content; align-items: stretch; }
+  .bracket-wrapper {
+    position: relative;
+    min-width: max-content;
+  }
+  .bracket { display: flex; gap: 3rem; align-items: stretch; position: relative; z-index: 1; }
 
   .bracket-round {
     display: flex;
@@ -188,6 +217,7 @@ function formatDate(d) {
     flex-direction: column;
     justify-content: space-around;
     flex: 1;
+    gap: 1.5rem;
   }
 
   .bracket-match {
@@ -195,58 +225,11 @@ function formatDate(d) {
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: 10px;
-    overflow: visible;
     transition: border-color 0.2s;
   }
   .bracket-match:hover { border-color: var(--accent); }
   .bracket-match.upcoming { border-style: dashed; }
 
-  /* ===== Left connector (from previous round) ===== */
-  .bracket-round:not(:first-child) .bracket-match::before {
-    content: '';
-    position: absolute;
-    left: -1.5rem;
-    top: 50%;
-    width: 1.5rem;
-    height: 2px;
-    background: var(--border);
-    transform: translateY(-1px);
-  }
-
-  /* ===== Right connectors (to next round) ===== */
-  /* Base: horizontal line only (for single-match rounds) */
-  .bracket-round:not(:last-child) .bracket-match::after {
-    content: '';
-    position: absolute;
-    right: -1.5rem;
-    top: 50%;
-    width: 1.5rem;
-    height: 2px;
-    background: var(--border);
-    transform: translateY(-1px);
-  }
-
-  /* Odd match (top of pair): L-shape — horizontal at center + vertical going down */
-  .bracket-round:not(:last-child) .bracket-match:nth-child(odd):not(:only-child)::after {
-    height: 50%;
-    background: transparent;
-    border-top: 2px solid var(--border);
-    border-right: 2px solid var(--border);
-    transform: none;
-  }
-
-  /* Even match (bottom of pair): L-shape — horizontal at center + vertical going up */
-  .bracket-round:not(:last-child) .bracket-match:nth-child(even)::after {
-    top: auto;
-    bottom: 50%;
-    height: 50%;
-    background: transparent;
-    border-bottom: 2px solid var(--border);
-    border-right: 2px solid var(--border);
-    transform: none;
-  }
-
-  /* ===== Match content ===== */
   .bracket-team-row {
     display: flex;
     align-items: center;
@@ -286,18 +269,108 @@ function formatDate(d) {
   }
   .bracket-link a:hover { color: var(--accent-hover); text-decoration: underline; }
 
+  .bracket-connectors {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+    overflow: visible;
+  }
+
+  .bracket-special {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border);
+  }
+  .bracket-special-matches {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .bracket-special .bracket-match { min-width: 200px; }
+
   @media (max-width: 768px) {
     .bracket-round { min-width: 170px; }
     .bracket { gap: 2rem; }
-    .bracket-round:not(:first-child) .bracket-match::before { left: -1rem; width: 1rem; }
-    .bracket-round:not(:last-child) .bracket-match::after { right: -1rem; width: 1rem; }
-    .bracket-round:not(:last-child) .bracket-match:nth-child(odd):not(:only-child)::after { border-right-width: 2px; }
-    .bracket-round:not(:last-child) .bracket-match:nth-child(even)::after { right: -1rem; }
   }
 </style>
 
 <script>
-  document.getElementById('tourney-select')?.addEventListener('change', (e) => {
-    window.location.href = '/tournament/' + e.target.value;
-  });
+  function drawConnectors() {
+    const svg = document.getElementById('bracket-connectors');
+    if (!svg) return;
+    svg.innerHTML = '';
+
+    const wrapper = document.querySelector('.bracket-wrapper');
+    const rounds = document.querySelectorAll('.bracket-round');
+
+    if (rounds.length < 2) return;
+
+    const wrapperRect = wrapper.getBoundingClientRect();
+    svg.setAttribute('width', wrapperRect.width);
+    svg.setAttribute('height', wrapperRect.height);
+    svg.setAttribute('viewBox', `0 0 ${wrapperRect.width} ${wrapperRect.height}`);
+
+    const roundData = Array.from(rounds).map(round => {
+      const roundRect = round.getBoundingClientRect();
+      const matches = round.querySelectorAll('.bracket-match');
+      return {
+        name: round.dataset.round,
+        right: roundRect.right - wrapperRect.left,
+        matches: Array.from(matches).map(m => {
+          const r = m.getBoundingClientRect();
+          return {
+            el: m,
+            slot: parseInt(m.dataset.slot || '0'),
+            round: m.dataset.round,
+            left: r.left - wrapperRect.left,
+            right: r.right - wrapperRect.left,
+            top: r.top - wrapperRect.top,
+            bottom: r.bottom - wrapperRect.top,
+            centerY: r.top - wrapperRect.top + r.height / 2,
+          };
+        }),
+      };
+    });
+
+    const NS = 'http://www.w3.org/2000/svg';
+
+    for (let i = 0; i < roundData.length - 1; i++) {
+      const currentRound = roundData[i];
+      const nextRound = roundData[i + 1];
+
+      currentRound.matches.forEach(match => {
+        // Target slot in next round = ceil(slot / 2)
+        const targetSlot = Math.ceil(match.slot / 2);
+        const targetMatch = nextRound.matches.find(m => m.slot === targetSlot);
+
+        if (!targetMatch) return;
+
+        const startX = match.right;
+        const startY = match.centerY;
+        const endX = targetMatch.left;
+        const endY = targetMatch.centerY;
+        const midX = (startX + endX) / 2;
+
+        // Draw path: horizontal → vertical → horizontal
+        const path = document.createElementNS(NS, 'path');
+        path.setAttribute('d', `M ${startX} ${startY} L ${midX} ${startY} L ${midX} ${endY} L ${endX} ${endY}`);
+        path.setAttribute('stroke', 'var(--border, #2a3142)');
+        path.setAttribute('stroke-width', '2');
+        path.setAttribute('fill', 'none');
+        path.setAttribute('opacity', '0.6');
+        svg.appendChild(path);
+      });
+    }
+  }
+
+  // Draw after load and on resize
+  window.addEventListener('load', drawConnectors);
+  window.addEventListener('resize', drawConnectors);
+
+  // Also redraw after a small delay to ensure layout is settled
+  setTimeout(drawConnectors, 100);
 </script>
