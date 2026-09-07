@@ -1,1 +1,103 @@
-{"tournament":"Clash for Glory: Road to All-Star S1","round":"Top 16","bracketSlot":1,"date":"2026-08-22","team1":"team-69","team2":"endevour-tvj","score1":3,"score2":0,"winner":"team-69","status":"completed","stats1":{"kills":0,"deaths":0,"assists":0},"stats2":{"kills":0,"deaths":0,"assists":0},"playerStats":[{"uid":"1656689899","rounds":[{"kills":10,"deaths":3,"assists":5},{"kills":6,"deaths":3,"assists":2},{"kills":6,"deaths":3,"assists":3}]},{"uid":"1192380567","rounds":[{"kills":9,"deaths":2,"assists":3},{"kills":10,"deaths":5,"assists":1},{"kills":10,"deaths":4,"assists":1}]},{"uid":"1161370373","rounds":[{"kills":6,"deaths":3,"assists":6},{"kills":2,"deaths":5,"assists":4},{"kills":5,"deaths":4,"assists":3}]},{"uid":"1078362342","rounds":[{"kills":6,"deaths":4,"assists":6},{"kills":9,"deaths":5,"assists":2},{"kills":15,"deaths":3,"assists":1}]},{"uid":"1613117529","rounds":[{"kills":4,"deaths":4,"assists":1},{"kills":6,"deaths":6,"assists":0},{"kills":2,"deaths":2,"assists":0}]},{"uid":"1047666366","rounds":[{"kills":4,"deaths":7,"assists":0},{"kills":1,"deaths":9,"assists":0},{"kills":5,"deaths":8,"assists":1}]},{"uid":"1105151021","rounds":[{"kills":3,"deaths":7,"assists":3}]},{"uid":"1213356890","rounds":[{"kills":3,"deaths":7,"assists":2},{"kills":4,"deaths":8,"assists":2},{"kills":6,"deaths":7,"assists":0}]},{"uid":"1246129555","rounds":[{"kills":3,"deaths":7,"assists":0},{"kills":7,"deaths":8,"assists":0},{"kills":0,"deaths":8,"assists":1}]},{"uid":"1370124271","rounds":[{"kills":3,"deaths":7,"assists":1},{"kills":12,"deaths":8,"assists":0},{"kills":1,"deaths":8,"assists":0}]},{"uid":"1895789462","rounds":[{"kills":4,"deaths":7,"assists":1}]}]}
+{
+  "tournament": "Clash for Glory: Road to All-Star S1",
+  "round": "Top 16",
+  "bracketSlot": 1,
+  "date": "2026-08-22",
+  "team1": "team-69",
+  "team2": "endevour-tvj",
+  "score1": 3,
+  "score2": 0,
+  "winner": "team-69",
+  "status": "completed",
+  "roundDetails": [
+    { "round_number": 1, "map": "Desert", "mvp": "1656689899" },
+    { "round_number": 2, "map": "Eagle Eye", "mvp": "1370124271" },
+    { "round_number": 3, "map": "Satellite", "mvp": "1078362342" }
+  ],
+  "playerStats": [
+    {
+      "uid": "1656689899",
+      "rounds": [
+        { "kills": 10, "deaths": 3, "assists": 5 },
+        { "kills": 6, "deaths": 3, "assists": 2 },
+        { "kills": 6, "deaths": 3, "assists": 3 }
+      ]
+    },
+    {
+      "uid": "1192380567",
+      "rounds": [
+        { "kills": 9, "deaths": 2, "assists": 3 },
+        { "kills": 10, "deaths": 5, "assists": 1 },
+        { "kills": 10, "deaths": 4, "assists": 1 }
+      ]
+    },
+    {
+      "uid": "1161370373",
+      "rounds": [
+        { "kills": 6, "deaths": 3, "assists": 6 },
+        { "kills": 2, "deaths": 5, "assists": 4 },
+        { "kills": 5, "deaths": 4, "assists": 3 }
+      ]
+    },
+    {
+      "uid": "1078362342",
+      "rounds": [
+        { "kills": 6, "deaths": 4, "assists": 6 },
+        { "kills": 9, "deaths": 5, "assists": 2 },
+        { "kills": 15, "deaths": 3, "assists": 1 }
+      ]
+    },
+    {
+      "uid": "1613117529",
+      "rounds": [
+        { "kills": 4, "deaths": 4, "assists": 1 },
+        { "kills": 6, "deaths": 6, "assists": 0 },
+        { "kills": 2, "deaths": 2, "assists": 0 }
+      ]
+    },
+    {
+      "uid": "1047666366",
+      "rounds": [
+        { "kills": 4, "deaths": 7, "assists": 0 },
+        { "kills": 1, "deaths": 9, "assists": 0 },
+        { "kills": 5, "deaths": 8, "assists": 1 }
+      ]
+    },
+    {
+      "uid": "1105151021",
+      "rounds": [
+        { "kills": 3, "deaths": 7, "assists": 3 }
+      ]
+    },
+    {
+      "uid": "1213356890",
+      "rounds": [
+        { "kills": 3, "deaths": 7, "assists": 2 },
+        { "kills": 4, "deaths": 8, "assists": 2 },
+        { "kills": 6, "deaths": 7, "assists": 0 }
+      ]
+    },
+    {
+      "uid": "1246129555",
+      "rounds": [
+        { "kills": 3, "deaths": 7, "assists": 0 },
+        { "kills": 7, "deaths": 8, "assists": 0 },
+        { "kills": 0, "deaths": 8, "assists": 1 }
+      ]
+    },
+    {
+      "uid": "1370124271",
+      "rounds": [
+        { "kills": 3, "deaths": 7, "assists": 1 },
+        { "kills": 12, "deaths": 8, "assists": 0 },
+        { "kills": 1, "deaths": 8, "assists": 0 }
+      ]
+    },
+    {
+      "uid": "1895789462",
+      "rounds": [
+        { "kills": 4, "deaths": 7, "assists": 1 }
+      ]
+    }
+  ]
+}

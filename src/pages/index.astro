@@ -85,6 +85,22 @@ const standings = teams.map(team => {
 
 const topFraggers = [...players].sort((a, b) => b.data.stats.kills - a.data.stats.kills).slice(0, 5);
 const topAssistsPlayers = [...players].sort((a, b) => b.data.stats.assists - a.data.stats.assists).slice(0, 5);
+
+// Calculate MVP counts from roundDetails across all completed matches
+const mvpCounts = new Map();
+completedMatches.forEach(m => {
+  (m.data.roundDetails || []).forEach(rd => {
+    if (rd.mvp) {
+      mvpCounts.set(rd.mvp, (mvpCounts.get(rd.mvp) || 0) + 1);
+    }
+  });
+});
+const totalMVPs = [...mvpCounts.values()].reduce((s, v) => s + v, 0);
+const topMVPPlayers = players
+  .map(p => ({ player: p, mvpCount: mvpCounts.get(p.data.uid) || 0 }))
+  .filter(p => p.mvpCount > 0)
+  .sort((a, b) => b.mvpCount - a.mvpCount)
+  .slice(0, 5);
 ---
 
 <Layout title="CFL Esports ID Tournament Hub - Home" current="Home">
@@ -114,6 +130,10 @@ const topAssistsPlayers = [...players].sort((a, b) => b.data.stats.assists - a.d
       <div class="stat-box stat-kills">
         <div class="stat-value">{totalKills}</div>
         <div class="stat-label">Total Kills</div>
+      </div>
+      <div class="stat-box stat-mvp">
+        <div class="stat-value">{totalMVPs}</div>
+        <div class="stat-label">MVP Awards</div>
       </div>
     </div>
 
@@ -179,38 +199,59 @@ const topAssistsPlayers = [...players].sort((a, b) => b.data.stats.assists - a.d
       </div>
 
       <div class="card">
-        <h3 style="margin-bottom: 1rem; color: var(--text-primary);">Tournament Winner</h3>
-        {tournaments.length > 0 && tournaments.some(t => t.winnerTeams.length > 0) ? (
-          <div class="carousel" id="tournament-carousel">
-            <div class="carousel-track" id="carousel-track">
-              {tournaments.filter(t => t.winnerTeams.length > 0).map((t) => (
-                <div class="carousel-slide">
-                  <div class="tournament-name">
-                    <div class="tournament-label">Tournament</div>
-                    <div class="tournament-title">{t.name}</div>
+        <h3 style="margin-bottom: 1rem; color: var(--text-primary);">Top MVP</h3>
+        {topMVPPlayers.length > 0 ? (
+          <div class="top-list">
+            {topMVPPlayers.map((p, i) => (
+              <div class="top-list-item">
+                <span class={`rank ${i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : 'rank-n'}`}>{i + 1}</span>
+                <div class="top-info">
+                  <a href={`/players/${p.player.id}`}><strong>{p.player.data.ign}</strong></a>
+                  <div style="color: var(--text-secondary); font-size: 0.85rem;">
+                    {p.mvpCount} {p.mvpCount === 1 ? 'MVP' : 'MVPs'}
                   </div>
-                  {t.winnerTeams.map((wt) => (
-                    <div class={`top-list-item ${wt.place === 1 ? 'rank-gold' : wt.place === 2 ? 'rank-silver' : 'rank-bronze'}`}>
-                      <span class="top-rank">{wt.place === 1 ? '🥇' : wt.place === 2 ? '🥈' : '🥉'}</span>
-                      <div class="top-info">
-                        <a href={`/teams/${wt.team.id}`}><strong>{wt.team.data.name}</strong></a>
-                        <div style="color: var(--text-secondary); font-size: 0.85rem;">
-                          {wt.place === 1 ? 'Champion' : wt.place === 2 ? 'Runner-up' : 'Third Place'}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
                 </div>
-              ))}
-            </div>
-            <button class="carousel-btn carousel-prev" id="carousel-prev" aria-label="Previous tournament">‹</button>
-            <button class="carousel-btn carousel-next" id="carousel-next" aria-label="Next tournament">›</button>
-            <div class="carousel-dots" id="carousel-dots"></div>
+              </div>
+            ))}
           </div>
         ) : (
-          <div style="color: var(--text-muted); text-align: center; padding: 1rem;">Tournament in progress</div>
+          <div style="color: var(--text-muted); text-align: center; padding: 1rem;">No MVPs yet</div>
         )}
       </div>
+    </div>
+
+    <div class="card" style="margin-top: 2rem;">
+      <h3 style="margin-bottom: 1rem; color: var(--text-primary);">Tournament Winner</h3>
+      {tournaments.length > 0 && tournaments.some(t => t.winnerTeams.length > 0) ? (
+        <div class="carousel" id="tournament-carousel">
+          <div class="carousel-track" id="carousel-track">
+            {tournaments.filter(t => t.winnerTeams.length > 0).map((t) => (
+              <div class="carousel-slide">
+                <div class="tournament-name">
+                  <div class="tournament-label">Tournament</div>
+                  <div class="tournament-title">{t.name}</div>
+                </div>
+                {t.winnerTeams.map((wt) => (
+                  <div class={`top-list-item ${wt.place === 1 ? 'rank-gold' : wt.place === 2 ? 'rank-silver' : 'rank-bronze'}`}>
+                    <span class="top-rank">{wt.place === 1 ? '🥇' : wt.place === 2 ? '🥈' : '🥉'}</span>
+                    <div class="top-info">
+                      <a href={`/teams/${wt.team.id}`}><strong>{wt.team.data.name}</strong></a>
+                      <div style="color: var(--text-secondary); font-size: 0.85rem;">
+                        {wt.place === 1 ? 'Champion' : wt.place === 2 ? 'Runner-up' : 'Third Place'}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+          <button class="carousel-btn carousel-prev" id="carousel-prev" aria-label="Previous tournament">‹</button>
+          <button class="carousel-btn carousel-next" id="carousel-next" aria-label="Next tournament">›</button>
+          <div class="carousel-dots" id="carousel-dots"></div>
+        </div>
+      ) : (
+        <div style="color: var(--text-muted); text-align: center; padding: 1rem;">Tournament in progress</div>
+      )}
     </div>
   </div>
 </Layout>
@@ -227,6 +268,8 @@ const topAssistsPlayers = [...players].sort((a, b) => b.data.stats.assists - a.d
   .stat-upcoming .stat-value { color: #fbbf24; }
   .stat-kills { background: rgba(255, 77, 46, 0.12); border-color: rgba(255, 77, 46, 0.3); }
   .stat-kills .stat-value { color: var(--accent); }
+  .stat-mvp { background: rgba(250, 204, 21, 0.12); border-color: rgba(250, 204, 21, 0.3); }
+  .stat-mvp .stat-value { color: #facc15; }
 
   /* Top list */
   .top-list-item {

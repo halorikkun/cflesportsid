@@ -28,20 +28,33 @@ const t2Won = m.data.winner === m.data.team2;
 const t1Color = m.data.status === 'completed' ? (t1Won ? '#f59e0b' : '#6b7280') : 'var(--text-primary)';
 const t2Color = m.data.status === 'completed' ? (t2Won ? '#f59e0b' : '#6b7280') : 'var(--text-primary)';
 
+// Round details: per-round map name and MVP (by UID)
+const roundDetails = m.data.roundDetails || [];
+const maps = roundDetails.map(rd => rd.map || '');
+const roundMVPuids = roundDetails.map(rd => rd.mvp || null);
+
+// numRounds = max of playerStats rounds and roundDetails length
+const numRounds = Math.max(
+  ...((m.data.playerStats || []).map(ps => (ps.rounds || []).length)),
+  roundDetails.length,
+  0
+);
+
 // Get player stats with player info
 const playerStats = (m.data.playerStats || []).map(ps => {
   const player = playersMap.get(ps.uid);
   const team = player ? teamsMap.get(player.data.team) : null;
+  const rounds = ps.rounds || [];
   return {
     uid: ps.uid,
-    ign: player ? player.data.ign : ps.uid,
+    ign: player ? player.data.ign : (ps.ign || ps.uid),
     teamName: team ? team.data.name : '—',
     teamTag: team ? team.data.tag : '—',
     teamId: player ? player.data.team : '',
-    rounds: ps.rounds || [],
-    totalKills: (ps.rounds || []).reduce((s, r) => s + (r.kills || 0), 0),
-    totalDeaths: (ps.rounds || []).reduce((s, r) => s + (r.deaths || 0), 0),
-    totalAssists: (ps.rounds || []).reduce((s, r) => s + (r.assists || 0), 0),
+    rounds,
+    totalKills: rounds.reduce((s, r) => s + (r.kills || 0), 0),
+    totalDeaths: rounds.reduce((s, r) => s + (r.deaths || 0), 0),
+    totalAssists: rounds.reduce((s, r) => s + (r.assists || 0), 0),
   };
 });
 
@@ -57,7 +70,46 @@ const team2Kills = team2Players.reduce((s, p) => s + p.totalKills, 0);
 const team2Deaths = team2Players.reduce((s, p) => s + p.totalDeaths, 0);
 const team2Assists = team2Players.reduce((s, p) => s + p.totalAssists, 0);
 
-const numRounds = Math.max(...playerStats.map(p => p.rounds.length), 0);
+// ===== MVP =====
+// Round MVP comes from roundDetails[].mvp (a UID) — we just resolve the player name
+function getRoundMVP(roundIdx) {
+  const uid = roundMVPuids[roundIdx];
+  if (!uid) return null;
+  const player = playersMap.get(uid);
+  const ps = playerStats.find(p => p.uid === uid);
+  const r = ps && ps.rounds[roundIdx] ? ps.rounds[roundIdx] : null;
+  return {
+    uid,
+    ign: player ? player.data.ign : (ps ? ps.ign : uid),
+    kills: r ? (r.kills || 0) : 0,
+    deaths: r ? (r.deaths || 0) : 0,
+    assists: r ? (r.assists || 0) : 0,
+  };
+}
+
+// Overall Match MVP: best total KDA across all rounds
+function kda(k, d, a) {
+  return (k + a) / Math.max(d, 1);
+}
+
+function calcOverallMVP() {
+  let best = null;
+  let bestKDA = -1;
+  for (const p of playerStats) {
+    if (p.totalKills + p.totalAssists === 0) continue;
+    const val = kda(p.totalKills, p.totalDeaths, p.totalAssists);
+    if (val > bestKDA) {
+      bestKDA = val;
+      best = { uid: p.uid, ign: p.ign, kills: p.totalKills, deaths: p.totalDeaths, assists: p.totalAssists, kda: val };
+    }
+  }
+  return best;
+}
+
+const roundMVPs = numRounds > 0
+  ? Array.from({ length: numRounds }, (_, i) => getRoundMVP(i))
+  : [];
+const overallMVP = calcOverallMVP();
 ---
 
 <Layout title={`${team1Name} vs ${team2Name} - CFL Esports ID Tournament Hub`} current="Matches">
@@ -87,6 +139,48 @@ const numRounds = Math.max(...playerStats.map(p => p.rounds.length), 0);
 
     {m.data.status === 'completed' && playerStats.length > 0 && (
       <>
+        {/* ===== Maps & MVP Section ===== */}
+        {roundDetails.length > 0 && (
+          <section style="margin-bottom: 2rem;">
+            <h2 style="margin-bottom: 1rem;">Maps &amp; MVP</h2>
+            <div class="mvp-grid">
+              {Array.from({ length: numRounds }, (_, i) => {
+                const mvp = roundMVPs[i];
+                const mapName = maps[i] || 'TBD';
+                return (
+                  <div class="mvp-card">
+                    <div class="mvp-round-label">Round {i + 1}</div>
+                    <div class="mvp-map-name">{mapName}</div>
+                    {mvp ? (
+                      <>
+                        <div class="mvp-label">Round MVP</div>
+                        <div class="mvp-player-name">{mvp.ign}</div>
+                        <div class="mvp-kda">
+                          <span class="kill">{mvp.kills}</span>/<span class="death">{mvp.deaths}</span>/<span class="assist">{mvp.assists}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div style="font-size: 0.85rem; color: var(--text-muted);">No MVP</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {overallMVP && (
+              <div class="overall-mvp">
+                <div class="overall-mvp-label">Match MVP</div>
+                <div class="overall-mvp-name">{overallMVP.ign}</div>
+                <div class="overall-mvp-kda">
+                  <span class="kill">{overallMVP.kills}</span>/<span class="death">{overallMVP.deaths}</span>/<span class="assist">{overallMVP.assists}</span>
+                  <span class="overall-mvp-ratio">KDA {overallMVP.kda.toFixed(2)}</span>
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* ===== Team Stats ===== */}
         <h2 style="margin-bottom: 1rem;">Team Stats</h2>
         <div class="stat-grid" style="margin-bottom: 2rem;">
           <div class="stat-box">
@@ -103,7 +197,8 @@ const numRounds = Math.max(...playerStats.map(p => p.rounds.length), 0);
           </div>
         </div>
 
-                <h2 style="margin-bottom: 1rem;">Player Stats</h2>
+        {/* ===== Player Stats ===== */}
+        <h2 style="margin-bottom: 1rem;">Player Stats</h2>
 
         {/* Team 1 players */}
         {team1Players.length > 0 && (
@@ -118,7 +213,7 @@ const numRounds = Math.max(...playerStats.map(p => p.rounds.length), 0);
                   <tr>
                     <th>Player</th>
                     {numRounds > 1 && Array.from({ length: numRounds }, (_, i) => (
-                      <th>Round {i + 1}</th>
+                      <th>Round {i + 1}{maps[i] ? ` — ${maps[i]}` : ''}</th>
                     ))}
                     <th>Total</th>
                   </tr>
@@ -155,7 +250,7 @@ const numRounds = Math.max(...playerStats.map(p => p.rounds.length), 0);
                   <tr>
                     <th>Player</th>
                     {numRounds > 1 && Array.from({ length: numRounds }, (_, i) => (
-                      <th>Round {i + 1}</th>
+                      <th>Round {i + 1}{maps[i] ? ` — ${maps[i]}` : ''}</th>
                     ))}
                     <th>Total</th>
                   </tr>
@@ -178,7 +273,6 @@ const numRounds = Math.max(...playerStats.map(p => p.rounds.length), 0);
             </div>
           </div>
         )}
-
 
         {numRounds <= 1 && (
           <div class="table-wrap" style="margin-bottom: 2rem;">
@@ -243,5 +337,82 @@ const numRounds = Math.max(...playerStats.map(p => p.rounds.length), 0);
       flex-direction: column;
       gap: 1rem;
     }
+  }
+
+  /* Maps & MVP cards */
+  .mvp-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .mvp-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    text-align: center;
+  }
+  .mvp-round-label {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+  }
+  .mvp-map-name {
+    font-size: 1.05rem;
+    font-weight: 800;
+    color: var(--accent);
+    margin-bottom: 0.75rem;
+  }
+  .mvp-label {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 0.25rem;
+  }
+  .mvp-player-name {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #facc15;
+    margin-bottom: 0.25rem;
+  }
+  .mvp-kda {
+    font-size: 0.85rem;
+    color: var(--text-primary);
+  }
+
+  /* Overall Match MVP banner */
+  .overall-mvp {
+    background: linear-gradient(135deg, var(--bg-card), rgba(255, 77, 46, 0.08));
+    border: 1px solid var(--accent);
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+  }
+  .overall-mvp-label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.5rem;
+  }
+  .overall-mvp-name {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #facc15;
+    margin-bottom: 0.25rem;
+  }
+  .overall-mvp-kda {
+    font-size: 1.1rem;
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .overall-mvp-ratio {
+    color: var(--text-muted);
+    font-weight: 400;
+    font-size: 0.9rem;
+    margin-left: 0.5rem;
   }
 </style>
