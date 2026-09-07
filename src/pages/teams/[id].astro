@@ -74,11 +74,11 @@ const sortedMatches = [...teamMatches].sort((a, b) => {
 
 <Layout title={`${team.data.name} - CFL Esports ID Tournament Hub`} current="Teams">
   <div class="container">
-    <a href="/teams" class="back-link">← Back to Teams</a>
     <div class="page-header">
       <h1>{team.data.name} <span style="color: var(--text-muted); font-size: 1rem;">[{team.data.tag}]</span></h1>
       <p style="font-size: 1.1rem; color: var(--accent); font-weight: 600;">{team.data.region} · {teamPlayers.filter(p => (p.data.status || 'active') === 'active').length} active players</p>
     </div>
+    <a href="/teams" class="back-link">← Back to Teams</a>
 
 
     {team.data.description && (

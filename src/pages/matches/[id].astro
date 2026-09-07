@@ -114,11 +114,11 @@ const overallMVP = calcOverallMVP();
 
 <Layout title={`${team1Name} vs ${team2Name} - CFL Esports ID Tournament Hub`} current="Matches">
   <div class="container">
-    <a href="/matches" class="back-link">← Back to Matches</a>
     <div class="page-header">
       <h1>{team1Name} vs {team2Name}</h1>
       <p>{m.data.tournament} · {m.data.round} · {m.data.date}</p>
     </div>
+    <a href="/matches" class="back-link">← Back to Matches</a>
 
     <div class="match-detail-scoreboard">
       <div class="match-detail-team" style={`color: ${t1Color};`}>
