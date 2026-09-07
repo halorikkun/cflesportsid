@@ -480,6 +480,69 @@ tr:hover td {
   }
 }
 
+/* ===== LOGO STYLES (Optimized for Black Line Art & Desktop) ===== */
+
+/* 1. Match Cards (Increased from 32px to 44px) */
+.team-logo {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  border-radius: 8px;
+  flex-shrink: 0;
+  /* Subtle background so black lines are visible */
+  background: var(--bg-card); 
+  border: 1px solid var(--border);
+  padding: 4px;
+}
+
+/* 2. Match Detail Scoreboard (Increased from 64px to 100px) */
+.team-logo-large {
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+  border-radius: 12px;
+  margin-bottom: 0.75rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 8px;
+}
+
+/* 3. Team Detail Hero (Increased from 96px to 128px) */
+.team-logo-hero {
+  width: 128px;
+  height: 128px;
+  object-fit: contain;
+  border-radius: 16px;
+  background: var(--bg-card);
+  border: 2px solid var(--border);
+  padding: 12px;
+  flex-shrink: 0;
+}
+
+/* 4. Teams Index Cards (Increased from 28px to 36px) */
+.team-logo-small {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  border-radius: 6px;
+  flex-shrink: 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 4px;
+}
+
+/* Mobile adjustments */
+@media (max-width: 640px) {
+  .team-logo-large {
+    width: 72px;
+    height: 72px;
+  }
+  .team-logo-hero {
+    width: 96px;
+    height: 96px;
+  }
+}
+
 @media (max-width: 480px) {
   /* --- NEW: 1 column for stats on very small screens --- */
   .stat-grid {
