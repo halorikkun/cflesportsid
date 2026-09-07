@@ -20,7 +20,6 @@ function getTeamRecord(teamId) {
 }
 
 const allPlayers = await getCollection('players');
-
 const playersByUid = {};
 allPlayers.forEach(p => {
   if (p.data.uid) playersByUid[p.data.uid] = p;
@@ -31,12 +30,15 @@ const teams = (await getCollection('teams')).map(team => {
   let teamPlayers = team.data.players
     .map(uid => playersByUid[uid])
     .filter(Boolean);
+    
   if (teamPlayers.length === 0) {
     teamPlayers = allPlayers.filter(p => p.data.team === team.id);
   }
+  
   const totalKills = teamPlayers.reduce((sum, p) => sum + (p.data.stats?.kills || 0), 0);
   const totalDeaths = teamPlayers.reduce((sum, p) => sum + (p.data.stats?.deaths || 0), 0);
   const totalAssists = teamPlayers.reduce((sum, p) => sum + (p.data.stats?.assists || 0), 0);
+  
   return {
     id: team.id,
     name: team.data.name,
@@ -89,59 +91,63 @@ const teams = (await getCollection('teams')).map(team => {
           data-kills={team.totalKills}
         >
           <div class="team-card-header">
-            <a href={`/teams/${team.id}`}><strong>{team.name}</strong></a>
+            <a href={`/teams/${team.id}`} class="team-name-link"><strong>{team.name}</strong></a>
             <span class="team-tag">[{team.tag}]</span>
             <span class="team-region">{team.region}</span>
           </div>
 
           <div class="team-card-stats">
-            <div class="team-stat-group team-stat-wl">
+            <div class="team-stat-group">
               <div class="team-stat-item">
                 <span class="team-stat-label">Kills</span>
-                <span style="color: var(--win); font-weight: 700;">{team.totalKills}</span>
+                <span class="text-win">{team.totalKills}</span>
               </div>
               <div class="team-stat-item">
                 <span class="team-stat-label">Deaths</span>
-                <span style="color: var(--loss); font-weight: 700;">{team.totalDeaths}</span>
+                <span class="text-loss">{team.totalDeaths}</span>
               </div>
               <div class="team-stat-item">
                 <span class="team-stat-label">Assists</span>
-                <span style="color: var(--assist); font-weight: 700;">{team.totalAssists}</span>
+                <span class="text-assist">{team.totalAssists}</span>
               </div>
             </div>
             <div class="team-stat-group team-stat-wl">
               <div class="team-stat-item">
                 <span class="team-stat-label">Wins</span>
-                <span style="color: var(--win); font-weight: 700;">{team.wins}</span>
+                <span class="text-win">{team.wins}</span>
               </div>
               <div class="team-stat-item">
                 <span class="team-stat-label">Losses</span>
-                <span style="color: var(--loss); font-weight: 700;">{team.losses}</span>
+                <span class="text-loss">{team.losses}</span>
               </div>
             </div>
           </div>
 
           <div class="team-players">
             <div class="team-players-label">Roster ({team.playerCount})</div>
-            {team.players.map(p => (
-              <div class="player-row">
-                <a href={`/players/${p.id}`} class="player-ign">{p.ign}</a>
-                <span class="player-uid">{p.uid}</span>
-                <span class={`player-status ${p.status === 'active' ? 'status-active' : 'status-inactive'}`}>
-                  {p.status === 'active' ? 'Active' : 'Inactive'}
-                </span>
-              </div>
-            ))}
+            <!-- NEW: Wrapped in roster-list for scrollable containment -->
+            <div class="roster-list">
+              {team.players.map(p => (
+                <div class="player-row">
+                  <a href={`/players/${p.id}`} class="player-ign">{p.ign}</a>
+                  <span class="player-uid">{p.uid}</span>
+                  <span class={`player-status ${p.status === 'active' ? 'status-active' : 'status-inactive'}`}>
+                    {p.status === 'active' ? 'Active' : 'Inactive'}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       ))}
     </div>
 
-    <p id="noResults" style="text-align: center; color: var(--text-muted); display: none; padding: 2rem;">No teams found.</p>
+    <p id="noResults" class="no-results">No teams found.</p>
     <div class="pagination" id="pagination"></div>
   </div>
 
   <script>
+    // ... (Your existing JS remains exactly the same, it's perfect!) ...
     const searchInput = document.getElementById('searchInput');
     const sortSelect = document.getElementById('sortSelect');
     const grid = document.getElementById('teamsGrid');
@@ -192,34 +198,31 @@ const teams = (await getCollection('teams')).map(team => {
       visible.slice(start, end).forEach(card => { card.style.display = ''; grid.appendChild(card); });
 
       noResults.style.display = visible.length === 0 ? 'block' : 'none';
-      renderPagination(totalPages);
-    }
-
-    function renderPagination(totalPages) {
+      
       pagination.innerHTML = '';
-      if (totalPages <= 1) return;
+      if (totalPages > 1) {
+        const prev = document.createElement('button');
+        prev.className = 'page-btn';
+        prev.textContent = '‹';
+        prev.disabled = currentPage === 1;
+        prev.addEventListener('click', () => { currentPage--; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+        pagination.appendChild(prev);
 
-      const prev = document.createElement('button');
-      prev.className = 'page-btn';
-      prev.textContent = '‹';
-      prev.disabled = currentPage === 1;
-      prev.addEventListener('click', () => { currentPage--; render(); window.scrollTo(0, 0); });
-      pagination.appendChild(prev);
+        for (let i = 1; i <= totalPages; i++) {
+          const btn = document.createElement('button');
+          btn.className = `page-btn ${i === currentPage ? 'active' : ''}`;
+          btn.textContent = i;
+          btn.addEventListener('click', () => { currentPage = i; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+          pagination.appendChild(btn);
+        }
 
-      for (let i = 1; i <= totalPages; i++) {
-        const btn = document.createElement('button');
-        btn.className = `page-btn ${i === currentPage ? 'active' : ''}`;
-        btn.textContent = i;
-        btn.addEventListener('click', () => { currentPage = i; render(); window.scrollTo(0, 0); });
-        pagination.appendChild(btn);
+        const next = document.createElement('button');
+        next.className = 'page-btn';
+        next.textContent = '›';
+        next.disabled = currentPage === totalPages;
+        next.addEventListener('click', () => { currentPage++; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+        pagination.appendChild(next);
       }
-
-      const next = document.createElement('button');
-      next.className = 'page-btn';
-      next.textContent = '›';
-      next.disabled = currentPage === totalPages;
-      next.addEventListener('click', () => { currentPage++; render(); window.scrollTo(0, 0); });
-      pagination.appendChild(next);
     }
 
     searchInput.addEventListener('input', () => { currentPage = 1; render(); });
@@ -229,40 +232,45 @@ const teams = (await getCollection('teams')).map(team => {
 </Layout>
 
 <style>
+  /* NEW: Responsive grid instead of single column */
+  .teams-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+  }
+
   .teams-toolbar {
     display: flex;
     gap: 0.75rem;
     margin-bottom: 1.5rem;
-    flex-wrap: wrap;
   }
-  .teams-search {
-    flex: 1;
-    min-width: 200px;
-    padding: 0.5rem 0.75rem;
+  
+  /* NEW: Stack toolbar on very small screens */
+  @media (max-width: 480px) {
+    .teams-toolbar { flex-direction: column; }
+    .teams-search { width: 100%; }
+  }
+
+  .teams-search, .teams-sort {
+    padding: 0.6rem 0.75rem;
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     color: var(--text-primary);
     font-size: 0.9rem;
   }
-  .teams-sort {
-    padding: 0.5rem 0.75rem;
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    color: var(--text-primary);
-    font-size: 0.9rem;
-    cursor: pointer;
-  }
+  .teams-search { flex: 1; min-width: 200px; }
+  .teams-sort { cursor: pointer; }
   .teams-sort:focus, .teams-search:focus {
     outline: none;
     border-color: var(--accent);
   }
 
-  .teams-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
+  .team-card {
+    /* Inherits global .card styles, ensuring equal height in grid */
+    height: 100%;
+    display: flex;
+    flex-direction: column;
   }
 
   .team-card-header {
@@ -274,14 +282,8 @@ const teams = (await getCollection('teams')).map(team => {
     padding-bottom: 1rem;
     border-bottom: 1px solid var(--border);
   }
-  .team-card-header a {
-    font-size: 1.05rem;
-  }
-  .team-tag {
-    color: var(--text-muted);
-    font-size: 0.85rem;
-    font-weight: 600;
-  }
+  .team-name-link { font-size: 1.1rem; }
+  .team-tag { color: var(--text-muted); font-size: 0.85rem; font-weight: 600; }
   .team-region {
     margin-left: auto;
     font-size: 0.7rem;
@@ -297,34 +299,29 @@ const teams = (await getCollection('teams')).map(team => {
   .team-card-stats {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     margin-bottom: 1rem;
   }
-  .team-stat-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
-  }
-  .team-stat-wl {
-    flex-direction: row;
-    gap: 1.5rem;
-  }
-  .team-stat-item {
-    display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
-    text-align: center;
-  }
+  .team-stat-group { display: flex; gap: 1.5rem; }
+  .team-stat-wl { flex-direction: row; }
+  .team-stat-item { display: flex; flex-direction: column; gap: 0.15rem; text-align: center; }
   .team-stat-label {
     font-size: 0.7rem;
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    font-weight: 600;
   }
+
+  /* NEW: Utility classes to replace inline styles */
+  .text-win { color: var(--win); font-weight: 700; }
+  .text-loss { color: var(--loss); font-weight: 700; }
+  .text-assist { color: var(--assist); font-weight: 700; }
 
   .team-players {
     border-top: 1px solid var(--border);
     padding-top: 0.75rem;
+    margin-top: auto; /* Pushes to bottom of card */
   }
   .team-players-label {
     font-size: 0.75rem;
@@ -332,7 +329,22 @@ const teams = (await getCollection('teams')).map(team => {
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin-bottom: 0.5rem;
+    font-weight: 600;
   }
+
+  /* NEW: Scrollable roster container */
+  .roster-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    max-height: 180px; /* Prevents card from getting too tall */
+    overflow-y: auto;
+    padding-right: 0.5rem;
+  }
+  .roster-list::-webkit-scrollbar { width: 4px; }
+  .roster-list::-webkit-scrollbar-track { background: transparent; }
+  .roster-list::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 4px; }
+
   .player-row {
     display: flex;
     align-items: center;
@@ -340,18 +352,18 @@ const teams = (await getCollection('teams')).map(team => {
     padding: 0.4rem 0;
     border-bottom: 1px solid var(--border);
   }
-  .player-row:last-child {
-    border-bottom: none;
-  }
+  .player-row:last-child { border-bottom: none; }
   .player-ign {
     font-weight: 600;
     font-size: 0.85rem;
     color: var(--text-primary);
     text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px; /* Prevents long names from breaking layout */
   }
-  .player-ign:hover {
-    color: var(--accent);
-  }
+  .player-ign:hover { color: var(--accent); }
   .player-uid {
     font-family: monospace;
     font-size: 0.75rem;
@@ -365,13 +377,10 @@ const teams = (await getCollection('teams')).map(team => {
     letter-spacing: 0.03em;
     padding: 0.15rem 0.5rem;
     border-radius: 4px;
+    flex-shrink: 0;
   }
-  .status-active {
-    background: rgba(34, 197, 94, 0.15);
-    color: var(--win);
-  }
-  .status-inactive {
-    background: rgba(156, 163, 175, 0.15);
-    color: var(--text-muted);
-  }
+  .status-active { background: rgba(34, 197, 94, 0.15); color: var(--win); }
+  .status-inactive { background: rgba(156, 163, 175, 0.15); color: var(--text-muted); }
+  
+  .no-results { text-align: center; color: var(--text-muted); display: none; padding: 2rem; }
 </style>

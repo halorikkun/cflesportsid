@@ -18,10 +18,7 @@ const playersMap = new Map(allPlayers.map(p => [p.id, p]));
 const teamPlayers = team.data.players.map(pid => playersMap.get(pid)).filter(Boolean);
 const allMatches = await getCollection('matches');
 
-const teamMatches = allMatches.filter(
-  m => m.data.team1 === team.id || m.data.team2 === team.id
-);
-
+const teamMatches = allMatches.filter(m => m.data.team1 === team.id || m.data.team2 === team.id);
 const completedMatches = teamMatches.filter(m => m.data.status === 'completed');
 
 let wins = 0, losses = 0;
@@ -38,30 +35,17 @@ const matchesPlayed = completedMatches.length;
 
 let totalKills = 0, totalDeaths = 0, totalAssists = 0;
 teamPlayers.forEach(p => {
-  totalKills += p.data.stats.kills;
-  totalDeaths += p.data.stats.deaths;
-  totalAssists += p.data.stats.assists;
+  totalKills += p.data.stats?.kills || 0;
+  totalDeaths += p.data.stats?.deaths || 0;
+  totalAssists += p.data.stats?.assists || 0;
 });
 
-// Build tournament name → numeric ID map (matches tournament/[id].astro getStaticPaths)
 const tournamentNames = [...new Set(allMatches.map(m => m.data.tournament || 'CFL Esports ID Tournament'))];
 const tournamentIds = new Map();
-tournamentNames.forEach((name, i) => {
-  tournamentIds.set(name, String(i + 1));
-});
+tournamentNames.forEach((name, i) => { tournamentIds.set(name, String(i + 1)); });
 
-// Round priority for sorting (Final first)
-const roundPriority = {
-  'Final': 1,
-  'Semifinal': 2,
-  'Quarter Final': 3,
-  'Top 16': 4,
-  'Round 3': 5,
-  'Round 2': 6,
-  'Round 1': 7,
-};
+const roundPriority = { 'Final': 1, 'Semifinal': 2, 'Quarter Final': 3, 'Top 16': 4, 'Round 3': 5, 'Round 2': 6, 'Round 1': 7 };
 
-// Sort match history: by date first (newest first), then by round priority
 const sortedMatches = [...teamMatches].sort((a, b) => {
   const dateA = new Date(a.data.date).getTime() || 0;
   const dateB = new Date(b.data.date).getTime() || 0;
@@ -70,23 +54,31 @@ const sortedMatches = [...teamMatches].sort((a, b) => {
   const prioB = roundPriority[b.data.round] || 99;
   return prioA - prioB;
 });
+
+const activePlayerCount = teamPlayers.filter(p => (p.data.status || 'active') === 'active').length;
+const initial = team.data.name.charAt(0).toUpperCase();
 ---
 
 <Layout title={`${team.data.name} - CFL Esports ID Tournament Hub`} current="Teams">
   <div class="container">
-    <div class="page-header">
-      <h1>{team.data.name} <span style="color: var(--text-muted); font-size: 1rem;">[{team.data.tag}]</span></h1>
-      <p style="font-size: 1.1rem; color: var(--accent); font-weight: 600;">{team.data.region} · {teamPlayers.filter(p => (p.data.status || 'active') === 'active').length} active players</p>
+    
+    <!-- NEW: Premium Detail Hero Section -->
+    <div class="detail-hero">
+      <div class="avatar avatar-large">{initial}</div>
+      <div class="detail-hero-info">
+        <h1>{team.data.name} <span class="hero-tag">[{team.data.tag}]</span></h1>
+        <p class="hero-subtitle">{team.data.region} · {activePlayerCount} active players</p>
+      </div>
     </div>
+
     <a href="/teams" class="back-link">← Back to Teams</a>
 
-
     {team.data.description && (
-      <p style="color: var(--text-secondary); margin-bottom: 2rem; max-width: 600px;">{team.data.description}</p>
+      <p class="team-description">{team.data.description}</p>
     )}
 
-    <h2 style="margin-bottom: 1rem;">Team Record</h2>
-    <div class="stat-grid" style="margin-bottom: 2rem;">
+    <h2 class="section-title">Team Record</h2>
+    <div class="stat-grid section-spacing">
       <div class="stat-box">
         <div class="stat-value">{matchesPlayed}</div>
         <div class="stat-label">Matches</div>
@@ -101,8 +93,8 @@ const sortedMatches = [...teamMatches].sort((a, b) => {
       </div>
     </div>
 
-    <h2 style="margin-bottom: 1rem;">Match Stats</h2>
-    <div class="stat-grid" style="margin-bottom: 2rem;">
+    <h2 class="section-title">Match Stats</h2>
+    <div class="stat-grid section-spacing">
       <div class="stat-box stat-box-kill">
         <div class="stat-value">{totalKills}</div>
         <div class="stat-label">Kills</div>
@@ -117,29 +109,28 @@ const sortedMatches = [...teamMatches].sort((a, b) => {
       </div>
     </div>
 
-    <h2 style="margin-bottom: 1rem;">Roster</h2>
-    <div class="grid grid-3" style="margin-bottom: 2rem;">
+    <h2 class="section-title">Roster</h2>
+    <div class="roster-detail-grid section-spacing">
       {teamPlayers.map(player => (
-        <a href={`/players/${player.id}`} class="card" style="text-decoration: none; color: inherit;">
-          <div style="display: flex; align-items: center; gap: 1rem;">
-            <div class="avatar">{player.data.ign.charAt(0).toUpperCase()}</div>
-            <div style="flex: 1;">
-              <strong>{player.data.ign}</strong>
-              <div style="color: var(--text-muted); font-size: 0.8rem;">{player.data.role}</div>
-            </div>
-            <span class={`badge ${player.data.status === 'inactive' ? 'badge-upcoming' : 'badge-completed'}`}>
-              {player.data.status === 'inactive' ? 'Inactive' : 'Active'}
-            </span>
+        <a href={`/players/${player.id}`} class="roster-card">
+          <div class="avatar">{player.data.ign.charAt(0).toUpperCase()}</div>
+          <div class="roster-card-info">
+            <strong>{player.data.ign}</strong>
+            <span>{player.data.role || 'Player'}</span>
           </div>
+          <span class={`badge ${player.data.status === 'inactive' ? 'badge-upcoming' : 'badge-completed'}`}>
+            {player.data.status === 'inactive' ? 'Inactive' : 'Active'}
+          </span>
         </a>
       ))}
     </div>
 
     {sortedMatches.length > 0 && (
       <div>
-        <h2 style="margin-bottom: 1rem;">Match History</h2>
+        <h2 class="section-title">Match History</h2>
         <div class="table-wrap">
-          <table>
+          <!-- NEW: Added class for targeted mobile sticky columns -->
+          <table class="match-history-table">
             <thead>
               <tr>
                 <th>Date</th>
@@ -158,20 +149,17 @@ const sortedMatches = [...teamMatches].sort((a, b) => {
                 const myScore = isTeam1 ? m.data.score1 : m.data.score2;
                 const oppScore = isTeam1 ? m.data.score2 : m.data.score1;
                 const won = m.data.winner === team.id;
-                const resultBadge = m.data.status === 'completed'
-                  ? (won ? 'badge-win' : 'badge-loss')
-                  : 'badge-upcoming';
-                const resultText = m.data.status === 'completed'
-                  ? (won ? 'Win' : 'Loss')
-                  : m.data.status;
+                const resultBadge = m.data.status === 'completed' ? (won ? 'badge-win' : 'badge-loss') : 'badge-upcoming';
+                const resultText = m.data.status === 'completed' ? (won ? 'Win' : 'Loss') : m.data.status;
                 const tournamentId = tournamentIds.get(m.data.tournament);
+                
                 return (
                   <tr>
-                    <td style="color: var(--text-muted);">{m.data.date}</td>
+                    <td>{m.data.date}</td>
                     <td><a href={`/tournament/${tournamentId}`}>{m.data.tournament}</a></td>
                     <td>{m.data.round}</td>
-                    <td><a href={`/teams/${opponentId}`}>{opponent ? opponent.data.name : opponentId}</a></td>
-                    <td><a href={`/matches/${m.id}`}>{myScore} - {oppScore}</a></td>
+                    <td><a href={`/teams/${opponentId}`} class="opponent-link">{opponent ? opponent.data.name : opponentId}</a></td>
+                    <td><a href={`/matches/${m.id}`} class="score-link">{myScore} - {oppScore}</a></td>
                     <td><span class={`badge ${resultBadge}`}>{resultText}</span></td>
                   </tr>
                 );
@@ -187,11 +175,102 @@ const sortedMatches = [...teamMatches].sort((a, b) => {
 <style>
   .back-link {
     display: inline-block;
-    margin-bottom: 1rem;
-    color: var(--accent);
+    margin-bottom: 1.5rem;
+    color: var(--text-secondary);
     font-weight: 600;
     font-size: 0.9rem;
     text-decoration: none;
+    transition: color 0.2s;
   }
-  .back-link:hover { text-decoration: underline; }
+  .back-link:hover { color: var(--accent); }
+
+  /* NEW: Detail Hero Styling */
+  .detail-hero {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 2rem;
+    background: linear-gradient(135deg, var(--accent-dim), transparent), var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 1.5rem;
+  }
+  .avatar-large {
+    width: 80px;
+    height: 80px;
+    font-size: 2rem;
+    background: var(--bg-primary);
+    border: 2px solid var(--accent);
+    flex-shrink: 0;
+  }
+  .detail-hero-info h1 { font-size: 1.75rem; margin-bottom: 0.25rem; }
+  .hero-tag { color: var(--text-muted); font-size: 1rem; font-weight: 600; }
+  .hero-subtitle { color: var(--accent); font-weight: 600; font-size: 1rem; margin: 0; }
+
+  .team-description {
+    color: var(--text-secondary);
+    margin-bottom: 2rem;
+    max-width: 700px;
+    line-height: 1.6;
+  }
+
+  .section-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-spacing { margin-bottom: 2.5rem; }
+
+  /* NEW: Clean Roster Grid Cards */
+  .roster-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+  }
+  .roster-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.2s;
+  }
+  .roster-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    background: var(--bg-card-hover);
+  }
+  .roster-card .avatar {
+    width: 40px;
+    height: 40px;
+    font-size: 0.9rem;
+  }
+  .roster-card-info {
+    flex: 1;
+    min-width: 0;
+  }
+  .roster-card-info strong {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-primary);
+    font-size: 1rem;
+  }
+  .roster-card-info span {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+
+  /* Table link styling */
+  .opponent-link { color: var(--text-primary); font-weight: 600; }
+  .opponent-link:hover { color: var(--accent); }
+  .score-link { color: var(--text-primary); font-family: monospace; font-weight: 700; }
+  .score-link:hover { color: var(--accent); }
 </style>
