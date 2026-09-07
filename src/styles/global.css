@@ -7,8 +7,8 @@
   --accent-hover: #ff6b50;
   --accent-dim: rgba(255, 77, 46, 0.15);
   --text-primary: #e4e7eb;
-  --text-secondary: #9ca3af;
-  --text-muted: #6b7280;
+  --text-secondary: #cbd5e1; /* --- MODIFIED: Lightened for better contrast --- */
+  --text-muted: #94a3b8;     /* --- MODIFIED: Lightened to pass WCAG accessibility contrast on dark bg --- */
   --border: #2a3142;
   --border-hover: #3a4258;
   --win: #22c55e;
@@ -16,8 +16,12 @@
   --assist: #eab308;
   --live: #f59e0b;
   --radius: 8px;
-  --accent-hover: #ff6b50;  /* keep as is */
-  --accent-orange: #f59e0b; /* new — for team name in players page */
+  --accent-orange: #f59e0b;
+}
+
+/* --- NEW: Smooth scrolling for the whole page --- */
+html {
+  scroll-behavior: smooth;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -41,14 +45,12 @@ a:hover { color: var(--accent-hover); }
   position: sticky;
   top: 0;
   z-index: 100;
+  backdrop-filter: blur(8px); /* --- NEW: Adds a modern glass effect when scrolling --- */
 }
 .site-header .container {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 64px;
-  flex-wrap: wrap;
-  height: auto;
   min-height: 64px;
   padding-top: 0.75rem;
   padding-bottom: 0.75rem;
@@ -61,7 +63,8 @@ a:hover { color: var(--accent-hover); }
   white-space: nowrap;
 }
 .logo span { color: var(--accent); }
-.nav { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+
+.nav { display: flex; gap: 1.5rem; }
 .nav a {
   color: var(--text-secondary);
   font-weight: 600;
@@ -69,6 +72,7 @@ a:hover { color: var(--accent-hover); }
   text-transform: uppercase;
   letter-spacing: 0.03em;
   transition: color 0.2s;
+  white-space: nowrap;
 }
 .nav a:hover, .nav a.active { color: var(--accent); }
 
@@ -96,24 +100,21 @@ a:hover { color: var(--accent-hover); }
   background: var(--bg-card-hover);
 }
 
-.team-card {
+/* --- NEW: Ensures cards in a grid are equal height --- */
+.grid-3 > .card, .grid-2 > .card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.team-card, .match-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 1.25rem;
   transition: border-color 0.2s, background 0.2s, transform 0.2s, box-shadow 0.2s;
 }
-.team-card:hover {
-  border-color: var(--accent);
-  background: var(--bg-card-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 20px rgba(255, 77, 46, 0.15);
-}
-
-.match-card {
-  transition: border-color 0.2s, background 0.2s, transform 0.2s, box-shadow 0.2s;
-}
-.match-card:hover {
+.team-card:hover, .match-card:hover {
   border-color: var(--accent);
   background: var(--bg-card-hover);
   transform: translateY(-2px);
@@ -158,7 +159,7 @@ th, td {
   border-bottom: 1px solid var(--border);
 }
 th {
-  color: var(--text-muted);
+  color: var(--text-primary); /* --- MODIFIED: Better contrast for headers --- */
   font-weight: 700;
   text-transform: uppercase;
   font-size: 0.75rem;
@@ -176,7 +177,6 @@ tr:hover td {
   background: var(--bg-card-hover);
 }
 
-
 .badge {
   display: inline-block;
   padding: 0.2rem 0.6rem;
@@ -192,14 +192,17 @@ tr:hover td {
 .badge-upcoming { background: rgba(156, 163, 175, 0.15); color: var(--text-secondary); }
 .badge-completed { background: rgba(34, 197, 94, 0.15); color: var(--win); }
 
-.stat-grid { display: flex; gap: 1rem; flex-wrap: wrap; }
+/* --- MODIFIED: Changed from flex to grid for perfect symmetry --- */
+.stat-grid { 
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* 3 columns on desktop */
+  gap: 1rem; 
+}
 .stat-box {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 1rem 1.5rem;
-  flex: 1;
-  min-width: 120px;
   text-align: center;
 }
 .stat-box .stat-value {
@@ -212,37 +215,19 @@ tr:hover td {
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  font-weight: 600; /* --- NEW: Slightly bolder for readability --- */
 }
 
-/* Colored stat-box variants — Team Record & Match Stats only */
-.stat-box-win {
-  border-color: var(--win);
-  background: rgba(34, 197, 94, 0.08);
-}
+/* Colored stat-box variants */
+.stat-box-win { border-color: var(--win); background: rgba(34, 197, 94, 0.08); }
 .stat-box-win .stat-value { color: var(--win); }
-
-.stat-box-loss {
-  border-color: var(--loss);
-  background: rgba(239, 68, 68, 0.08);
-}
+.stat-box-loss { border-color: var(--loss); background: rgba(239, 68, 68, 0.08); }
 .stat-box-loss .stat-value { color: var(--loss); }
-
-.stat-box-kill {
-  border-color: var(--win);
-  background: rgba(34, 197, 94, 0.08);
-}
+.stat-box-kill { border-color: var(--win); background: rgba(34, 197, 94, 0.08); }
 .stat-box-kill .stat-value { color: var(--win); }
-
-.stat-box-death {
-  border-color: var(--loss);
-  background: rgba(239, 68, 68, 0.08);
-}
+.stat-box-death { border-color: var(--loss); background: rgba(239, 68, 68, 0.08); }
 .stat-box-death .stat-value { color: var(--loss); }
-
-.stat-box-assist {
-  border-color: var(--assist);
-  background: rgba(234, 179, 8, 0.08);
-}
+.stat-box-assist { border-color: var(--assist); background: rgba(234, 179, 8, 0.08); }
 .stat-box-assist .stat-value { color: var(--assist); }
 
 .kda { font-family: monospace; font-size: 0.85rem; }
@@ -276,24 +261,6 @@ tr:hover td {
 .kd-positive { color: var(--win); font-weight: 700; }
 .kd-negative { color: var(--loss); font-weight: 700; }
 
-@media (max-width: 768px) {
-  .site-header .container {
-    gap: 0.5rem;
-  }
-  .logo {
-    font-size: 1rem;
-  }
-  .nav {
-    gap: 0.75rem;
-    width: 100%;
-  }
-  .nav a {
-    font-size: 0.75rem;
-  }
-  .page-header h1 { font-size: 1.5rem; }
-}
-
-/* Rank circles */
 .rank {
   display: inline-flex;
   align-items: center;
@@ -310,7 +277,6 @@ tr:hover td {
 .rank-3 { background: #d97706; color: #fff; }
 .rank-n { background: #2a2d38; color: #9ca3af; }
 
-/* Pagination */
 .pagination {
   display: flex;
   justify-content: center;
@@ -322,13 +288,116 @@ tr:hover td {
   background: var(--bg-card);
   border: 1px solid var(--border);
   color: var(--text-secondary);
-  padding: 0.5rem 0.9rem;
+  padding: 0.6rem 1rem; /* --- MODIFIED: Slightly larger for better touch targets --- */
   border-radius: var(--radius);
   cursor: pointer;
   font-weight: 600;
   font-size: 0.85rem;
-  transition: border-color 0.2s, color 0.2s;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+  min-height: 44px; /* --- NEW: Accessibility standard for touch --- */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
-.page-btn:hover { border-color: var(--accent); color: var(--accent); }
+.page-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
 .page-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
 .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* --- NEW: Truncate long player names to prevent layout breaking --- */
+.top-info strong {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+/* --- NEW: Carousel button touch targets --- */
+.carousel-btn {
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.carousel-btn:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* =========================================
+   MOBILE RESPONSIVENESS 
+   ========================================= */
+@media (max-width: 768px) {
+  .site-header .container {
+    gap: 0.5rem;
+  }
+  .logo {
+    font-size: 1.1rem;
+  }
+  
+  /* --- MODIFIED: Clean horizontal scroll instead of messy wrap --- */
+  .nav {
+    gap: 1rem;
+    width: 100%;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+    flex-wrap: nowrap;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+  }
+  .nav::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+  }
+  .nav a {
+    font-size: 0.8rem;
+  }
+
+  .page-header h1 { font-size: 1.5rem; }
+  
+  /* --- MODIFIED: 2 columns for stats on mobile --- */
+  .stat-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* --- NEW: Sticky first two columns in table for mobile readability --- */
+  th:first-child, td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    border-right: 1px solid var(--border);
+  }
+  th:nth-child(2), td:nth-child(2) {
+    position: sticky;
+    left: 50px; /* Adjust based on rank column width */
+    z-index: 2;
+    border-right: 1px solid var(--border);
+  }
+  
+  /* Ensure sticky columns match row backgrounds */
+  th:first-child, th:nth-child(2) {
+    background: rgba(255, 77, 46, 0.08);
+  }
+  tbody tr:nth-child(even) td:first-child,
+  tbody tr:nth-child(even) td:nth-child(2) {
+    background: rgba(255, 255, 255, 0.02);
+  }
+  tr:hover td:first-child,
+  tr:hover td:nth-child(2) {
+    background: var(--bg-card-hover);
+  }
+}
+
+@media (max-width: 480px) {
+  /* --- NEW: 1 column for stats on very small screens --- */
+  .stat-grid {
+    grid-template-columns: 1fr;
+  }
+}
