@@ -43,10 +43,11 @@ teamPlayers.forEach(p => {
   totalAssists += p.data.stats.assists;
 });
 
-// Build tournament name → slug map for linking
-const tournamentSlugs = new Map();
-[...new Set(allMatches.map(m => m.data.tournament))].forEach(tName => {
-  tournamentSlugs.set(tName, tName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''));
+// Build tournament name → numeric ID map (matches tournament/[id].astro getStaticPaths)
+const tournamentNames = [...new Set(allMatches.map(m => m.data.tournament || 'CFL Esports ID Tournament'))];
+const tournamentIds = new Map();
+tournamentNames.forEach((name, i) => {
+  tournamentIds.set(name, String(i + 1));
 });
 
 // Round priority for sorting (Final first)
@@ -162,11 +163,11 @@ const sortedMatches = [...teamMatches].sort((a, b) => {
                 const resultText = m.data.status === 'completed'
                   ? (won ? 'Win' : 'Loss')
                   : m.data.status;
-                const tournamentSlug = tournamentSlugs.get(m.data.tournament);
+                const tournamentId = tournamentIds.get(m.data.tournament);
                 return (
                   <tr>
                     <td style="color: var(--text-muted);">{m.data.date}</td>
-                    <td><a href={`/tournament/${tournamentSlug}`}>{m.data.tournament}</a></td>
+                    <td><a href={`/tournament/${tournamentId}`}>{m.data.tournament}</a></td>
                     <td>{m.data.round}</td>
                     <td><a href={`/teams/${opponentId}`}>{opponent ? opponent.data.name : opponentId}</a></td>
                     <td><a href={`/matches/${m.id}`}>{myScore} - {oppScore}</a></td>
