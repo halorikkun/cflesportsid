@@ -44,6 +44,7 @@ playerMatches.forEach(m => {
 
 <Layout title={`${player.data.ign} - CFL Tournament Hub`} current="Players">
   <div class="container">
+    <a href="/players" class="back-link">← Back to Players</a>
     <div style="display: flex; align-items: center; gap: 1.5rem; margin: 3rem 0 2rem;">
       <div class="avatar" style="width: 80px; height: 80px; font-size: 2rem;">
         {player.data.ign.charAt(0).toUpperCase()}
@@ -206,36 +207,40 @@ playerMatches.forEach(m => {
 </Layout>
 
 <style>
+  .back-link {
+    display: inline-block;
+    margin-bottom: 1rem;
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-decoration: none;
+  }
+  .back-link:hover { text-decoration: underline; }
   .stat-kills {
     background: rgba(34, 197, 94, 0.12);
     border-color: rgba(34, 197, 94, 0.3);
   }
   .stat-kills .stat-value { color: #4ade80; }
-
   .stat-deaths {
     background: rgba(239, 68, 68, 0.12);
     border-color: rgba(239, 68, 68, 0.3);
   }
   .stat-deaths .stat-value { color: #f87171; }
-
   .stat-assists {
     background: rgba(168, 85, 247, 0.12);
     border-color: rgba(168, 85, 247, 0.3);
   }
   .stat-assists .stat-value { color: #c084fc; }
-
   .stat-kd {
     background: rgba(245, 158, 11, 0.12);
     border-color: rgba(245, 158, 11, 0.3);
   }
   .stat-kd .stat-value { color: #fbbf24; }
-
   .stat-matches {
     background: rgba(59, 130, 246, 0.12);
     border-color: rgba(59, 130, 246, 0.3);
   }
   .stat-matches .stat-value { color: #60a5fa; }
-
   .stat-mvp {
     background: rgba(250, 204, 21, 0.12);
     border-color: rgba(250, 204, 21, 0.3);

@@ -73,7 +73,6 @@ const team2Deaths = team2Players.reduce((s, p) => s + p.totalDeaths, 0);
 const team2Assists = team2Players.reduce((s, p) => s + p.totalAssists, 0);
 
 // ===== MVP =====
-// Round MVP comes from roundDetails[].mvp (a UID) — we just resolve the player name
 function getRoundMVP(roundIdx) {
   const uid = roundMVPuids[roundIdx];
   if (!uid) return null;
@@ -89,7 +88,6 @@ function getRoundMVP(roundIdx) {
   };
 }
 
-// Overall Match MVP: best total KDA across all rounds
 function kda(k, d, a) {
   return (k + a) / Math.max(d, 1);
 }
@@ -116,6 +114,7 @@ const overallMVP = calcOverallMVP();
 
 <Layout title={`${team1Name} vs ${team2Name} - CFL Esports ID Tournament Hub`} current="Matches">
   <div class="container">
+    <a href="/matches" class="back-link">← Back to Matches</a>
     <div class="page-header">
       <h1>{team1Name} vs {team2Name}</h1>
       <p>{m.data.tournament} · {m.data.round} · {m.data.date}</p>
@@ -141,7 +140,6 @@ const overallMVP = calcOverallMVP();
 
     {m.data.status === 'completed' && playerStats.length > 0 && (
       <>
-        {/* ===== Maps & MVP Section ===== */}
         {roundDetails.length > 0 && (
           <section style="margin-bottom: 2rem;">
             <h2 style="margin-bottom: 1rem;">Maps &amp; MVP</h2>
@@ -182,7 +180,6 @@ const overallMVP = calcOverallMVP();
           </section>
         )}
 
-        {/* ===== Team Stats ===== */}
         <h2 style="margin-bottom: 1rem;">Team Stats</h2>
         <div class="stat-grid" style="margin-bottom: 2rem;">
           <div class="stat-box">
@@ -199,10 +196,8 @@ const overallMVP = calcOverallMVP();
           </div>
         </div>
 
-        {/* ===== Player Stats ===== */}
         <h2 style="margin-bottom: 1rem;">Player Stats</h2>
 
-        {/* Team 1 players */}
         {team1Players.length > 0 && (
           <div style="margin-bottom: 2rem;">
             <h3 style="margin-bottom: 0.75rem; color: {t1Color};">
@@ -239,7 +234,6 @@ const overallMVP = calcOverallMVP();
           </div>
         )}
 
-        {/* Team 2 players */}
         {team2Players.length > 0 && (
           <div style="margin-bottom: 2rem;">
             <h3 style="margin-bottom: 0.75rem; color: {t2Color};">
@@ -314,6 +308,15 @@ const overallMVP = calcOverallMVP();
 </Layout>
 
 <style>
+  .back-link {
+    display: inline-block;
+    margin-bottom: 1rem;
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-decoration: none;
+  }
+  .back-link:hover { text-decoration: underline; }
   .match-detail-scoreboard {
     display: flex;
     align-items: center;
@@ -340,8 +343,6 @@ const overallMVP = calcOverallMVP();
       gap: 1rem;
     }
   }
-
-  /* Maps & MVP cards */
   .mvp-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -384,8 +385,6 @@ const overallMVP = calcOverallMVP();
     font-size: 0.85rem;
     color: var(--text-primary);
   }
-
-  /* Overall Match MVP banner */
   .overall-mvp {
     background: linear-gradient(135deg, var(--bg-card), rgba(255, 77, 46, 0.08));
     border: 1px solid var(--accent);
