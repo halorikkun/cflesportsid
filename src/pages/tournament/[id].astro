@@ -17,22 +17,15 @@ const matches = await getCollection('matches');
 const teams = await getCollection('teams');
 
 const tMatches = matches.filter(m => (m.data.tournament || 'CFL Esports ID Tournament') === tournamentName);
+const tournamentNamesList = [...new Set(matches.map(m => m.data.tournament || 'CFL Esports ID Tournament'))];
+const tournaments = tournamentNamesList.map((name, i) => ({ name, id: i + 1 }));
 
-const tournamentNames = [...new Set(matches.map(m => m.data.tournament || 'CFL Esports ID Tournament'))];
-const tournaments = tournamentNames.map((name, i) => ({ name, id: i + 1 }));
-
-const ROUND_ORDER = [
-  'First Round', 'Second Round', 'Third Round',
-  'Top 16', 'Quarter Final', 'Semi Final', 'Final'
-];
-
-const BRACKET_ROUNDS = ROUND_ORDER;
+const ROUND_ORDER = ['First Round', 'Second Round', 'Third Round', 'Top 16', 'Quarter Final', 'Semi Final', 'Final'];
 const SPECIAL_ROUNDS = ['Bronze Match'];
 
-const bracketMatches = tMatches.filter(m => BRACKET_ROUNDS.includes(m.data.round));
+const bracketMatches = tMatches.filter(m => ROUND_ORDER.includes(m.data.round));
 const specialMatches = tMatches.filter(m => SPECIAL_ROUNDS.includes(m.data.round));
 
-// Group bracket matches by round
 const byRound = {};
 bracketMatches.forEach(m => {
   const round = m.data.round;
@@ -49,13 +42,10 @@ const rounds = Object.keys(byRound).sort((a, b) => {
   return ia - ib;
 });
 
-// Sort matches within each round by bracketSlot
 rounds.forEach(r => {
   byRound[r].sort((a, b) => (a.data.bracketSlot || 0) - (b.data.bracketSlot || 0));
 });
 
-// Build combined entries (matches + byes) for each round
-// A "bye" is auto-detected when a slot is missing but the next round expects it
 const roundEntries = {};
 rounds.forEach((round, roundIdx) => {
   const entries = [];
@@ -67,7 +57,6 @@ rounds.forEach((round, roundIdx) => {
     entries.push({ type: 'match', slot, match: m });
   });
 
-  // If not the last bracket round, detect byes
   if (roundIdx < rounds.length - 1) {
     const nextRound = rounds[roundIdx + 1];
     const nextMatches = byRound[nextRound];
@@ -75,27 +64,17 @@ rounds.forEach((round, roundIdx) => {
 
     for (let slot = 1; slot <= expectedSlots; slot++) {
       if (!existingSlots.has(slot)) {
-        // Find the bye team from the next round's match
-        const targetSlot = Math.ceil(slot / 2);
-        const targetMatch = nextMatches.find(m => (m.data.bracketSlot || 0) === targetSlot);
-
+        const targetMatch = nextMatches.find(m => (m.data.bracketSlot || 0) === Math.ceil(slot / 2));
         if (targetMatch) {
-          // The paired slot (sibling) has a winner
           const pairedSlot = slot % 2 === 1 ? slot + 1 : slot - 1;
           const pairedMatch = byRound[round].find(m => (m.data.bracketSlot || 0) === pairedSlot);
           const pairedWinner = pairedMatch?.data.winner;
-
-          // Bye team = the QF participant that didn't come from the paired match
-          const byeTeam = pairedWinner === targetMatch.data.team1
-            ? targetMatch.data.team2
-            : targetMatch.data.team1;
-
+          const byeTeam = pairedWinner === targetMatch.data.team1 ? targetMatch.data.team2 : targetMatch.data.team1;
           entries.push({ type: 'bye', slot, team: byeTeam });
         }
       }
     }
   }
-
   entries.sort((a, b) => a.slot - b.slot);
   roundEntries[round] = entries;
 });
@@ -123,7 +102,7 @@ function formatDate(d) {
 
     <div class="bracket-nav">
       <a href="/tournament" class="back-link">← All Tournaments</a>
-      <select id="tourney-select">
+      <select id="tourney-select" onchange="if(this.value) window.location.href='/tournament/'+this.value">
         {tournaments.map(t => (
           <option value={t.id} selected={t.name === tournamentName}>{t.name}</option>
         ))}
@@ -138,6 +117,7 @@ function formatDate(d) {
             const roundMatches = byRound[round];
             const dates = [...new Set(roundMatches.map(m => m.data.date).filter(Boolean))];
             const dateStr = dates.length > 0 ? dates.map(formatDate).join(' & ') : '';
+            
             return (
               <div class="bracket-round" data-round={round}>
                 <div class="bracket-round-header">
@@ -159,7 +139,7 @@ function formatDate(d) {
                           </div>
                           <div class="bracket-team-row empty">
                             <div class="bracket-team-info">
-                              <span class="bracket-team-name" style="color: var(--text-muted); font-style: italic;">No opponent</span>
+                              <span class="bracket-team-name">No opponent</span>
                             </div>
                           </div>
                         </div>
@@ -171,8 +151,9 @@ function formatDate(d) {
                     const team2 = getTeam(m.data.team2);
                     const win1 = isCompleted && m.data.winner === m.data.team1;
                     const win2 = isCompleted && m.data.winner === m.data.team2;
+                    
                     return (
-                      <div class={`bracket-match ${isCompleted ? '' : 'upcoming'}`} data-slot={entry.slot} data-round={round} data-match-id={m.id}>
+                      <a href={`/matches/${m.id}`} class={`bracket-match ${isCompleted ? '' : 'upcoming'}`} data-slot={entry.slot} data-round={round} data-match-id={m.id}>
                         <div class={`bracket-team-row ${win1 ? 'winner' : (win2 ? 'loser' : '')}`}>
                           <div class="bracket-team-info">
                             <span class="bracket-team-tag">{team1?.data.tag || 'TBD'}</span>
@@ -187,17 +168,11 @@ function formatDate(d) {
                           </div>
                           <span class="bracket-team-score">{isCompleted ? m.data.score2 : '–'}</span>
                         </div>
-                        {isCompleted && (
-                          <div class="bracket-link">
-                            <a href={`/matches/${m.id}`}>Details →</a>
-                          </div>
-                        )}
-                      </div>
+                      </a>
                     );
                   })}
                 </div>
 
-                {/* Bronze Match below Final in the last round column */}
                 {roundIdx === rounds.length - 1 && specialMatches.length > 0 && (
                   <div class="bracket-bronze">
                     <div class="bracket-bronze-divider"></div>
@@ -208,8 +183,9 @@ function formatDate(d) {
                       const team2 = getTeam(m.data.team2);
                       const win1 = isCompleted && m.data.winner === m.data.team1;
                       const win2 = isCompleted && m.data.winner === m.data.team2;
+                      
                       return (
-                        <div class={`bracket-match ${isCompleted ? '' : 'upcoming'}`} data-slot={m.data.bracketSlot || 0} data-round={m.data.round} data-match-id={m.id}>
+                        <a href={`/matches/${m.id}`} class={`bracket-match ${isCompleted ? '' : 'upcoming'}`} data-slot={m.data.bracketSlot || 0} data-round={m.data.round} data-match-id={m.id}>
                           <div class={`bracket-team-row ${win1 ? 'winner' : (win2 ? 'loser' : '')}`}>
                             <div class="bracket-team-info">
                               <span class="bracket-team-tag">{team1?.data.tag || 'TBD'}</span>
@@ -224,12 +200,7 @@ function formatDate(d) {
                             </div>
                             <span class="bracket-team-score">{isCompleted ? m.data.score2 : '–'}</span>
                           </div>
-                          {isCompleted && (
-                            <div class="bracket-link">
-                              <a href={`/matches/${m.id}`}>Details →</a>
-                            </div>
-                          )}
-                        </div>
+                        </a>
                       );
                     })}
                   </div>
@@ -253,38 +224,55 @@ function formatDate(d) {
     flex-wrap: wrap;
   }
   .back-link {
-    color: var(--accent);
+    color: var(--text-secondary);
     font-weight: 600;
     text-decoration: none;
+    transition: color 0.2s;
   }
-  .back-link:hover { color: var(--accent-hover); text-decoration: underline; }
+  .back-link:hover { color: var(--accent); }
+  
   #tourney-select {
     background: var(--bg-card);
     border: 1px solid var(--border);
     color: var(--text-primary);
-    padding: 0.5rem 0.75rem;
+    padding: 0.6rem 0.75rem;
     border-radius: var(--radius);
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     font-weight: 600;
     cursor: pointer;
+    transition: border-color 0.2s;
   }
   #tourney-select:focus { outline: none; border-color: var(--accent); }
 
-  .bracket-scroll { overflow-x: auto; padding-bottom: 1rem; }
+  .bracket-scroll { 
+    overflow-x: auto; 
+    padding-bottom: 2rem; 
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .bracket-scroll::-webkit-scrollbar { height: 8px; }
+  .bracket-scroll::-webkit-scrollbar-track { background: transparent; }
+  .bracket-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
   .bracket-wrapper {
     position: relative;
     min-width: max-content;
+    padding: 1rem 0;
   }
-  .bracket { display: flex; gap: 3rem; align-items: stretch; position: relative; z-index: 1; }
+  .bracket { 
+    display: flex; 
+    gap: 3rem; 
+    align-items: stretch; 
+    position: relative; 
+    z-index: 1; 
+  }
 
   .bracket-round {
     display: flex;
     flex-direction: column;
-    min-width: 200px;
+    min-width: 220px;
   }
-  .bracket-round-header {
-    margin-bottom: 1.5rem;
-  }
+  .bracket-round-header { margin-bottom: 1.5rem; }
   .bracket-round-title {
     text-align: center;
     font-size: 0.85rem;
@@ -293,7 +281,7 @@ function formatDate(d) {
     letter-spacing: 0.05em;
     color: var(--accent);
     padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 2px solid var(--accent-dim);
   }
   .bracket-round-date {
     text-align: center;
@@ -314,12 +302,19 @@ function formatDate(d) {
     position: relative;
     background: var(--bg-card);
     border: 1px solid var(--border);
-    border-radius: 10px;
-    transition: border-color 0.2s;
+    border-radius: var(--radius);
+    transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+    text-decoration: none;
+    color: inherit;
+    display: block;
   }
-  .bracket-match:hover { border-color: var(--accent); }
+  .bracket-match:hover { 
+    border-color: var(--accent); 
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
   .bracket-match.upcoming { border-style: dashed; }
-  .bracket-match.bye { border-style: dashed; border-color: var(--border-hover); opacity: 0.75; }
+  .bracket-match.bye { border-style: dashed; border-color: var(--border-hover); opacity: 0.8; pointer-events: none; }
 
   .bracket-team-row {
     display: flex;
@@ -329,10 +324,12 @@ function formatDate(d) {
     font-size: 0.88rem;
   }
   .bracket-team-row + .bracket-team-row { border-top: 1px solid var(--border); }
+  
   .bracket-team-row.winner { background: rgba(250, 204, 21, 0.06); }
   .bracket-team-row.loser { opacity: 0.5; }
   .bracket-team-row.empty { opacity: 0.4; }
-  .bracket-team-info { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
+  
+  .bracket-team-info { display: flex; align-items: center; gap: 0.5rem; min-width: 0; flex: 1; }
   .bracket-team-tag {
     font-size: 0.7rem;
     font-weight: 700;
@@ -343,6 +340,7 @@ function formatDate(d) {
     flex-shrink: 0;
   }
   .bracket-team-row.winner .bracket-team-tag { background: rgba(250, 204, 21, 0.2); color: #facc15; }
+  
   .bracket-team-name {
     font-weight: 600;
     white-space: nowrap;
@@ -352,6 +350,7 @@ function formatDate(d) {
   .bracket-team-score { font-weight: 800; font-size: 1rem; min-width: 24px; text-align: right; }
   .bracket-team-row.winner .bracket-team-score { color: #facc15; }
   .bracket-team-row.loser .bracket-team-score { color: var(--text-muted); }
+  
   .bracket-bye-label {
     font-size: 0.7rem;
     font-weight: 700;
@@ -360,14 +359,6 @@ function formatDate(d) {
     padding: 0.1rem 0.5rem;
     border-radius: 4px;
   }
-  .bracket-link { text-align: center; margin-top: 0.4rem; padding-bottom: 0.3rem; }
-  .bracket-link a {
-    font-size: 0.75rem;
-    color: var(--accent);
-    font-weight: 600;
-    text-decoration: none;
-  }
-  .bracket-link a:hover { color: var(--accent-hover); text-decoration: underline; }
 
   .bracket-connectors {
     position: absolute;
@@ -380,14 +371,8 @@ function formatDate(d) {
     overflow: visible;
   }
 
-  .bracket-bronze {
-    margin-top: 2rem;
-  }
-  .bracket-bronze-divider {
-    height: 1px;
-    background: var(--border);
-    margin-bottom: 1.5rem;
-  }
+  .bracket-bronze { margin-top: 2rem; }
+  .bracket-bronze-divider { height: 1px; background: var(--border); margin-bottom: 1.5rem; }
   .bracket-bronze .bracket-round-title {
     text-align: center;
     font-size: 0.85rem;
@@ -396,16 +381,17 @@ function formatDate(d) {
     letter-spacing: 0.05em;
     color: var(--accent-orange);
     margin-bottom: 1rem;
+    border-bottom-color: rgba(245, 158, 11, 0.2);
   }
-  .bracket-bronze .bracket-match { margin-top: 1rem; }
 
   @media (max-width: 768px) {
-    .bracket-round { min-width: 170px; }
-    .bracket { gap: 2rem; }
+    .bracket-round { min-width: 180px; }
+    .bracket { gap: 1.5rem; }
   }
 </style>
 
-<script>
+<!-- NEW: is:inline prevents Astro from hoisting this script to the <head>, ensuring DOM elements exist -->
+<script is:inline>
   function drawConnectors() {
     const svg = document.getElementById('bracket-connectors');
     if (!svg) return;
@@ -463,16 +449,24 @@ function formatDate(d) {
 
         const path = document.createElementNS(NS, 'path');
         path.setAttribute('d', `M ${startX} ${startY} L ${midX} ${startY} L ${midX} ${endY} L ${endX} ${endY}`);
-        path.setAttribute('stroke', '#2a3142');
+        path.setAttribute('stroke', '#3a4258'); /* Slightly lighter than border for visibility */
         path.setAttribute('stroke-width', '2');
         path.setAttribute('fill', 'none');
-        path.setAttribute('opacity', '0.6');
+        path.setAttribute('opacity', '0.8');
         svg.appendChild(path);
       });
     }
   }
 
-  window.addEventListener('load', drawConnectors);
-  window.addEventListener('resize', drawConnectors);
-  setTimeout(drawConnectors, 100);
+  // Ensure DOM is fully loaded and fonts are rendered before drawing
+  document.addEventListener('DOMContentLoaded', () => {
+    drawConnectors();
+    setTimeout(drawConnectors, 150); // Fallback for late font loading
+  });
+  
+  window.addEventListener('resize', () => {
+    // Debounce resize for performance
+    clearTimeout(window.resizeTimer);
+    window.resizeTimer = setTimeout(drawConnectors, 100);
+  });
 </script>

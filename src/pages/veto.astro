@@ -6,7 +6,7 @@ const matches = await getCollection('matches');
 const teams = await getCollection('teams');
 const teamsMap = new Map(teams.map(t => [t.id, t]));
 
-// ===== EDIT: Your competitive map pool =====
+// ===== Competitive map pool =====
 const MAPS = [
   'Desert', 'Sub Base', 'Satellite', 'Island',
   'Ankara', 'Eagle Eye', 'Power Supply', 'Greece',
@@ -43,7 +43,7 @@ const matchData = matches.map(m => {
       </select>
     </div>
 
-    <div class="veto-toast" id="veto-toast"></div>
+    <div class="veto-toast" id="veto-toast" role="alert" aria-live="polite"></div>
 
     <div id="veto-interface" style="display:none;">
       <div class="veto-teams">
@@ -78,9 +78,8 @@ const matchData = matches.map(m => {
         </div>
       </div>
 
-      <div class="veto-steps" id="veto-steps"></div>
-
-      <div class="veto-action-prompt" id="veto-prompt"></div>
+      <div class="veto-steps" id="veto-steps" role="list"></div>
+      <div class="veto-action-prompt" id="veto-prompt" aria-live="polite"></div>
 
       <!-- Timer -->
       <div class="veto-timer" id="veto-timer" style="display:none;">
@@ -103,15 +102,16 @@ const matchData = matches.map(m => {
         <div class="timer-status" id="timer-status"></div>
       </div>
 
-      <div class="veto-maps" id="veto-maps"></div>
+      <!-- NEW: Changed to buttons for accessibility and native focus states -->
+      <div class="veto-maps" id="veto-maps" role="group" aria-label="Available maps"></div>
     </div>
 
     <div id="veto-wheel-section" style="display:none;">
       <h2 class="wheel-title">Decider Map — Spin the Wheel!</h2>
       <p class="wheel-subtitle">Remaining maps go into the wheel. The one it lands on will be the decider.</p>
       <div class="wheel-container">
-        <div class="wheel-pointer"></div>
-        <canvas id="wheel-canvas" width="320" height="320"></canvas>
+        <div class="wheel-pointer" aria-hidden="true"></div>
+        <canvas id="wheel-canvas" width="320" height="320" aria-label="Spinning wheel for decider map"></canvas>
       </div>
       <button id="spin-btn" class="veto-btn wheel-btn">🎡 Spin the Wheel</button>
     </div>
@@ -121,7 +121,7 @@ const matchData = matches.map(m => {
       <div class="results-maps" id="results-maps"></div>
       <div class="results-banned">
         <h3>Banned Maps</h3>
-        <div id="results-banned-list"></div>
+        <div id="results-banned-list" class="results-banned-list"></div>
       </div>
       <div class="results-actions">
         <button id="copy-btn" class="veto-btn">📋 Copy Result</button>
@@ -131,40 +131,43 @@ const matchData = matches.map(m => {
   </div>
 </Layout>
 
+<!-- Data passed to inline script -->
 <script type="application/json" id="match-data" set:html={JSON.stringify(matchData)} />
 <script type="application/json" id="maps-data" set:html={JSON.stringify(MAPS)} />
 
 <style is:global>
-  /* ===== Hardcoded color palette (no dependency on external CSS vars) ===== */
+  /* ===== Core Layout & Select ===== */
   .veto-select-wrap { margin-bottom: 2rem; }
   .veto-select {
     width: 100%; max-width: 500px;
-    background: #1a1f2e; border: 1px solid #2a3142;
-    color: #e4e7eb;
-    padding: 0.6rem 0.85rem; border-radius: 8px;
+    background: var(--bg-card, #1a1f2e); 
+    border: 1px solid var(--border, #2a3142);
+    color: var(--text-primary, #e4e7eb);
+    padding: 0.75rem 1rem; border-radius: var(--radius, 8px);
     font-size: 0.95rem; font-weight: 600; cursor: pointer;
+    transition: border-color 0.2s;
   }
-  .veto-select:focus { outline: none; border-color: #ff4d2e; }
+  .veto-select:focus { outline: none; border-color: var(--accent, #ff4d2e); }
 
-  /* ===== Team banners ===== */
+  /* ===== Team Banners ===== */
   .veto-teams {
     display: flex; align-items: center; justify-content: center;
-    gap: 1.5rem; margin-bottom: 1.5rem; flex-wrap: wrap;
+    gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap;
   }
   .veto-team {
     display: flex; flex-direction: column; align-items: center; gap: 0.25rem;
-    padding: 1rem 1.5rem; border-radius: 8px;
-    min-width: 160px;
+    padding: 1rem 1.5rem; border-radius: var(--radius, 8px);
+    min-width: 160px; transition: transform 0.2s;
   }
   .veto-team.team-a { background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.3); }
   .veto-team.team-b { background: rgba(249,115,22,0.12); border: 1px solid rgba(249,115,22,0.3); }
   .veto-team-tag { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
   .team-a .veto-team-tag { color: #60a5fa; }
   .team-b .veto-team-tag { color: #fb923c; }
-  .veto-team-name { font-size: 1rem; font-weight: 700; color: #e4e7eb; }
-  .veto-vs { font-size: 1.25rem; font-weight: 800; color: #6b7280; }
+  .veto-team-name { font-size: 1.1rem; font-weight: 700; color: var(--text-primary, #e4e7eb); }
+  .veto-vs { font-size: 1.25rem; font-weight: 800; color: var(--text-muted, #6b7280); }
 
-  /* ===== Team pick cards ===== */
+  /* ===== Team Pick Cards ===== */
   .veto-picks {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -172,39 +175,24 @@ const matchData = matches.map(m => {
     margin-bottom: 2rem;
   }
   .pick-card {
-    border-radius: 8px;
+    border-radius: var(--radius, 8px);
     padding: 1.25rem;
-    border: 2px solid;
-    transition: all 0.25s;
+    border: 2px solid transparent;
+    transition: all 0.3s ease;
     text-align: center;
   }
-  .pick-card.team-a {
-    border-color: rgba(59,130,246,0.25);
-    background: rgba(59,130,246,0.06);
-  }
-  .pick-card.team-b {
-    border-color: rgba(249,115,22,0.25);
-    background: rgba(249,115,22,0.06);
-  }
-  .pick-card.team-a.filled {
-    border-color: #3b82f6;
-    background: rgba(59,130,246,0.12);
-    box-shadow: 0 4px 20px rgba(59,130,246,0.15);
-  }
-  .pick-card.team-b.filled {
-    border-color: #f97316;
-    background: rgba(249,115,22,0.12);
-    box-shadow: 0 4px 20px rgba(249,115,22,0.15);
-  }
+  .pick-card.team-a { border-color: rgba(59,130,246,0.25); background: rgba(59,130,246,0.06); }
+  .pick-card.team-b { border-color: rgba(249,115,22,0.25); background: rgba(249,115,22,0.06); }
+  
+  .pick-card.team-a.filled { border-color: #3b82f6; background: rgba(59,130,246,0.12); box-shadow: 0 4px 20px rgba(59,130,246,0.15); }
+  .pick-card.team-b.filled { border-color: #f97316; background: rgba(249,115,22,0.12); box-shadow: 0 4px 20px rgba(249,115,22,0.15); }
+  
   .pick-card.voided {
     border-color: rgba(239,68,68,0.4) !important;
     background: rgba(239,68,68,0.06) !important;
     box-shadow: none !important;
   }
-  .pick-card-top {
-    display: flex; align-items: center; justify-content: center;
-    gap: 0.5rem; margin-bottom: 0.75rem;
-  }
+  .pick-card-top { display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-bottom: 0.75rem; }
   .pick-team-tag {
     font-size: 0.75rem; font-weight: 800; text-transform: uppercase;
     letter-spacing: 0.05em; padding: 0.15rem 0.5rem; border-radius: 4px;
@@ -212,90 +200,65 @@ const matchData = matches.map(m => {
   }
   .pick-card.team-a .pick-team-tag { color: #60a5fa; }
   .pick-card.team-b .pick-team-tag { color: #fb923c; }
-  .pick-card-label {
-    font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.05em; color: #6b7280;
-  }
-  .pick-map-name {
-    font-size: 1.3rem; font-weight: 800; margin-bottom: 0.4rem;
-    color: #e4e7eb;
-  }
+  .pick-card-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted, #6b7280); }
+  .pick-map-name { font-size: 1.4rem; font-weight: 800; margin-bottom: 0.4rem; color: var(--text-primary, #e4e7eb); }
   .pick-card.team-a.filled .pick-map-name { color: #60a5fa; }
   .pick-card.team-b.filled .pick-map-name { color: #fb923c; }
   .pick-card.voided .pick-map-name { color: #ef4444; }
-  .pick-card-status {
-    font-size: 0.75rem; font-weight: 600; color: #6b7280;
-  }
+  .pick-card-status { font-size: 0.8rem; font-weight: 600; color: var(--text-muted, #6b7280); }
   .pick-card.filled .pick-card-status { color: #22c55e; }
   .pick-card.voided .pick-card-status { color: #ef4444; }
 
-  /* ===== Veto step pills ===== */
+  /* ===== Veto Step Pills ===== */
   .veto-steps {
     display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center;
     margin-bottom: 1.5rem;
   }
   .veto-step {
     display: flex; align-items: center; gap: 0.4rem;
-    padding: 0.4rem 0.8rem; border-radius: 8px;
+    padding: 0.5rem 0.8rem; border-radius: 8px;
     font-size: 0.8rem; font-weight: 600;
-    border: 1px solid #2a3142; background: #1a1f2e;
-    color: #e4e7eb;
+    border: 1px solid var(--border, #2a3142); background: var(--bg-card, #1a1f2e);
+    color: var(--text-primary, #e4e7eb);
     transition: all 0.2s;
   }
   .veto-step.team-a { border-color: rgba(59,130,246,0.3); background: rgba(59,130,246,0.06); }
   .veto-step.team-b { border-color: rgba(249,115,22,0.3); background: rgba(249,115,22,0.06); }
   .veto-step.active {
     transform: scale(1.05);
-    box-shadow: 0 0 0 2px #ff4d2e;
-    border-color: #ff4d2e;
+    box-shadow: 0 0 0 2px var(--accent, #ff4d2e);
+    border-color: var(--accent, #ff4d2e);
+    z-index: 2;
   }
-  .veto-step.done { opacity: 0.5; }
-  .veto-step .step-team {
-    font-weight: 800; font-size: 0.75rem;
-    padding: 0.1rem 0.35rem; border-radius: 4px;
-    background: rgba(255,255,255,0.06);
-  }
+  .veto-step.done { opacity: 0.5; filter: grayscale(0.5); }
+  .veto-step .step-team { font-weight: 800; font-size: 0.75rem; padding: 0.1rem 0.35rem; border-radius: 4px; background: rgba(255,255,255,0.06); }
   .veto-step.team-a .step-team { color: #60a5fa; }
   .veto-step.team-b .step-team { color: #fb923c; }
-  .veto-step .step-action {
-    color: #9ca3af; font-size: 0.75rem;
-    padding: 0.1rem 0.35rem; border-radius: 4px;
-    background: rgba(255,255,255,0.04);
-  }
+  .veto-step .step-action { color: #9ca3af; font-size: 0.75rem; padding: 0.1rem 0.35rem; border-radius: 4px; background: rgba(255,255,255,0.04); }
   .veto-step .step-action.ban { color: #ef4444; }
   .veto-step .step-action.pick { color: #22c55e; }
-  .veto-step .step-map { color: #ff4d2e; font-weight: 700; }
+  .veto-step .step-map { color: var(--accent, #ff4d2e); font-weight: 700; }
   .veto-step .step-void { color: #ef4444; font-weight: 700; font-size: 0.7rem; }
 
   .veto-action-prompt {
-    text-align: center; margin-bottom: 1rem;
-    font-size: 1.1rem; font-weight: 700;
-    color: #e4e7eb;
+    text-align: center; margin-bottom: 1.5rem;
+    font-size: 1.15rem; font-weight: 700;
+    color: var(--text-primary, #e4e7eb);
+    min-height: 1.5em;
   }
-  .veto-action-prompt .prompt-team { font-size: 1.2rem; }
+  .veto-action-prompt .prompt-team { font-size: 1.25rem; }
   .veto-action-prompt .prompt-team.a { color: #60a5fa; }
   .veto-action-prompt .prompt-team.b { color: #fb923c; }
-  .veto-action-prompt .prompt-action { color: #ff4d2e; }
+  .veto-action-prompt .prompt-action { color: var(--accent, #ff4d2e); }
 
   /* ===== Timer ===== */
-  .veto-timer { margin-bottom: 1.5rem; }
-  .timer-row {
-    display: flex; gap: 1.5rem; justify-content: center; flex-wrap: wrap;
-  }
-  .timer-block {
-    display: flex; align-items: center; gap: 0.5rem;
-    flex: 1; max-width: 280px; min-width: 180px;
-  }
-  .timer-label {
-    font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-    color: #6b7280; white-space: nowrap;
-  }
-  .timer-bar-wrap {
-    flex: 1; height: 10px; background: rgba(255,255,255,0.06);
-    border-radius: 5px; overflow: hidden;
-  }
+  .veto-timer { margin-bottom: 2rem; padding: 1rem; background: var(--bg-card, #1a1f2e); border-radius: var(--radius, 8px); border: 1px solid var(--border, #2a3142); }
+  .timer-row { display: flex; gap: 1.5rem; justify-content: center; flex-wrap: wrap; }
+  .timer-block { display: flex; align-items: center; gap: 0.75rem; flex: 1; max-width: 280px; min-width: 180px; }
+  .timer-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted, #6b7280); white-space: nowrap; width: 60px; }
+  .timer-bar-wrap { flex: 1; height: 12px; background: rgba(255,255,255,0.06); border-radius: 6px; overflow: hidden; }
   .timer-bar {
-    height: 100%; border-radius: 5px; width: 100%;
+    height: 100%; border-radius: 6px; width: 100%;
     transition: width 1s linear, background 0.3s;
   }
   .timer-bar.green { background: #22c55e; }
@@ -303,41 +266,39 @@ const matchData = matches.map(m => {
   .timer-bar.red { background: #ef4444; }
   .timer-bar.inactive { background: rgba(255,255,255,0.12); }
   .timer-bar.red.active { animation: timer-pulse 0.5s infinite alternate; }
-  @keyframes timer-pulse { from { opacity: 0.5; } to { opacity: 1; } }
-  .timer-value {
-    font-size: 0.85rem; font-weight: 700; min-width: 38px; text-align: right;
-    color: #e4e7eb;
-  }
-  .timer-status {
-    text-align: center; font-size: 0.82rem; font-weight: 600; margin-top: 0.5rem;
-    min-height: 1.2rem;
-  }
+  @keyframes timer-pulse { from { opacity: 0.6; } to { opacity: 1; } }
+  .timer-value { font-size: 0.9rem; font-weight: 700; min-width: 42px; text-align: right; color: var(--text-primary, #e4e7eb); font-variant-numeric: tabular-nums; }
+  .timer-status { text-align: center; font-size: 0.85rem; font-weight: 600; margin-top: 0.75rem; min-height: 1.2rem; }
   .timer-status.pick { color: #9ca3af; }
   .timer-status.reserve { color: #f59e0b; }
   .timer-status.void { color: #ef4444; }
 
-  /* ===== Map cards grid ===== */
+  /* ===== Map Cards Grid (Now Buttons) ===== */
   .veto-maps {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     gap: 1rem;
     margin-bottom: 2rem;
   }
   .veto-map-card {
-    background: #1a1f2e;
-    border: 2px solid #2a3142;
-    border-radius: 8px;
+    background: var(--bg-card, #1a1f2e);
+    border: 2px solid var(--border, #2a3142);
+    border-radius: var(--radius, 8px);
     padding: 1.25rem 1rem;
     cursor: pointer;
     transition: all 0.2s;
     text-align: center;
     position: relative;
     overflow: hidden;
-    min-height: 90px;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.4rem;
-    color: #e4e7eb;
+    min-height: 100px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem;
+    color: var(--text-primary, #e4e7eb);
+    font-family: inherit;
   }
-  /* Team-aware hover: blue for Team A, orange for Team B */
+  .veto-map-card:focus-visible {
+    outline: 2px solid var(--accent, #ff4d2e);
+    outline-offset: 2px;
+  }
   .veto-maps.turn-a .veto-map-card:hover:not(.banned):not(.picked):not(.disabled) {
     border-color: #3b82f6 !important;
     transform: translateY(-3px);
@@ -351,27 +312,13 @@ const matchData = matches.map(m => {
     background: rgba(249,115,22,0.08);
   }
   .veto-map-card.disabled { cursor: not-allowed; opacity: 0.4; }
-  .veto-map-card.banned {
-    cursor: default;
-    border-color: rgba(239,68,68,0.4);
-    background: rgba(239,68,68,0.1);
-  }
-  .veto-map-card.picked {
-    cursor: default;
-    border-color: rgba(34,197,94,0.4);
-    background: rgba(34,197,94,0.1);
-  }
-  .veto-map-card.decider {
-    cursor: default;
-    border-color: #facc15;
-    background: rgba(250,204,21,0.1);
-  }
-  .veto-map-name { font-weight: 700; font-size: 1rem; color: #e4e7eb; }
+  .veto-map-card.banned { cursor: default; border-color: rgba(239,68,68,0.4); background: rgba(239,68,68,0.1); }
+  .veto-map-card.picked { cursor: default; border-color: rgba(34,197,94,0.4); background: rgba(34,197,94,0.1); }
+  .veto-map-card.decider { cursor: default; border-color: #facc15; background: rgba(250,204,21,0.1); }
+  
+  .veto-map-name { font-weight: 700; font-size: 1.05rem; color: var(--text-primary, #e4e7eb); }
   .veto-map-card.banned .veto-map-name { text-decoration: line-through; opacity: 0.6; }
-  .veto-map-status {
-    font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.03em;
-  }
+  .veto-map-status { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
   .veto-map-card.banned .veto-map-status { color: #ef4444; }
   .veto-map-card.picked .veto-map-status { color: #22c55e; }
   .veto-map-card.decider .veto-map-status { color: #facc15; }
@@ -381,133 +328,104 @@ const matchData = matches.map(m => {
 
   /* ===== Buttons ===== */
   .veto-btn {
-    background: #ff4d2e; color: #fff; border: none;
-    padding: 0.6rem 1.5rem; border-radius: 8px;
-    font-size: 0.95rem; font-weight: 700; cursor: pointer;
-    transition: background 0.2s;
+    background: var(--accent, #ff4d2e); color: #fff; border: none;
+    padding: 0.75rem 1.75rem; border-radius: var(--radius, 8px);
+    font-size: 1rem; font-weight: 700; cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
   }
-  .veto-btn:hover { background: #ff6b50; }
+  .veto-btn:hover { background: var(--accent-hover, #ff6b50); }
+  .veto-btn:active { transform: scale(0.98); }
+  .veto-btn:disabled { opacity: 0.5; cursor: not-allowed; }
   .veto-btn-secondary {
-    background: #1a1f2e; color: #e4e7eb; border: 1px solid #2a3142;
+    background: var(--bg-card, #1a1f2e); color: var(--text-primary, #e4e7eb); border: 1px solid var(--border, #2a3142);
   }
-  .veto-btn-secondary:hover { border-color: #ff4d2e; background: #222938; }
+  .veto-btn-secondary:hover { border-color: var(--accent, #ff4d2e); background: var(--bg-card-hover, #222938); }
 
   /* ===== Toast ===== */
   .veto-toast {
-    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+    position: fixed; top: 24px; left: 50%; transform: translateX(-50%) translateY(-20px);
     background: rgba(239,68,68,0.95); color: #fff;
-    padding: 0.75rem 1.5rem; border-radius: 8px;
-    font-weight: 700; font-size: 0.9rem; z-index: 1000;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-    opacity: 0; transition: opacity 0.3s;
-    pointer-events: none; display: none;
+    padding: 0.85rem 1.75rem; border-radius: 8px;
+    font-weight: 700; font-size: 0.95rem; z-index: 1000;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    opacity: 0; transition: opacity 0.3s, transform 0.3s;
+    pointer-events: none; display: none; backdrop-filter: blur(4px);
   }
-  .veto-toast.show { opacity: 1; }
+  .veto-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
   /* ===== Wheel ===== */
-  .wheel-title { text-align: center; margin-bottom: 0.5rem; color: #e4e7eb; }
-  .wheel-subtitle { text-align: center; color: #9ca3af; margin-bottom: 1.5rem; font-size: 0.9rem; }
+  .wheel-title { text-align: center; margin-bottom: 0.5rem; color: var(--text-primary, #e4e7eb); }
+  .wheel-subtitle { text-align: center; color: var(--text-muted, #9ca3af); margin-bottom: 1.5rem; font-size: 0.95rem; }
   .wheel-container {
     position: relative; width: 320px; height: 320px;
-    margin: 0 auto 1.5rem;
+    margin: 0 auto 2rem;
   }
   .wheel-pointer {
-    position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
+    position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
     width: 0; height: 0;
-    border-left: 12px solid transparent; border-right: 12px solid transparent;
-    border-top: 20px solid #ff4d2e;
-    z-index: 10; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+    border-left: 14px solid transparent; border-right: 14px solid transparent;
+    border-top: 24px solid var(--accent, #ff4d2e);
+    z-index: 10; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
   }
   #wheel-canvas {
     transition: transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99);
+    max-width: 100%;
+    height: auto;
   }
-  .wheel-btn { display: block; margin: 0 auto; }
+  .wheel-btn { display: block; margin: 0 auto; font-size: 1.1rem; padding: 0.85rem 2rem; }
 
   /* ===== Results ===== */
-  .results-title {
-    text-align: center; margin-bottom: 1.5rem;
-    color: #e4e7eb;
-  }
-  .results-maps {
-    display: flex; flex-direction: column; gap: 1rem;
-    margin-bottom: 2rem;
-  }
+  .results-title { text-align: center; margin-bottom: 1.5rem; color: var(--text-primary, #e4e7eb); }
+  .results-maps { display: flex; flex-direction: column; gap: 1rem; margin-bottom: 2rem; }
   .result-map-card {
     display: flex; align-items: center; gap: 1rem;
-    padding: 1.25rem 1.5rem; border-radius: 8px;
-    background: #1a1f2e;
-    border: 1px solid #2a3142;
-    border-left: 4px solid #2a3142;
+    padding: 1.25rem 1.5rem; border-radius: var(--radius, 8px);
+    background: var(--bg-card, #1a1f2e);
+    border: 1px solid var(--border, #2a3142);
+    border-left: 4px solid var(--border, #2a3142);
     transition: all 0.2s;
-    color: #e4e7eb;
+    color: var(--text-primary, #e4e7eb);
   }
   .result-map-card:hover { transform: translateX(4px); box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
-  .result-map-card.team-a-pick {
-    border-left-color: #3b82f6;
-    background: linear-gradient(90deg, rgba(59,130,246,0.08), #1a1f2e 60%);
-  }
-  .result-map-card.team-b-pick {
-    border-left-color: #f97316;
-    background: linear-gradient(90deg, rgba(249,115,22,0.08), #1a1f2e 60%);
-  }
-  .result-map-card.decider {
-    border-color: rgba(250,204,21,0.3);
-    border-left: 4px solid #facc15;
-    background: linear-gradient(90deg, rgba(250,204,21,0.08), #1a1f2e 60%);
-  }
-  .result-map-card.voided-pick {
-    border-left-color: #ef4444;
-    opacity: 0.65;
-    background: linear-gradient(90deg, rgba(239,68,68,0.08), #1a1f2e 60%);
-  }
+  .result-map-card.team-a-pick { border-left-color: #3b82f6; background: linear-gradient(90deg, rgba(59,130,246,0.08), var(--bg-card, #1a1f2e) 60%); }
+  .result-map-card.team-b-pick { border-left-color: #f97316; background: linear-gradient(90deg, rgba(249,115,22,0.08), var(--bg-card, #1a1f2e) 60%); }
+  .result-map-card.decider { border-color: rgba(250,204,21,0.3); border-left: 4px solid #facc15; background: linear-gradient(90deg, rgba(250,204,21,0.08), var(--bg-card, #1a1f2e) 60%); }
+  .result-map-card.voided-pick { border-left-color: #ef4444; opacity: 0.75; background: linear-gradient(90deg, rgba(239,68,68,0.08), var(--bg-card, #1a1f2e) 60%); }
   .result-map-card.voided-pick .result-map-name { color: #ef4444; }
-  .result-map-card.voided-pick .result-map-num {
-    background: rgba(239,68,68,0.15); color: #ef4444;
-  }
+  .result-map-card.voided-pick .result-map-num { background: rgba(239,68,68,0.15); color: #ef4444; }
+  
   .result-map-num {
-    width: 40px; height: 40px; border-radius: 50%;
+    width: 44px; height: 44px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
     font-weight: 800; font-size: 1.15rem; flex-shrink: 0;
-    background: rgba(255,77,46,0.15); color: #ff4d2e;
+    background: rgba(255,77,46,0.15); color: var(--accent, #ff4d2e);
   }
-  .result-map-card.team-a-pick .result-map-num {
-    background: rgba(59,130,246,0.15); color: #60a5fa;
-  }
-  .result-map-card.team-b-pick .result-map-num {
-    background: rgba(249,115,22,0.15); color: #fb923c;
-  }
-  .result-map-card.decider .result-map-num {
-    background: rgba(250,204,21,0.15); color: #facc15;
-  }
+  .result-map-card.team-a-pick .result-map-num { background: rgba(59,130,246,0.15); color: #60a5fa; }
+  .result-map-card.team-b-pick .result-map-num { background: rgba(249,115,22,0.15); color: #fb923c; }
+  .result-map-card.decider .result-map-num { background: rgba(250,204,21,0.15); color: #facc15; }
+  
   .result-map-info { flex: 1; }
-  .result-map-name { font-weight: 700; font-size: 1.1rem; color: #e4e7eb; }
-  .result-map-label { font-size: 0.8rem; color: #9ca3af; }
+  .result-map-name { font-weight: 700; font-size: 1.15rem; color: var(--text-primary, #e4e7eb); }
+  .result-map-label { font-size: 0.85rem; color: var(--text-muted, #9ca3af); margin-top: 0.25rem; }
   .result-map-label .pick-team { font-weight: 700; }
   .result-map-label .pick-team.a { color: #60a5fa; }
   .result-map-label .pick-team.b { color: #fb923c; }
   .result-map-label .void-tag { color: #ef4444; font-weight: 600; }
 
   .results-banned { margin-bottom: 2rem; }
-  .results-banned h3 {
-    font-size: 1rem; margin-bottom: 0.75rem; color: #9ca3af;
-  }
-  .results-banned-list {
-    display: flex; flex-wrap: wrap; gap: 0.5rem;
-  }
+  .results-banned h3 { font-size: 1rem; margin-bottom: 0.75rem; color: var(--text-muted, #9ca3af); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
+  .results-banned-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
   .banned-map-item {
-    display: inline-flex; align-items: center; gap: 0.4rem;
-    padding: 0.4rem 0.8rem;
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 0.5rem 0.85rem;
     background: rgba(239,68,68,0.1);
     border: 1px solid rgba(239,68,68,0.25);
-    border-radius: 8px; font-size: 0.82rem;
+    border-radius: 8px; font-size: 0.85rem;
     transition: all 0.2s;
     border-left: 3px solid transparent;
-    color: #e4e7eb;
+    color: var(--text-primary, #e4e7eb);
   }
-  .banned-map-item:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(239,68,68,0.2);
-  }
+  .banned-map-item:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(239,68,68,0.2); }
   .banned-map-item.team-a-ban { border-left-color: #3b82f6; }
   .banned-map-item.team-b-ban { border-left-color: #f97316; }
   .banned-map-item .b-team { font-weight: 700; }
@@ -515,7 +433,7 @@ const matchData = matches.map(m => {
   .banned-map-item .b-team.b { color: #fb923c; }
   .banned-map-item .b-map { text-decoration: line-through; opacity: 0.7; }
 
-  .results-actions { display: flex; gap: 1rem; justify-content: center; }
+  .results-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
 
   @media (max-width: 768px) {
     .veto-picks { grid-template-columns: 1fr; }
@@ -526,6 +444,9 @@ const matchData = matches.map(m => {
     .wheel-container { width: 280px; height: 280px; }
     #wheel-canvas { width: 280px; height: 280px; }
   }
+  @media (max-width: 480px) {
+    .veto-maps { grid-template-columns: 1fr; }
+  }
 </style>
 
 <script is:inline>
@@ -533,9 +454,8 @@ const matchData = matches.map(m => {
     const matchData = JSON.parse(document.getElementById('match-data').textContent);
     const MAPS = JSON.parse(document.getElementById('maps-data').textContent);
 
-    // ===== Timer config =====
-    const PICK_TIME = 20;       // seconds per turn
-    const RESERVE_TIME = 120;   // shared reserve pool
+    const PICK_TIME = 20;
+    const RESERVE_TIME = 120;
 
     const VETO_STEPS = [
       { team: 'A', action: 'ban' },
@@ -551,18 +471,13 @@ const matchData = matches.map(m => {
     const WHEEL_COLORS = ['#ff4d2e','#3b82f6','#22c55e','#eab308','#a855f7','#ec4899','#06b6d4','#f97316'];
 
     let state = {
-      matchId: null,
-      match: null,
-      currentStep: 0,
-      mapStates: {},
-      vetoHistory: [],
+      matchId: null, match: null, currentStep: 0,
+      mapStates: {}, vetoHistory: [],
       picks: { A: null, B: null, decider: null },
       voidedPicks: { A: false, B: false },
       phase: 'select',
-      pickTimer: PICK_TIME,
-      reserveTimer: RESERVE_TIME,
-      timerPhase: null,
-      timerInterval: null,
+      pickTimer: PICK_TIME, reserveTimer: RESERVE_TIME,
+      timerPhase: null, timerInterval: null,
     };
 
     const $ = id => document.getElementById(id);
@@ -574,7 +489,6 @@ const matchData = matches.map(m => {
       $('reset-btn').addEventListener('click', resetVeto);
     }
 
-    // ===== Timer functions =====
     function startTimer() {
       stopTimer();
       if (state.phase !== 'veto') return;
@@ -621,22 +535,16 @@ const matchData = matches.map(m => {
       const teamName = step.team === 'A' ? state.match.team1.name : state.match.team2.name;
 
       state.vetoHistory.push({ map: null, team: step.team, action: step.action, voided: true });
-      if (step.action === 'pick') {
-        state.voidedPicks[step.team] = true;
-      }
+      if (step.action === 'pick') state.voidedPicks[step.team] = true;
       state.currentStep++;
 
       showToast(`⏱️ Time up — ${teamName}'s ${step.action} voided`);
-      renderPicks();
-      renderSteps();
-      renderMaps();
+      renderPicks(); renderSteps(); renderMaps();
 
       if (state.currentStep >= VETO_STEPS.length) {
         state.phase = 'wheel';
         state.timerPhase = null;
-        renderSteps();
-        renderPrompt();
-        renderTimer();
+        renderSteps(); renderPrompt(); renderTimer();
         showWheel();
       } else {
         renderPrompt();
@@ -646,27 +554,21 @@ const matchData = matches.map(m => {
 
     function renderTimer() {
       const timerEl = $('veto-timer');
-      if (state.phase !== 'veto') {
-        timerEl.style.display = 'none';
-        return;
-      }
+      if (state.phase !== 'veto') { timerEl.style.display = 'none'; return; }
       timerEl.style.display = '';
 
-      // Pick timer bar
       const pickPct = (state.pickTimer / PICK_TIME) * 100;
       const pickBar = $('pick-timer-bar');
       pickBar.style.width = pickPct + '%';
       pickBar.className = 'timer-bar ' + getTimerColorClass(pickPct, state.timerPhase === 'pick');
       $('pick-timer-value').textContent = state.pickTimer + 's';
 
-      // Reserve timer bar
       const reservePct = (state.reserveTimer / RESERVE_TIME) * 100;
       const reserveBar = $('reserve-timer-bar');
       reserveBar.style.width = reservePct + '%';
       reserveBar.className = 'timer-bar reserve ' + getTimerColorClass(reservePct, state.timerPhase === 'reserve');
       $('reserve-timer-value').textContent = state.reserveTimer + 's';
 
-      // Status text
       const status = $('timer-status');
       if (state.timerPhase === 'pick') {
         status.textContent = 'Pick phase — choose now!';
@@ -699,7 +601,6 @@ const matchData = matches.map(m => {
       }, 2500);
     }
 
-    // ===== Veto flow =====
     function onMatchSelect(e) {
       const id = e.target.value;
       if (!id) return;
@@ -707,24 +608,15 @@ const matchData = matches.map(m => {
       state = {
         matchId: id,
         match: matchData.find(m => m.id === id),
-        currentStep: 0,
-        mapStates: {},
-        vetoHistory: [],
+        currentStep: 0, mapStates: {}, vetoHistory: [],
         picks: { A: null, B: null, decider: null },
         voidedPicks: { A: false, B: false },
-        phase: 'veto',
-        pickTimer: PICK_TIME,
-        reserveTimer: RESERVE_TIME,
-        timerPhase: null,
-        timerInterval: null,
+        phase: 'veto', pickTimer: PICK_TIME, reserveTimer: RESERVE_TIME,
+        timerPhase: null, timerInterval: null,
       };
       MAPS.forEach(m => state.mapStates[m] = 'available');
       showVetoInterface();
-      renderPicks();
-      renderSteps();
-      renderPrompt();
-      renderMaps();
-      renderTimer();
+      renderPicks(); renderSteps(); renderPrompt(); renderMaps(); renderTimer();
       $('veto-wheel-section').style.display = 'none';
       $('veto-results').style.display = 'none';
       startTimer();
@@ -741,40 +633,24 @@ const matchData = matches.map(m => {
     }
 
     function renderPicks() {
-      // Team A pick card
-      const cardA = $('pick-card-a');
-      const mapA = $('pick-map-a');
-      const statusA = $('pick-status-a');
+      const cardA = $('pick-card-a'), mapA = $('pick-map-a'), statusA = $('pick-status-a');
       cardA.classList.remove('filled', 'voided');
       if (state.voidedPicks.A) {
-        cardA.classList.add('voided');
-        mapA.textContent = 'VOID';
-        statusA.textContent = '⏱ No pick (time expired)';
+        cardA.classList.add('voided'); mapA.textContent = 'VOID'; statusA.textContent = '⏱ No pick (time expired)';
       } else if (state.picks.A) {
-        cardA.classList.add('filled');
-        mapA.textContent = state.picks.A;
-        statusA.textContent = '✓ Picked';
+        cardA.classList.add('filled'); mapA.textContent = state.picks.A; statusA.textContent = '✓ Picked';
       } else {
-        mapA.textContent = '—';
-        statusA.textContent = 'Waiting…';
+        mapA.textContent = '—'; statusA.textContent = 'Waiting…';
       }
 
-      // Team B pick card
-      const cardB = $('pick-card-b');
-      const mapB = $('pick-map-b');
-      const statusB = $('pick-status-b');
+      const cardB = $('pick-card-b'), mapB = $('pick-map-b'), statusB = $('pick-status-b');
       cardB.classList.remove('filled', 'voided');
       if (state.voidedPicks.B) {
-        cardB.classList.add('voided');
-        mapB.textContent = 'VOID';
-        statusB.textContent = '⏱ No pick (time expired)';
+        cardB.classList.add('voided'); mapB.textContent = 'VOID'; statusB.textContent = '⏱ No pick (time expired)';
       } else if (state.picks.B) {
-        cardB.classList.add('filled');
-        mapB.textContent = state.picks.B;
-        statusB.textContent = '✓ Picked';
+        cardB.classList.add('filled'); mapB.textContent = state.picks.B; statusB.textContent = '✓ Picked';
       } else {
-        mapB.textContent = '—';
-        statusB.textContent = 'Waiting…';
+        mapB.textContent = '—'; statusB.textContent = 'Waiting…';
       }
     }
 
@@ -787,20 +663,10 @@ const matchData = matches.map(m => {
         const history = state.vetoHistory[i];
         const cls = `veto-step team-${step.team.toLowerCase()} ${active && state.phase === 'veto' ? 'active' : ''} ${done ? 'done' : ''}`;
         const tag = step.team === 'A' ? tagA : tagB;
-        let mapHtml = '';
-        if (history) {
-          mapHtml = history.voided
-            ? `<span class="step-void">VOID</span>`
-            : `<span class="step-map">${history.map}</span>`;
-        }
-        return `<div class="${cls}">
-          <span class="step-team">${tag}</span>
-          <span class="step-action ${step.action}">${step.action === 'ban' ? 'Ban' : 'Pick'}</span>
-          ${mapHtml}
-        </div>`;
-      }).join('') + `<div class="veto-step ${state.phase === 'wheel' ? 'active' : ''} ${state.phase === 'result' ? 'done' : ''}">
-        <span class="step-team" style="color:#facc15">★</span>
-        <span class="step-action">Wheel</span>
+        let mapHtml = history ? (history.voided ? `<span class="step-void">VOID</span>` : `<span class="step-map">${history.map}</span>`) : '';
+        return `<div class="${cls}" role="listitem"><span class="step-team">${tag}</span><span class="step-action ${step.action}">${step.action === 'ban' ? 'Ban' : 'Pick'}</span>${mapHtml}</div>`;
+      }).join('') + `<div class="veto-step ${state.phase === 'wheel' ? 'active' : ''} ${state.phase === 'result' ? 'done' : ''}" role="listitem">
+        <span class="step-team" style="color:#facc15">★</span><span class="step-action">Wheel</span>
         ${state.picks.decider ? `<span class="step-map">${state.picks.decider}</span>` : ''}
       </div>`;
       $('veto-steps').innerHTML = html;
@@ -817,33 +683,31 @@ const matchData = matches.map(m => {
     function renderMaps() {
       const interactive = state.phase === 'veto';
       const mapsEl = $('veto-maps');
-      // Set team-aware hover class
       if (interactive) {
         const step = VETO_STEPS[state.currentStep];
-        if (step) {
-          mapsEl.className = `veto-maps turn-${step.team.toLowerCase()}`;
-        } else {
-          mapsEl.className = 'veto-maps';
-        }
+        mapsEl.className = `veto-maps turn-${step ? step.team.toLowerCase() : ''}`;
       } else {
         mapsEl.className = 'veto-maps';
       }
+      
       const html = MAPS.map(map => {
         const st = state.mapStates[map] || 'available';
         const isAvail = st === 'available';
         const clickable = interactive && isAvail;
-        let statusLabel = '';
-        let statusClass = '';
+        let statusLabel = '', statusClass = '';
         if (st === 'banned') { statusLabel = 'BANNED'; statusClass = 'banned'; }
         else if (st === 'picked') { statusLabel = 'PICKED'; statusClass = 'picked'; }
         else if (st === 'decider') { statusLabel = 'DECIDER'; statusClass = 'decider'; }
+        
         const cls = `veto-map-card ${statusClass} ${clickable ? '' : (isAvail ? 'disabled' : '')}`;
-        return `<div class="${cls}" data-map="${map}" ${clickable ? '' : 'style="pointer-events:none;"'}>
+        // NEW: Render as button for accessibility
+        return `<button class="${cls}" data-map="${map}" ${clickable ? '' : 'disabled'} aria-label="${map} ${statusLabel || 'available'}">
           <div class="veto-map-name">${map}</div>
           ${statusLabel ? `<div class="veto-map-status">${statusLabel}</div>` : ''}
-        </div>`;
+        </button>`;
       }).join('');
       mapsEl.innerHTML = html;
+      
       if (interactive) {
         document.querySelectorAll('.veto-map-card[data-map]').forEach(card => {
           card.addEventListener('click', () => onMapClick(card.dataset.map));
@@ -852,8 +716,7 @@ const matchData = matches.map(m => {
     }
 
     function onMapClick(map) {
-      if (state.phase !== 'veto') return;
-      if (state.mapStates[map] !== 'available') return;
+      if (state.phase !== 'veto' || state.mapStates[map] !== 'available') return;
       const step = VETO_STEPS[state.currentStep];
       if (!step) return;
 
@@ -863,20 +726,14 @@ const matchData = matches.map(m => {
       if (step.action === 'pick') state.picks[step.team] = map;
       state.currentStep++;
 
-      renderPicks();
-      renderSteps();
-      renderMaps();
+      renderPicks(); renderSteps(); renderMaps();
 
       if (state.currentStep >= VETO_STEPS.length) {
-        state.phase = 'wheel';
-        state.timerPhase = null;
-        renderSteps();
-        renderPrompt();
-        renderTimer();
+        state.phase = 'wheel'; state.timerPhase = null;
+        renderSteps(); renderPrompt(); renderTimer();
         showWheel();
       } else {
-        renderPrompt();
-        startTimer();
+        renderPrompt(); startTimer();
       }
     }
 
@@ -886,15 +743,13 @@ const matchData = matches.map(m => {
 
     function showWheel() {
       $('veto-wheel-section').style.display = '';
-      const remaining = getRemainingMaps();
-      drawWheel(remaining);
+      drawWheel(getRemainingMaps());
     }
 
     function drawWheel(maps) {
       const canvas = $('wheel-canvas');
       const ctx = canvas.getContext('2d');
-      const cx = canvas.width / 2;
-      const cy = canvas.height / 2;
+      const cx = canvas.width / 2, cy = canvas.height / 2;
       const radius = Math.min(cx, cy) - 8;
       const segAngle = (2 * Math.PI) / maps.length;
       const startOffset = -Math.PI / 2;
@@ -902,39 +757,20 @@ const matchData = matches.map(m => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       maps.forEach((map, i) => {
-        const a1 = startOffset + i * segAngle;
-        const a2 = a1 + segAngle;
-        ctx.beginPath();
-        ctx.moveTo(cx, cy);
-        ctx.arc(cx, cy, radius, a1, a2);
-        ctx.closePath();
-        ctx.fillStyle = WHEEL_COLORS[i % WHEEL_COLORS.length];
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(0,0,0,0.2)';
-        ctx.lineWidth = 2;
-        ctx.stroke();
+        const a1 = startOffset + i * segAngle, a2 = a1 + segAngle;
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, radius, a1, a2); ctx.closePath();
+        ctx.fillStyle = WHEEL_COLORS[i % WHEEL_COLORS.length]; ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.lineWidth = 2; ctx.stroke();
 
-        // Draw text
-        ctx.save();
-        ctx.translate(cx, cy);
-        ctx.rotate(a1 + segAngle / 2);
-        ctx.textAlign = 'right';
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 13px "Segoe UI", sans-serif';
-        ctx.shadowColor = 'rgba(0,0,0,0.5)';
-        ctx.shadowBlur = 3;
-        ctx.fillText(map, radius - 15, 5);
-        ctx.restore();
+        ctx.save(); ctx.translate(cx, cy); ctx.rotate(a1 + segAngle / 2);
+        ctx.textAlign = 'right'; ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "Segoe UI", sans-serif';
+        ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 3;
+        ctx.fillText(map, radius - 15, 5); ctx.restore();
       });
 
-      // Center circle
-      ctx.beginPath();
-      ctx.arc(cx, cy, 20, 0, 2 * Math.PI);
-      ctx.fillStyle = '#111827';
-      ctx.fill();
-      ctx.strokeStyle = '#2a3142';
-      ctx.lineWidth = 2;
-      ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx, cy, 20, 0, 2 * Math.PI);
+      ctx.fillStyle = '#111827'; ctx.fill();
+      ctx.strokeStyle = '#2a3142'; ctx.lineWidth = 2; ctx.stroke();
     }
 
     function spinWheel() {
@@ -957,9 +793,7 @@ const matchData = matches.map(m => {
         state.mapStates[winner] = 'decider';
         state.picks.decider = winner;
         state.phase = 'result';
-        renderPicks();
-        renderSteps();
-        renderMaps();
+        renderPicks(); renderSteps(); renderMaps();
         showResults();
       }, 4200);
     }
@@ -977,9 +811,7 @@ const matchData = matches.map(m => {
       const mapsHtml = pickResults.map(r => {
         const cls = r.voided ? 'voided-pick' : r.cls;
         const name = r.voided ? 'Void' : (r.map || '—');
-        const label = r.voided
-          ? `${r.labelHtml} — <span class="void-tag">No pick (time expired)</span>`
-          : r.labelHtml;
+        const label = r.voided ? `${r.labelHtml} — <span class="void-tag">No pick (time expired)</span>` : r.labelHtml;
         return `<div class="result-map-card ${cls}">
           <div class="result-map-num">${r.num}</div>
           <div class="result-map-info">
@@ -1004,13 +836,11 @@ const matchData = matches.map(m => {
       const lines = [
         `Map Veto Result`,
         `${state.match.tournament} — ${state.match.round}`,
-        `${state.match.team1.name} vs ${state.match.team2.name}`,
-        '',
+        `${state.match.team1.name} vs ${state.match.team2.name}`, '',
         'Maps to Play:',
         `1. ${state.voidedPicks.A ? 'VOID (no pick)' : state.picks.A || '—'} — ${state.match.team1.name}'s Pick${state.voidedPicks.A ? ' (time expired)' : ''}`,
         `2. ${state.voidedPicks.B ? 'VOID (no pick)' : state.picks.B || '—'} — ${state.match.team2.name}'s Pick${state.voidedPicks.B ? ' (time expired)' : ''}`,
-        `3. ${state.picks.decider || '—'} — Decider`,
-        '',
+        `3. ${state.picks.decider || '—'} — Decider`, '',
         'Banned Maps:',
         ...state.vetoHistory.filter(h => h.action === 'ban' && !h.voided).map(h =>
           `- ${h.map} (${h.team === 'A' ? state.match.team1.name : state.match.team2.name})`
@@ -1018,37 +848,40 @@ const matchData = matches.map(m => {
       ];
       if (voidedSteps.length > 0) {
         lines.push('', 'Voided Steps:');
-        lines.push(...voidedSteps.map(h =>
-          `- ${h.team === 'A' ? state.match.team1.name : state.match.team2.name} ${h.action} (time expired)`
-        ));
+        lines.push(...voidedSteps.map(h => `- ${h.team === 'A' ? state.match.team1.name : state.match.team2.name} ${h.action} (time expired)`));
       }
       navigator.clipboard.writeText(lines.join('\n')).then(() => {
-        $('copy-btn').textContent = '✓ Copied!';
-        setTimeout(() => { $('copy-btn').textContent = '📋 Copy Result'; }, 2000);
+        const btn = $('copy-btn');
+        btn.textContent = '✓ Copied!';
+        setTimeout(() => { btn.textContent = '📋 Copy Result'; }, 2000);
       });
     }
 
     function resetVeto() {
       stopTimer();
       state = {
-        matchId: null, match: null, currentStep: 0,
-        mapStates: {}, vetoHistory: [],
-        picks: { A: null, B: null, decider: null },
-        voidedPicks: { A: false, B: false },
-        phase: 'select',
-        pickTimer: PICK_TIME,
-        reserveTimer: RESERVE_TIME,
-        timerPhase: null,
-        timerInterval: null,
+        matchId: null, match: null, currentStep: 0, mapStates: {}, vetoHistory: [],
+        picks: { A: null, B: null, decider: null }, voidedPicks: { A: false, B: false },
+        phase: 'select', pickTimer: PICK_TIME, reserveTimer: RESERVE_TIME,
+        timerPhase: null, timerInterval: null,
       };
       $('match-select').value = '';
       $('veto-interface').style.display = 'none';
       $('veto-timer').style.display = 'none';
       $('veto-wheel-section').style.display = 'none';
       $('veto-results').style.display = 'none';
-      $('wheel-canvas').style.transform = '';
-      $('spin-btn').disabled = false;
-      $('spin-btn').textContent = '🎡 Spin the Wheel';
+      
+      // NEW: Instantly snap wheel back without reverse animation
+      const canvas = $('wheel-canvas');
+      canvas.style.transition = 'none';
+      canvas.style.transform = 'rotate(0deg)';
+      // Force reflow
+      void canvas.offsetWidth;
+      canvas.style.transition = 'transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99)';
+      
+      const spinBtn = $('spin-btn');
+      spinBtn.disabled = false;
+      spinBtn.textContent = '🎡 Spin the Wheel';
     }
 
     init();

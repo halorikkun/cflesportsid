@@ -69,7 +69,7 @@ const rounds = [...new Set(matches.map(m => m.data.round))];
     </div>
 
     <div id="sortBar" class="matches-sortbar">
-      <span style="color: var(--text-muted); font-size: 0.85rem;">Sort by:</span>
+      <span class="sort-label">Sort by:</span>
       <button class="sort-btn active" data-column="default">Default ↓</button>
       <button class="sort-btn" data-column="tournament">Tournament ↓</button>
       <button class="sort-btn" data-column="date">Date ↓</button>
@@ -88,46 +88,48 @@ const rounds = [...new Set(matches.map(m => m.data.round))];
         const scoreText = m.data.status === 'completed' ? `${m.data.score1} - ${m.data.score2}` : 'VS';
         const t1Won = m.data.winner === m.data.team1;
         const t2Won = m.data.winner === m.data.team2;
-        const t1Color = m.data.status === 'completed' ? (t1Won ? '#f59e0b' : '#6b7280') : 'var(--text-primary)';
-        const t2Color = m.data.status === 'completed' ? (t2Won ? '#f59e0b' : '#6b7280') : 'var(--text-primary)';
+        
+        // Use CSS variables instead of inline color styles
+        const t1Color = m.data.status === 'completed' ? (t1Won ? 'var(--win)' : 'var(--text-muted)') : 'var(--text-primary)';
+        const t2Color = m.data.status === 'completed' ? (t2Won ? 'var(--win)' : 'var(--text-muted)') : 'var(--text-primary)';
+        
         const stats1 = getTeamKDA(m, m.data.team1);
         const stats2 = getTeamKDA(m, m.data.team2);
         const searchText = (m.data.tournament + ' ' + team1Name + ' ' + team2Name + ' ' + team1Tag + ' ' + team2Tag).toLowerCase();
+        
         return (
-          <a href={`/matches/${m.id}`} class="card match-card"
+          <a href={`/matches/${m.id}`} class="match-card"
             data-search={searchText}
             data-status={m.data.status}
             data-round={m.data.round}
             data-date={m.data.date}
             data-round-order={roundOrder[m.data.round] || 99}
             data-tournament={m.data.tournament}
-            style="text-decoration: none; color: inherit;"
+            style={`--t1-color: ${t1Color}; --t2-color: ${t2Color};`}
           >
-            <div style="text-align: center; margin-bottom: 1rem;">
-              <div style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 600;">
-                {m.data.tournament}
-              </div>
-              <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem;">
-                {m.data.date}
-              </div>
-              <div style="margin-top: 0.25rem;">
+            <div class="match-card-header">
+              <div class="match-card-tournament">{m.data.tournament}</div>
+              <div class="match-card-date">{m.data.date}</div>
+              <div class="match-card-round">
                 <span class={`badge badge-${m.data.status}`}>{m.data.round}</span>
               </div>
             </div>
 
-            <div class="score-display" style="justify-content: center; padding: 1rem 0;">
-              <span style={`color: ${t1Color};`}>{team1Name}</span>
+            <div class="match-card-score">
+              <span class="match-card-team1">{team1Name}</span>
               <span class="vs">{scoreText}</span>
-              <span style={`color: ${t2Color};`}>{team2Name}</span>
+              <span class="match-card-team2">{team2Name}</span>
             </div>
 
             {m.data.status === 'completed' && (stats1.kills > 0 || stats2.kills > 0) && (
-              <div style="display: flex; justify-content: space-around; margin-top: 1rem; font-size: 0.8rem; color: var(--text-muted);">
+              <div class="match-card-kda">
                 <div>
-                  <span style={`color: ${t1Color}; font-weight: 600;`}>{team1Tag}</span>: <span class="kda"><span class="kill">{stats1.kills}</span>/<span class="death">{stats1.deaths}</span>/<span class="assist">{stats1.assists}</span></span>
+                  <span class="match-card-kda-team1">{team1Tag}</span>: 
+                  <span class="kda"><span class="kill">{stats1.kills}</span>/<span class="death">{stats1.deaths}</span>/<span class="assist">{stats1.assists}</span></span>
                 </div>
                 <div>
-                  <span style={`color: ${t2Color}; font-weight: 600;`}>{team2Tag}</span>: <span class="kda"><span class="kill">{stats2.kills}</span>/<span class="death">{stats2.deaths}</span>/<span class="assist">{stats2.assists}</span></span>
+                  <span class="match-card-kda-team2">{team2Tag}</span>: 
+                  <span class="kda"><span class="kill">{stats2.kills}</span>/<span class="death">{stats2.deaths}</span>/<span class="assist">{stats2.assists}</span></span>
                 </div>
               </div>
             )}
@@ -136,135 +138,138 @@ const rounds = [...new Set(matches.map(m => m.data.round))];
       })}
     </div>
 
-    <p id="noResults" style="text-align: center; color: var(--text-muted); display: none; padding: 2rem;">No matches found.</p>
+    <p id="noResults" class="no-results">No matches found.</p>
     <div class="pagination" id="pagination"></div>
   </div>
 
-  <script>
-    const searchInput = document.getElementById('searchInput');
-    const statusFilter = document.getElementById('statusFilter');
-    const roundFilter = document.getElementById('roundFilter');
-    const grid = document.getElementById('matchesGrid');
-    const noResults = document.getElementById('noResults');
-    const cards = Array.from(grid.querySelectorAll('.match-card'));
-    const sortBtns = document.querySelectorAll('.sort-btn');
-    const pagination = document.getElementById('pagination');
-    const perPage = 10;
-    let currentPage = 1;
-    let sortColumn = 'default';
-    let sortDirection = 'desc';
+  <script is:inline>
+    document.addEventListener('DOMContentLoaded', () => {
+      const searchInput = document.getElementById('searchInput');
+      const statusFilter = document.getElementById('statusFilter');
+      const roundFilter = document.getElementById('roundFilter');
+      const grid = document.getElementById('matchesGrid');
+      const noResults = document.getElementById('noResults');
+      const cards = Array.from(grid.querySelectorAll('.match-card'));
+      const sortBtns = document.querySelectorAll('.sort-btn');
+      const pagination = document.getElementById('pagination');
+      const perPage = 10;
+      
+      let currentPage = 1;
+      let sortColumn = 'default';
+      let sortDirection = 'desc';
 
-    function getVisibleCards() {
-      const search = searchInput.value.toLowerCase();
-      const status = statusFilter.value;
-      const round = roundFilter.value;
-      return cards.filter(card => {
-        const matchesSearch = !search || card.dataset.search.includes(search);
-        const matchesStatus = !status || card.dataset.status === status;
-        const matchesRound = !round || card.dataset.round === round;
-        return matchesSearch && matchesStatus && matchesRound;
-      });
-    }
-
-    function sortCards(visible) {
-      visible.sort((a, b) => {
-        let result = 0;
-        switch(sortColumn) {
-          case 'tournament':
-            result = a.dataset.tournament.localeCompare(b.dataset.tournament);
-            break;
-          case 'date':
-            result = new Date(a.dataset.date).getTime() - new Date(b.dataset.date).getTime();
-            break;
-          case 'round':
-            result = parseInt(a.dataset.roundOrder) - parseInt(b.dataset.roundOrder);
-            break;
-          case 'status':
-            const statusOrder = { 'upcoming': 0, 'live': 1, 'completed': 2 };
-            result = (statusOrder[a.dataset.status] || 0) - (statusOrder[b.dataset.status] || 0);
-            break;
-          default:
-            const aUpcoming = a.dataset.status === 'upcoming' ? 0 : 1;
-            const bUpcoming = b.dataset.status === 'upcoming' ? 0 : 1;
-            if (aUpcoming !== bUpcoming) result = aUpcoming - bUpcoming;
-            else {
-              const dateDiff = new Date(b.dataset.date).getTime() - new Date(a.dataset.date).getTime();
-              if (dateDiff !== 0) result = dateDiff;
-              else result = parseInt(b.dataset.roundOrder) - parseInt(a.dataset.roundOrder);
-            }
-            break;
-        }
-        return sortDirection === 'desc' ? result : -result;
-      });
-    }
-
-    function render() {
-      const visible = getVisibleCards();
-      sortCards(visible);
-
-      cards.forEach(card => { card.style.display = 'none'; grid.appendChild(card); });
-
-      const totalPages = Math.ceil(visible.length / perPage);
-      if (currentPage > totalPages) currentPage = 1;
-
-      const start = (currentPage - 1) * perPage;
-      const end = start + perPage;
-      visible.slice(start, end).forEach(card => { card.style.display = ''; grid.appendChild(card); });
-
-      noResults.style.display = visible.length === 0 ? 'block' : 'none';
-      renderPagination(totalPages);
-    }
-
-    function renderPagination(totalPages) {
-      pagination.innerHTML = '';
-      if (totalPages <= 1) return;
-
-      const prev = document.createElement('button');
-      prev.className = 'page-btn';
-      prev.textContent = '‹';
-      prev.disabled = currentPage === 1;
-      prev.addEventListener('click', () => { currentPage--; render(); window.scrollTo(0, 0); });
-      pagination.appendChild(prev);
-
-      for (let i = 1; i <= totalPages; i++) {
-        const btn = document.createElement('button');
-        btn.className = `page-btn ${i === currentPage ? 'active' : ''}`;
-        btn.textContent = i;
-        btn.addEventListener('click', () => { currentPage = i; render(); window.scrollTo(0, 0); });
-        pagination.appendChild(btn);
+      function getVisibleCards() {
+        const search = searchInput.value.toLowerCase();
+        const status = statusFilter.value;
+        const round = roundFilter.value;
+        return cards.filter(card => {
+          const matchesSearch = !search || card.dataset.search.includes(search);
+          const matchesStatus = !status || card.dataset.status === status;
+          const matchesRound = !round || card.dataset.round === round;
+          return matchesSearch && matchesStatus && matchesRound;
+        });
       }
 
-      const next = document.createElement('button');
-      next.className = 'page-btn';
-      next.textContent = '›';
-      next.disabled = currentPage === totalPages;
-      next.addEventListener('click', () => { currentPage++; render(); window.scrollTo(0, 0); });
-      pagination.appendChild(next);
-    }
-
-    sortBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const col = btn.dataset.column;
-        if (sortColumn === col) {
-          sortDirection = sortDirection === 'desc' ? 'asc' : 'desc';
-        } else {
-          sortColumn = col;
-          sortDirection = 'desc';
-        }
-        sortBtns.forEach(b => {
-          b.classList.remove('active');
-          b.textContent = b.textContent.replace(/ [↑↓]$/, '');
+      function sortCards(visible) {
+        visible.sort((a, b) => {
+          let result = 0;
+          switch(sortColumn) {
+            case 'tournament':
+              result = a.dataset.tournament.localeCompare(b.dataset.tournament);
+              break;
+            case 'date':
+              result = new Date(a.dataset.date).getTime() - new Date(b.dataset.date).getTime();
+              break;
+            case 'round':
+              result = parseInt(a.dataset.roundOrder) - parseInt(b.dataset.roundOrder);
+              break;
+            case 'status':
+              const statusOrder = { 'upcoming': 0, 'live': 1, 'completed': 2 };
+              result = (statusOrder[a.dataset.status] || 0) - (statusOrder[b.dataset.status] || 0);
+              break;
+            default:
+              const aUpcoming = a.dataset.status === 'upcoming' ? 0 : 1;
+              const bUpcoming = b.dataset.status === 'upcoming' ? 0 : 1;
+              if (aUpcoming !== bUpcoming) result = aUpcoming - bUpcoming;
+              else {
+                const dateDiff = new Date(b.dataset.date).getTime() - new Date(a.dataset.date).getTime();
+                if (dateDiff !== 0) result = dateDiff;
+                else result = parseInt(b.dataset.roundOrder) - parseInt(a.dataset.roundOrder);
+              }
+              break;
+          }
+          return sortDirection === 'desc' ? result : -result;
         });
-        btn.classList.add('active');
-        btn.textContent = btn.textContent.replace(/ [↑↓]$/, '') + ' ' + (sortDirection === 'desc' ? '↓' : '↑');
-        render();
-      });
-    });
+      }
 
-    searchInput.addEventListener('input', () => { currentPage = 1; render(); });
-    statusFilter.addEventListener('change', () => { currentPage = 1; render(); });
-    roundFilter.addEventListener('change', () => { currentPage = 1; render(); });
-    render();
+      function render() {
+        const visible = getVisibleCards();
+        sortCards(visible);
+
+        cards.forEach(card => { card.style.display = 'none'; grid.appendChild(card); });
+
+        const totalPages = Math.ceil(visible.length / perPage);
+        if (currentPage > totalPages) currentPage = 1;
+
+        const start = (currentPage - 1) * perPage;
+        const end = start + perPage;
+        visible.slice(start, end).forEach(card => { card.style.display = ''; grid.appendChild(card); });
+
+        noResults.style.display = visible.length === 0 ? 'block' : 'none';
+        renderPagination(totalPages);
+      }
+
+      function renderPagination(totalPages) {
+        pagination.innerHTML = '';
+        if (totalPages <= 1) return;
+
+        const prev = document.createElement('button');
+        prev.className = 'page-btn';
+        prev.textContent = '‹';
+        prev.disabled = currentPage === 1;
+        prev.addEventListener('click', () => { currentPage--; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+        pagination.appendChild(prev);
+
+        for (let i = 1; i <= totalPages; i++) {
+          const btn = document.createElement('button');
+          btn.className = `page-btn ${i === currentPage ? 'active' : ''}`;
+          btn.textContent = i;
+          btn.addEventListener('click', () => { currentPage = i; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+          pagination.appendChild(btn);
+        }
+
+        const next = document.createElement('button');
+        next.className = 'page-btn';
+        next.textContent = '›';
+        next.disabled = currentPage === totalPages;
+        next.addEventListener('click', () => { currentPage++; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+        pagination.appendChild(next);
+      }
+
+      sortBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const col = btn.dataset.column;
+          if (sortColumn === col) {
+            sortDirection = sortDirection === 'desc' ? 'asc' : 'desc';
+          } else {
+            sortColumn = col;
+            sortDirection = 'desc';
+          }
+          sortBtns.forEach(b => {
+            b.classList.remove('active');
+            b.textContent = b.textContent.replace(/ [↑↓]$/, '');
+          });
+          btn.classList.add('active');
+          btn.textContent = btn.textContent.replace(/ [↑↓]$/, '') + ' ' + (sortDirection === 'desc' ? '↓' : '↑');
+          render();
+        });
+      });
+
+      searchInput.addEventListener('input', () => { currentPage = 1; render(); });
+      statusFilter.addEventListener('change', () => { currentPage = 1; render(); });
+      roundFilter.addEventListener('change', () => { currentPage = 1; render(); });
+      render();
+    });
   </script>
 </Layout>
 
@@ -273,31 +278,24 @@ const rounds = [...new Set(matches.map(m => m.data.round))];
     display: flex;
     gap: 0.75rem;
     margin-bottom: 1rem;
-    flex-wrap: wrap;
   }
-  .matches-search {
-    flex: 1;
-    min-width: 200px;
-    padding: 0.5rem 0.75rem;
+  @media (max-width: 600px) {
+    .matches-toolbar { flex-direction: column; }
+    .matches-search { width: 100%; }
+  }
+
+  .matches-search, .matches-select {
+    padding: 0.6rem 0.75rem;
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     color: var(--text-primary);
     font-size: 0.9rem;
   }
-  .matches-select {
-    padding: 0.5rem 0.75rem;
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    color: var(--text-primary);
-    font-size: 0.9rem;
-    cursor: pointer;
-  }
-  .matches-search:focus, .matches-select:focus {
-    outline: none;
-    border-color: var(--accent);
-  }
+  .matches-search { flex: 1; min-width: 200px; }
+  .matches-select { cursor: pointer; }
+  .matches-search:focus, .matches-select:focus { outline: none; border-color: var(--accent); }
+
   .matches-sortbar {
     display: flex;
     gap: 0.5rem;
@@ -305,8 +303,10 @@ const rounds = [...new Set(matches.map(m => m.data.round))];
     flex-wrap: wrap;
     align-items: center;
   }
+  .sort-label { color: var(--text-muted); font-size: 0.85rem; margin-right: 0.25rem; }
+  
   .sort-btn {
-    padding: 0.35rem 0.75rem;
+    padding: 0.4rem 0.85rem;
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
@@ -314,18 +314,69 @@ const rounds = [...new Set(matches.map(m => m.data.round))];
     cursor: pointer;
     font-size: 0.85rem;
     transition: all 0.2s;
+    font-weight: 600;
   }
-  .sort-btn:hover {
-    border-color: var(--border-hover);
-  }
+  .sort-btn:hover { border-color: var(--border-hover); color: var(--text-primary); }
   .sort-btn.active {
     background: var(--accent-dim);
     border-color: var(--accent);
     color: var(--accent);
   }
+
+  /* NEW: 2-Column Grid on Desktop */
   .matches-grid {
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
     gap: 1.5rem;
   }
+
+  /* NEW: Premium Match Card Styling */
+  .match-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+    display: flex;
+    flex-direction: column;
+  }
+  .match-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--accent);
+    box-shadow: 0 8px 24px rgba(255, 77, 46, 0.15);
+  }
+
+  .match-card-header { text-align: center; margin-bottom: 1rem; }
+  .match-card-tournament { font-size: 0.85rem; color: var(--text-secondary); font-weight: 600; }
+  .match-card-date { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem; }
+  .match-card-round { margin-top: 0.5rem; }
+
+  .match-card-score {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+  }
+  .match-card-team1 { color: var(--t1-color); text-align: right; flex: 1; }
+  .match-card-team2 { color: var(--t2-color); text-align: left; flex: 1; }
+  .vs { color: var(--text-muted); font-weight: 400; font-size: 0.9rem; }
+
+  .match-card-kda {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 1rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    border-top: 1px solid var(--border);
+    padding-top: 1rem;
+  }
+  .match-card-kda-team1 { color: var(--t1-color); font-weight: 600; margin-right: 0.25rem; }
+  .match-card-kda-team2 { color: var(--t2-color); font-weight: 600; margin-right: 0.25rem; }
+
+  .no-results { text-align: center; color: var(--text-muted); display: none; padding: 2rem; }
 </style>

@@ -24,7 +24,6 @@ const tournaments = tournamentNames.map((name, i) => {
   }
 
   const dates = tMatches.map(m => m.data.date).filter(Boolean).sort();
-
   const finalMatch = tMatches.find(m => m.data.round === 'Final' && m.data.status === 'completed');
   const winner = finalMatch ? teams.find(t => t.id === finalMatch.data.winner) : null;
 
@@ -64,8 +63,11 @@ function formatDate(d) {
     <div class="tourney-grid">
       {tournaments.map(t => (
         <a href={`/tournament/${t.id}`} class="tourney-card">
-          <div class="tourney-icon">🏆</div>
-          <h3>{t.name}</h3>
+          <div class="tourney-header">
+            <div class="tourney-icon">🏆</div>
+            <h3>{t.name}</h3>
+          </div>
+          
           {t.startDate && (
             <div class="tourney-date">
               {t.endDate && t.endDate !== t.startDate
@@ -73,17 +75,21 @@ function formatDate(d) {
                 : formatDate(t.startDate)}
             </div>
           )}
+          
           <div class="tourney-meta">
-            <span class={`tourney-badge ${t.status}`}>{t.statusLabel}</span>
-            <span class="tourney-badge rounds">{t.rounds.length} Rounds</span>
-            <span class="tourney-badge rounds">{t.completedMatches}/{t.totalMatches} Matches</span>
+            <span class={`badge badge-${t.status}`}>{t.statusLabel}</span>
+            <span class="badge badge-secondary">{t.rounds.length} Rounds</span>
+            <span class="badge badge-secondary">{t.completedMatches}/{t.totalMatches} Matches</span>
           </div>
+          
           {t.winner && (
             <div class="tourney-winner">
-              🥇 Champion: <strong>{t.winner.data.name}</strong>
+              <span class="winner-icon">🥇</span> 
+              <span>Champion: <strong>{t.winner.data.name}</strong></span>
             </div>
           )}
-          <div class="tourney-cta">View Bracket →</div>
+          
+          <div class="tourney-cta">View Bracket & Results →</div>
         </a>
       ))}
     </div>
@@ -93,45 +99,93 @@ function formatDate(d) {
 <style>
   .tourney-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 1.25rem;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
   }
+
   .tourney-card {
     background: var(--bg-card);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 1.75rem;
+    border-radius: var(--radius);
+    padding: 1.5rem;
     text-decoration: none;
     color: inherit;
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+    height: 100%; /* Ensures equal height in grid */
     transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
   }
+
   .tourney-card:hover {
     transform: translateY(-4px);
     border-color: var(--accent);
     box-shadow: 0 8px 24px rgba(255, 77, 46, 0.12);
   }
-  .tourney-icon { font-size: 2rem; line-height: 1; }
-  .tourney-card h3 { font-size: 1.15rem; font-weight: 800; }
-  .tourney-date { color: var(--text-secondary); font-size: 0.85rem; }
-  .tourney-meta { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.25rem; }
-  .tourney-badge {
-    font-size: 0.75rem;
-    font-weight: 700;
-    padding: 0.2rem 0.6rem;
-    border-radius: 6px;
-  }
-  .tourney-badge.ongoing { background: rgba(239, 68, 68, 0.15); color: var(--loss); }
-  .tourney-badge.upcoming { background: var(--accent-dim); color: var(--accent); }
-  .tourney-badge.completed { background: rgba(34, 197, 94, 0.15); color: var(--win); }
-  .tourney-badge.rounds { background: var(--bg-card-hover); color: var(--text-secondary); }
-  .tourney-winner { font-size: 0.85rem; color: var(--text-secondary); }
-  .tourney-winner strong { color: var(--accent-orange); }
-  .tourney-cta { margin-top: 0.5rem; color: var(--accent); font-weight: 700; font-size: 0.9rem; }
 
-  @media (max-width: 768px) {
+  .tourney-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .tourney-icon { 
+    font-size: 1.75rem; 
+    line-height: 1; 
+    flex-shrink: 0;
+  }
+
+  .tourney-card h3 { 
+    font-size: 1.15rem; 
+    font-weight: 800; 
+    line-height: 1.3;
+    margin: 0;
+  }
+
+  .tourney-date { 
+    color: var(--text-secondary); 
+    font-size: 0.85rem; 
+    font-weight: 500;
+  }
+
+  .tourney-meta { 
+    display: flex; 
+    gap: 0.5rem; 
+    flex-wrap: wrap; 
+    margin-top: 0.25rem; 
+  }
+
+  /* Reusing global badge styles, adding specific variants */
+  .badge-ongoing { background: rgba(245, 158, 11, 0.15); color: var(--live); }
+  .badge-upcoming { background: var(--accent-dim); color: var(--accent); }
+  .badge-completed { background: rgba(34, 197, 94, 0.15); color: var(--win); }
+  .badge-secondary { background: var(--bg-card-hover); color: var(--text-secondary); }
+
+  .tourney-winner { 
+    font-size: 0.85rem; 
+    color: var(--text-secondary); 
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-top: 0.5rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border);
+  }
+  .tourney-winner strong { color: var(--accent-orange); }
+
+  .tourney-cta { 
+    margin-top: auto; /* Pushes CTA to the bottom of the card */
+    color: var(--accent); 
+    font-weight: 700; 
+    font-size: 0.9rem;
+    padding-top: 0.5rem;
+    transition: color 0.2s;
+  }
+  .tourney-card:hover .tourney-cta {
+    color: var(--accent-hover);
+  }
+
+  @media (max-width: 640px) {
     .tourney-grid { grid-template-columns: 1fr; }
   }
 </style>

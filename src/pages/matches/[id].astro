@@ -25,22 +25,21 @@ const team1Tag = t1 ? t1.data.tag : m.data.team1;
 const team2Tag = t2 ? t2.data.tag : m.data.team2;
 const t1Won = m.data.winner === m.data.team1;
 const t2Won = m.data.winner === m.data.team2;
-const t1Color = m.data.status === 'completed' ? (t1Won ? '#f59e0b' : '#6b7280') : 'var(--text-primary)';
-const t2Color = m.data.status === 'completed' ? (t2Won ? '#f59e0b' : '#6b7280') : 'var(--text-primary)';
 
-// Round details: per-round map name and MVP (by UID)
+// Clean CSS variables for colors
+const t1Color = m.data.status === 'completed' ? (t1Won ? 'var(--win)' : 'var(--text-muted)') : 'var(--text-primary)';
+const t2Color = m.data.status === 'completed' ? (t2Won ? 'var(--win)' : 'var(--text-muted)') : 'var(--text-primary)';
+
 const roundDetails = m.data.roundDetails || [];
 const maps = roundDetails.map(rd => rd.map || '');
 const roundMVPuids = roundDetails.map(rd => rd.mvp || null);
 
-// numRounds = max of playerStats rounds and roundDetails length
 const numRounds = Math.max(
   ...((m.data.playerStats || []).map(ps => (ps.rounds || []).length)),
   roundDetails.length,
   0
 );
 
-// Get player stats with player info (filter out null/missing uids)
 const playerStats = (m.data.playerStats || [])
   .filter(ps => ps.uid)
   .map(ps => {
@@ -60,11 +59,9 @@ const playerStats = (m.data.playerStats || [])
     };
   });
 
-// Split by team
 const team1Players = playerStats.filter(p => p.teamId === m.data.team1);
 const team2Players = playerStats.filter(p => p.teamId === m.data.team2);
 
-// Team totals
 const team1Kills = team1Players.reduce((s, p) => s + p.totalKills, 0);
 const team1Deaths = team1Players.reduce((s, p) => s + p.totalDeaths, 0);
 const team1Assists = team1Players.reduce((s, p) => s + p.totalAssists, 0);
@@ -72,7 +69,6 @@ const team2Kills = team2Players.reduce((s, p) => s + p.totalKills, 0);
 const team2Deaths = team2Players.reduce((s, p) => s + p.totalDeaths, 0);
 const team2Assists = team2Players.reduce((s, p) => s + p.totalAssists, 0);
 
-// ===== MVP =====
 function getRoundMVP(roundIdx) {
   const uid = roundMVPuids[roundIdx];
   if (!uid) return null;
@@ -88,9 +84,7 @@ function getRoundMVP(roundIdx) {
   };
 }
 
-function kda(k, d, a) {
-  return (k + a) / Math.max(d, 1);
-}
+function kda(k, d, a) { return (k + a) / Math.max(d, 1); }
 
 function calcOverallMVP() {
   let best = null;
@@ -106,9 +100,7 @@ function calcOverallMVP() {
   return best;
 }
 
-const roundMVPs = numRounds > 0
-  ? Array.from({ length: numRounds }, (_, i) => getRoundMVP(i))
-  : [];
+const roundMVPs = numRounds > 0 ? Array.from({ length: numRounds }, (_, i) => getRoundMVP(i)) : [];
 const overallMVP = calcOverallMVP();
 ---
 
@@ -120,29 +112,32 @@ const overallMVP = calcOverallMVP();
     </div>
     <a href="/matches" class="back-link">← Back to Matches</a>
 
-    <div class="match-detail-scoreboard">
-      <div class="match-detail-team" style={`color: ${t1Color};`}>
-        <a href={`/teams/${m.data.team1}`} style={`color: ${t1Color};`}>{team1Name}</a>
-        <span style="font-size: 0.85rem; color: var(--text-muted);">[{team1Tag}]</span>
+    <!-- NEW: Premium VS Scoreboard -->
+    <div class="match-detail-scoreboard" style={`--team1-color: ${t1Color}; --team2-color: ${t2Color};`}>
+      <div class="match-detail-team">
+        <a href={`/teams/${m.data.team1}`}>{team1Name}</a>
+        <span class="tag">[{team1Tag}]</span>
       </div>
       <div class="match-detail-score">
         {m.data.status === 'completed' ? `${m.data.score1} - ${m.data.score2}` : 'VS'}
       </div>
-      <div class="match-detail-team" style={`color: ${t2Color};`}>
-        <a href={`/teams/${m.data.team2}`} style={`color: ${t2Color};`}>{team2Name}</a>
-        <span style="font-size: 0.85rem; color: var(--text-muted);">[{team2Tag}]</span>
+      <div class="match-detail-team">
+        <a href={`/teams/${m.data.team2}`}>{team2Name}</a>
+        <span class="tag">[{team2Tag}]</span>
       </div>
     </div>
 
-    <div style="text-align: center; margin-bottom: 2rem;">
-      <span class={`badge badge-${m.data.status}`}>{m.data.status === 'completed' ? (t1Won ? `${team1Name} wins` : `${team2Name} wins`) : m.data.status}</span>
+    <div class="match-status-center">
+      <span class={`badge badge-${m.data.status}`}>
+        {m.data.status === 'completed' ? (t1Won ? `${team1Name} wins` : `${team2Name} wins`) : m.data.status}
+      </span>
     </div>
 
     {m.data.status === 'completed' && playerStats.length > 0 && (
       <>
         {roundDetails.length > 0 && (
-          <section style="margin-bottom: 2rem;">
-            <h2 style="margin-bottom: 1rem;">Maps &amp; MVP</h2>
+          <section class="section-spacing">
+            <h2 class="section-title">Maps & MVP</h2>
             <div class="mvp-grid">
               {Array.from({ length: numRounds }, (_, i) => {
                 const mvp = roundMVPs[i];
@@ -160,7 +155,7 @@ const overallMVP = calcOverallMVP();
                         </div>
                       </>
                     ) : (
-                      <div style="font-size: 0.85rem; color: var(--text-muted);">No MVP</div>
+                      <div class="mvp-none">No MVP</div>
                     )}
                   </div>
                 );
@@ -180,32 +175,32 @@ const overallMVP = calcOverallMVP();
           </section>
         )}
 
-        <h2 style="margin-bottom: 1rem;">Team Stats</h2>
-        <div class="stat-grid" style="margin-bottom: 2rem;">
+        <h2 class="section-title">Team Stats</h2>
+        <div class="stat-grid section-spacing">
           <div class="stat-box">
-            <div class="stat-value" style="font-size: 1.25rem;">
+            <div class="stat-value stat-value-small">
               <span class="kda"><span class="kill">{team1Kills}</span>/<span class="death">{team1Deaths}</span>/<span class="assist">{team1Assists}</span></span>
             </div>
             <div class="stat-label">{team1Tag} K/D/A</div>
           </div>
           <div class="stat-box">
-            <div class="stat-value" style="font-size: 1.25rem;">
+            <div class="stat-value stat-value-small">
               <span class="kda"><span class="kill">{team2Kills}</span>/<span class="death">{team2Deaths}</span>/<span class="assist">{team2Assists}</span></span>
             </div>
             <div class="stat-label">{team2Tag} K/D/A</div>
           </div>
         </div>
 
-        <h2 style="margin-bottom: 1rem;">Player Stats</h2>
+        <h2 class="section-title">Player Stats</h2>
 
         {team1Players.length > 0 && (
-          <div style="margin-bottom: 2rem;">
-            <h3 style="margin-bottom: 0.75rem; color: {t1Color};">
-              <a href={`/teams/${m.data.team1}`} style={`color: ${t1Color};`}>{team1Name}</a>
-              <span style="font-size: 0.85rem; color: var(--text-muted);"> [{team1Tag}]</span>
+          <div class="section-spacing" style={`--team-color: ${t1Color};`}>
+            <h3 class="team-header">
+              <a href={`/teams/${m.data.team1}`}>{team1Name}</a>
+              <span class="tag"> [{team1Tag}]</span>
             </h3>
             <div class="table-wrap">
-              <table>
+              <table class="match-stats-table">
                 <thead>
                   <tr>
                     <th>Player</th>
@@ -223,9 +218,9 @@ const overallMVP = calcOverallMVP();
                         <td class="kda"><span class="kill">{r.kills || 0}</span>/<span class="death">{r.deaths || 0}</span>/<span class="assist">{r.assists || 0}</span></td>
                       ))}
                       {numRounds > 1 && Array.from({ length: numRounds - p.rounds.length }, () => (
-                        <td style="color: var(--text-muted);">—</td>
+                        <td class="text-muted">—</td>
                       ))}
-                      <td class="kda" style="font-weight: 700;"><span class="kill">{p.totalKills}</span>/<span class="death">{p.totalDeaths}</span>/<span class="assist">{p.totalAssists}</span></td>
+                      <td class="kda total-kda"><span class="kill">{p.totalKills}</span>/<span class="death">{p.totalDeaths}</span>/<span class="assist">{p.totalAssists}</span></td>
                     </tr>
                   ))}
                 </tbody>
@@ -235,13 +230,13 @@ const overallMVP = calcOverallMVP();
         )}
 
         {team2Players.length > 0 && (
-          <div style="margin-bottom: 2rem;">
-            <h3 style="margin-bottom: 0.75rem; color: {t2Color};">
-              <a href={`/teams/${m.data.team2}`} style={`color: ${t2Color};`}>{team2Name}</a>
-              <span style="font-size: 0.85rem; color: var(--text-muted);"> [{team2Tag}]</span>
+          <div class="section-spacing" style={`--team-color: ${t2Color};`}>
+            <h3 class="team-header">
+              <a href={`/teams/${m.data.team2}`}>{team2Name}</a>
+              <span class="tag"> [{team2Tag}]</span>
             </h3>
             <div class="table-wrap">
-              <table>
+              <table class="match-stats-table">
                 <thead>
                   <tr>
                     <th>Player</th>
@@ -259,9 +254,9 @@ const overallMVP = calcOverallMVP();
                         <td class="kda"><span class="kill">{r.kills || 0}</span>/<span class="death">{r.deaths || 0}</span>/<span class="assist">{r.assists || 0}</span></td>
                       ))}
                       {numRounds > 1 && Array.from({ length: numRounds - p.rounds.length }, () => (
-                        <td style="color: var(--text-muted);">—</td>
+                        <td class="text-muted">—</td>
                       ))}
-                      <td class="kda" style="font-weight: 700;"><span class="kill">{p.totalKills}</span>/<span class="death">{p.totalDeaths}</span>/<span class="assist">{p.totalAssists}</span></td>
+                      <td class="kda total-kda"><span class="kill">{p.totalKills}</span>/<span class="death">{p.totalDeaths}</span>/<span class="assist">{p.totalAssists}</span></td>
                     </tr>
                   ))}
                 </tbody>
@@ -271,8 +266,8 @@ const overallMVP = calcOverallMVP();
         )}
 
         {numRounds <= 1 && (
-          <div class="table-wrap" style="margin-bottom: 2rem;">
-            <table>
+          <div class="table-wrap section-spacing">
+            <table class="match-stats-table">
               <thead>
                 <tr>
                   <th>Player</th>
@@ -286,7 +281,7 @@ const overallMVP = calcOverallMVP();
                 {playerStats.map(p => (
                   <tr>
                     <td><a href={`/players/${playersMap.get(p.uid)?.id || ''}`}><strong>{p.ign}</strong></a></td>
-                    <td style="color: var(--text-muted);">{p.teamTag}</td>
+                    <td class="text-muted">{p.teamTag}</td>
                     <td class="kda"><span class="kill">{p.totalKills}</span></td>
                     <td class="kda"><span class="death">{p.totalDeaths}</span></td>
                     <td class="kda"><span class="assist">{p.totalAssists}</span></td>
@@ -300,7 +295,7 @@ const overallMVP = calcOverallMVP();
     )}
 
     {m.data.status !== 'completed' && (
-      <div style="text-align: center; color: var(--text-muted); padding: 2rem;">
+      <div class="empty-state">
         Match stats will be available after the match is completed.
       </div>
     )}
@@ -310,39 +305,84 @@ const overallMVP = calcOverallMVP();
 <style>
   .back-link {
     display: inline-block;
-    margin-bottom: 1rem;
-    color: var(--accent);
+    margin-bottom: 1.5rem;
+    color: var(--text-secondary);
     font-weight: 600;
     font-size: 0.9rem;
     text-decoration: none;
+    transition: color 0.2s;
   }
-  .back-link:hover { text-decoration: underline; }
+  .back-link:hover { color: var(--accent); }
+
+  .section-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-spacing { margin-bottom: 2.5rem; }
+  .text-muted { color: var(--text-muted); }
+  .empty-state { text-align: center; color: var(--text-muted); padding: 3rem 1rem; font-size: 1.1rem; }
+
+  /* Premium VS Scoreboard */
   .match-detail-scoreboard {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 2rem;
-    padding: 2rem 0;
+    padding: 2.5rem 1.5rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 1.5rem;
   }
   .match-detail-team {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 0.25rem;
-    font-size: 1.25rem;
-    font-weight: 700;
+    flex: 1;
+    min-width: 0;
   }
+  .match-detail-team a {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--team-color, var(--text-primary));
+    text-decoration: none;
+    text-align: center;
+    word-break: break-word;
+    transition: opacity 0.2s;
+  }
+  .match-detail-team a:hover { opacity: 0.8; }
+  .match-detail-team .tag { font-size: 0.85rem; color: var(--text-muted); font-weight: 600; }
+  
   .match-detail-score {
-    font-size: 2rem;
+    font-size: 2.5rem;
     font-weight: 800;
     color: var(--accent);
+    padding: 0 1.5rem;
+    border-left: 2px solid var(--border);
+    border-right: 2px solid var(--border);
   }
+
+  .match-status-center { text-align: center; margin-bottom: 2.5rem; }
+
   @media (max-width: 640px) {
-    .match-detail-scoreboard {
-      flex-direction: column;
-      gap: 1rem;
+    .match-detail-scoreboard { flex-direction: column; gap: 1rem; padding: 1.5rem; }
+    .match-detail-score {
+      border: none;
+      border-top: 2px solid var(--border);
+      border-bottom: 2px solid var(--border);
+      padding: 0.75rem 0;
+      width: 100%;
+      text-align: center;
+      font-size: 2rem;
     }
+    .match-detail-team { width: 100%; }
   }
+
+  /* MVP Grid */
   .mvp-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -352,68 +392,61 @@ const overallMVP = calcOverallMVP();
   .mvp-card {
     background: var(--bg-card);
     border: 1px solid var(--border);
-    border-radius: 12px;
+    border-radius: var(--radius);
     padding: 1.25rem;
     text-align: center;
   }
-  .mvp-round-label {
-    color: var(--text-muted);
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 0.5rem;
-  }
-  .mvp-map-name {
-    font-size: 1.05rem;
-    font-weight: 800;
-    color: var(--accent);
-    margin-bottom: 0.75rem;
-  }
-  .mvp-label {
-    font-size: 0.72rem;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    margin-bottom: 0.25rem;
-  }
-  .mvp-player-name {
-    font-size: 1rem;
-    font-weight: 700;
-    color: #facc15;
-    margin-bottom: 0.25rem;
-  }
-  .mvp-kda {
-    font-size: 0.85rem;
-    color: var(--text-primary);
-  }
+  .mvp-round-label { color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; font-weight: 600; }
+  .mvp-map-name { font-size: 1.05rem; font-weight: 800; color: var(--accent); margin-bottom: 0.75rem; }
+  .mvp-label { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.25rem; font-weight: 600; }
+  .mvp-player-name { font-size: 1rem; font-weight: 700; color: #facc15; margin-bottom: 0.25rem; }
+  .mvp-kda { font-size: 0.85rem; color: var(--text-primary); font-family: monospace; }
+  .mvp-none { font-size: 0.85rem; color: var(--text-muted); font-style: italic; margin-top: 1rem; }
+
   .overall-mvp {
     background: linear-gradient(135deg, var(--bg-card), rgba(255, 77, 46, 0.08));
     border: 1px solid var(--accent);
-    border-radius: 12px;
+    border-radius: var(--radius);
     padding: 1.5rem;
     text-align: center;
   }
-  .overall-mvp-label {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin-bottom: 0.5rem;
+  .overall-mvp-label { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; font-weight: 700; }
+  .overall-mvp-name { font-size: 1.6rem; font-weight: 800; color: #facc15; margin-bottom: 0.25rem; }
+  .overall-mvp-kda { font-size: 1.1rem; color: var(--accent); font-weight: 700; font-family: monospace; }
+  .overall-mvp-ratio { color: var(--text-muted); font-weight: 400; font-size: 0.9rem; margin-left: 0.5rem; }
+
+  /* Team Stats Boxes */
+  .stat-value-small { font-size: 1.5rem !important; }
+
+  /* Team Headers */
+  .team-header {
+    margin-bottom: 1rem;
+    font-size: 1.15rem;
   }
-  .overall-mvp-name {
-    font-size: 1.6rem;
-    font-weight: 800;
-    color: #facc15;
-    margin-bottom: 0.25rem;
+  .team-header a { color: var(--team-color, var(--accent)); text-decoration: none; font-weight: 700; }
+  .team-header a:hover { text-decoration: underline; }
+  .team-header .tag { color: var(--text-muted); font-weight: 600; }
+
+  /* NEW: Mobile Sticky Columns for Wide Tables */
+  .match-stats-table th:first-child,
+  .match-stats-table td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: var(--bg-card);
+    border-right: 1px solid var(--border);
+    min-width: 120px;
   }
-  .overall-mvp-kda {
-    font-size: 1.1rem;
-    color: var(--accent);
-    font-weight: 700;
+  .match-stats-table th:first-child {
+    background: rgba(255, 77, 46, 0.08); /* Match header bg */
+    z-index: 3;
   }
-  .overall-mvp-ratio {
-    color: var(--text-muted);
-    font-weight: 400;
-    font-size: 0.9rem;
-    margin-left: 0.5rem;
+  .match-stats-table tbody tr:nth-child(even) td:first-child {
+    background: rgba(255, 255, 255, 0.02); /* Match even row bg */
   }
+  .match-stats-table tbody tr:hover td:first-child {
+    background: var(--bg-card-hover); /* Match hover bg */
+  }
+  
+  .total-kda { font-weight: 700; font-size: 0.95rem; }
 </style>

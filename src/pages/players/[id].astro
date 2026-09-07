@@ -21,11 +21,10 @@ const playerMatches = allMatches.filter(m =>
 );
 
 const matchesPlayed = playerMatches.length;
-const kd = (player.data.stats.kills / Math.max(player.data.stats.deaths, 1)).toFixed(2);
+const kd = ((player.data.stats?.kills || 0) / Math.max(player.data.stats?.deaths || 1, 1)).toFixed(2);
 const kdClass = parseFloat(kd) >= 1 ? 'kd-positive' : 'kd-negative';
-const hasSocials = Object.values(player.data.socials).some(v => v);
+const hasSocials = player.data.socials && Object.values(player.data.socials).some(v => v);
 
-// Calculate MVP count from roundDetails across all matches this player participated in
 let mvpCount = 0;
 const mvpMatches = [];
 playerMatches.forEach(m => {
@@ -40,52 +39,55 @@ playerMatches.forEach(m => {
     });
   }
 });
+
+const initial = player.data.ign.charAt(0).toUpperCase();
 ---
 
 <Layout title={`${player.data.ign} - CFL Tournament Hub`} current="Players">
   <div class="container">
-    <div style="display: flex; align-items: center; gap: 1.5rem; margin: 3rem 0 2rem;">
-      <div class="avatar" style="width: 80px; height: 80px; font-size: 2rem;">
-        {player.data.ign.charAt(0).toUpperCase()}
-      </div>
-      <div>
+    
+    <!-- NEW: Premium Detail Hero -->
+    <div class="detail-hero">
+      <div class="avatar avatar-large">{initial}</div>
+      <div class="detail-hero-info">
         <h1>{player.data.ign}</h1>
-        <p style="color: var(--text-secondary);">
+        <p class="hero-subtitle">
           {player.data.name}
           {team && <span> · <a href={`/teams/${team.id}`}>{team.data.name}</a></span>}
           {player.data.country && <span> · {player.data.country}</span>}
         </p>
       </div>
+      
       {mvpCount > 0 && (
-        <div style="margin-left: auto; text-align: center;">
-          <div style="font-size: 2rem; font-weight: 800; color: #facc15;">{mvpCount}</div>
-          <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;">
-            {mvpCount === 1 ? 'MVP Award' : 'MVP Awards'}
-          </div>
+        <div class="hero-mvp">
+          <div class="mvp-value">{mvpCount}</div>
+          <div class="mvp-label">{mvpCount === 1 ? 'MVP Award' : 'MVP Awards'}</div>
         </div>
       )}
     </div>
+
     <a href="/players" class="back-link">← Back to Players</a>
 
     {player.data.bio && (
-      <p style="color: var(--text-secondary); max-width: 600px; margin-bottom: 2rem;">{player.data.bio}</p>
+      <p class="player-description">{player.data.bio}</p>
     )}
 
-    <div class="stat-grid" style="margin-bottom: 2rem;">
+    <h2 class="section-title">Career Statistics</h2>
+    <div class="stat-grid section-spacing">
       <div class="stat-box stat-kills">
-        <div class="stat-value">{player.data.stats.kills}</div>
+        <div class="stat-value">{player.data.stats?.kills || 0}</div>
         <div class="stat-label">Kills</div>
       </div>
       <div class="stat-box stat-deaths">
-        <div class="stat-value">{player.data.stats.deaths}</div>
+        <div class="stat-value">{player.data.stats?.deaths || 0}</div>
         <div class="stat-label">Deaths</div>
       </div>
       <div class="stat-box stat-assists">
-        <div class="stat-value">{player.data.stats.assists}</div>
+        <div class="stat-value">{player.data.stats?.assists || 0}</div>
         <div class="stat-label">Assists</div>
       </div>
       <div class="stat-box stat-kd">
-        <div class="stat-value" class={kdClass}>{kd}</div>
+        <div class={kdClass}>{kd}</div>
         <div class="stat-label">K/D Ratio</div>
       </div>
       <div class="stat-box stat-matches">
@@ -99,27 +101,27 @@ playerMatches.forEach(m => {
     </div>
 
     {hasSocials && (
-      <div style="margin-bottom: 2rem;">
-        <h3 style="margin-bottom: 0.75rem;">Socials</h3>
-        <div style="display: flex; gap: 1rem;">
-          {player.data.socials.discord && (
-            <span class="badge" style="background: #5865F2; color: white;">Discord: {player.data.socials.discord}</span>
+      <div class="section-spacing">
+        <h3 class="section-title">Socials</h3>
+        <div class="socials-list">
+          {player.data.socials?.discord && (
+            <span class="badge badge-discord">Discord: {player.data.socials.discord}</span>
           )}
-          {player.data.socials.youtube && (
-            <a href={`https://youtube.com/${player.data.socials.youtube}`} class="badge" style="background: #FF0000; color: white;">YouTube</a>
+          {player.data.socials?.youtube && (
+            <a href={`https://youtube.com/${player.data.socials.youtube}`} target="_blank" rel="noopener noreferrer" class="badge badge-youtube">YouTube</a>
           )}
-          {player.data.socials.twitch && (
-            <a href={`https://twitch.tv/${player.data.socials.twitch}`} class="badge" style="background: #9146FF; color: white;">Twitch</a>
+          {player.data.socials?.twitch && (
+            <a href={`https://twitch.tv/${player.data.socials.twitch}`} target="_blank" rel="noopener noreferrer" class="badge badge-twitch">Twitch</a>
           )}
         </div>
       </div>
     )}
 
     {mvpMatches.length > 0 && (
-      <div style="margin-bottom: 2rem;">
-        <h2 style="margin-bottom: 1rem;">MVP Awards</h2>
+      <div class="section-spacing">
+        <h2 class="section-title">MVP Awards</h2>
         <div class="table-wrap">
-          <table>
+          <table class="match-history-table">
             <thead>
               <tr>
                 <th>Date</th>
@@ -136,16 +138,18 @@ playerMatches.forEach(m => {
                 const matchName = (t1 ? t1.data.name : m.data.team1) + ' vs ' + (t2 ? t2.data.name : m.data.team2);
                 return (
                   <tr>
-                    <td style="color: var(--text-muted);">{m.data.date}</td>
+                    <td>{m.data.date}</td>
                     <td>{m.data.tournament}</td>
                     <td>{m.data.round}</td>
-                    <td><a href={`/matches/${m.id}`}>{matchName}</a></td>
+                    <td><a href={`/matches/${m.id}`} class="match-link">{matchName}</a></td>
                     <td>
-                      {mvpRounds.map((rn, i) => (
-                        <span class="badge badge-completed" style="margin-right: 0.4rem;">
-                          R{rn} — {maps[i] || ''}
-                        </span>
-                      ))}
+                      <div class="mvp-rounds">
+                        {mvpRounds.map((rn, i) => (
+                          <span class="badge badge-completed">
+                            R{rn} — {maps[i] || ''}
+                          </span>
+                        ))}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -158,9 +162,9 @@ playerMatches.forEach(m => {
 
     {playerMatches.length > 0 && (
       <div>
-        <h2 style="margin-bottom: 1rem;">Recent Matches</h2>
+        <h2 class="section-title">Recent Matches</h2>
         <div class="table-wrap">
-          <table>
+          <table class="match-history-table">
             <thead>
               <tr>
                 <th>Date</th>
@@ -176,24 +180,31 @@ playerMatches.forEach(m => {
                 const t2 = teamsMap.get(m.data.team2);
                 const matchName = (t1 ? t1.data.name : m.data.team1) + ' vs ' + (t2 ? t2.data.name : m.data.team2);
                 const ps = m.data.playerStats.find(ps => ps.uid === player.data.uid);
+                
                 let pKills = 0, pDeaths = 0, pAssists = 0;
                 if (ps && ps.rounds) {
                   ps.rounds.forEach(r => {
-                    pKills += r.kills;
-                    pDeaths += r.deaths;
-                    pAssists += r.assists;
+                    pKills += r.kills || 0;
+                    pDeaths += r.deaths || 0;
+                    pAssists += r.assists || 0;
                   });
                 }
+                
                 const wonMVP = (m.data.roundDetails || []).some(rd => rd.mvp === player.data.uid);
+                
                 return (
                   <tr>
-                    <td style="color: var(--text-muted);">{m.data.date}</td>
+                    <td>{m.data.date}</td>
                     <td>{m.data.tournament}</td>
                     <td>{m.data.round}</td>
-                    <td><a href={`/matches/${m.id}`}>{matchName}</a></td>
+                    <td><a href={`/matches/${m.id}`} class="match-link">{matchName}</a></td>
                     <td>
-                      <span class="kda"><span class="kill">{pKills}</span>/<span class="death">{pDeaths}</span>/<span class="assist">{pAssists}</span></span>
-                      {wonMVP && <span class="badge badge-completed" style="margin-left: 0.5rem;">MVP</span>}
+                      <div class="match-kda">
+                        <span class="kda">
+                          <span class="kill">{pKills}</span> / <span class="death">{pDeaths}</span> / <span class="assist">{pAssists}</span>
+                        </span>
+                        {wonMVP && <span class="badge badge-completed">MVP</span>}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -209,41 +220,81 @@ playerMatches.forEach(m => {
 <style>
   .back-link {
     display: inline-block;
-    margin-bottom: 1rem;
-    color: var(--accent);
+    margin-bottom: 1.5rem;
+    color: var(--text-secondary);
     font-weight: 600;
     font-size: 0.9rem;
     text-decoration: none;
+    transition: color 0.2s;
   }
-  .back-link:hover { text-decoration: underline; }
-  .stat-kills {
-    background: rgba(34, 197, 94, 0.12);
-    border-color: rgba(34, 197, 94, 0.3);
+  .back-link:hover { color: var(--accent); }
+
+  .player-description {
+    color: var(--text-secondary);
+    max-width: 700px;
+    margin-bottom: 2rem;
+    line-height: 1.6;
   }
+
+  .section-title {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-spacing { margin-bottom: 2.5rem; }
+
+  /* Hero MVP Box */
+  .hero-mvp {
+    margin-left: auto;
+    text-align: center;
+    background: var(--bg-primary);
+    padding: 1rem 1.5rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .mvp-value { font-size: 2rem; font-weight: 800; color: #facc15; line-height: 1; }
+  .mvp-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 0.25rem; }
+
+  /* Custom Stat Box Variants */
+  .stat-kills { background: rgba(34, 197, 94, 0.12); border-color: rgba(34, 197, 94, 0.3); }
   .stat-kills .stat-value { color: #4ade80; }
-  .stat-deaths {
-    background: rgba(239, 68, 68, 0.12);
-    border-color: rgba(239, 68, 68, 0.3);
-  }
+  
+  .stat-deaths { background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.3); }
   .stat-deaths .stat-value { color: #f87171; }
-  .stat-assists {
-    background: rgba(168, 85, 247, 0.12);
-    border-color: rgba(168, 85, 247, 0.3);
-  }
+  
+  .stat-assists { background: rgba(168, 85, 247, 0.12); border-color: rgba(168, 85, 247, 0.3); }
   .stat-assists .stat-value { color: #c084fc; }
-  .stat-kd {
-    background: rgba(245, 158, 11, 0.12);
-    border-color: rgba(245, 158, 11, 0.3);
-  }
+  
+  .stat-kd { background: rgba(245, 158, 11, 0.12); border-color: rgba(245, 158, 11, 0.3); }
   .stat-kd .stat-value { color: #fbbf24; }
-  .stat-matches {
-    background: rgba(59, 130, 246, 0.12);
-    border-color: rgba(59, 130, 246, 0.3);
-  }
+  
+  .stat-matches { background: rgba(59, 130, 246, 0.12); border-color: rgba(59, 130, 246, 0.3); }
   .stat-matches .stat-value { color: #60a5fa; }
-  .stat-mvp {
-    background: rgba(250, 204, 21, 0.12);
-    border-color: rgba(250, 204, 21, 0.3);
-  }
+  
+  .stat-mvp { background: rgba(250, 204, 21, 0.12); border-color: rgba(250, 204, 21, 0.3); }
   .stat-mvp .stat-value { color: #facc15; }
+
+  /* Socials */
+  .socials-list { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+  .badge-discord { background: #5865F2; color: white; }
+  .badge-youtube { background: #FF0000; color: white; text-decoration: none; }
+  .badge-twitch { background: #9146FF; color: white; text-decoration: none; }
+  .badge-youtube:hover, .badge-twitch:hover { opacity: 0.9; }
+
+  /* Table Helpers */
+  .match-link { color: var(--text-primary); font-weight: 600; text-decoration: none; }
+  .match-link:hover { color: var(--accent); }
+  
+  .mvp-rounds { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+  .match-kda { display: flex; align-items: center; gap: 0.5rem; }
+
+  /* Mobile Hero Adjustment */
+  @media (max-width: 600px) {
+    .detail-hero { flex-direction: column; text-align: center; gap: 1rem; }
+    .hero-mvp { margin-left: 0; width: 100%; }
+    .hero-subtitle { display: flex; flex-direction: column; gap: 0.25rem; }
+  }
 </style>

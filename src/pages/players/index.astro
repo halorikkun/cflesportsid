@@ -14,18 +14,19 @@ function getMatchesPlayed(uid) {
 
 const players = (await getCollection('players')).map(p => {
   const team = p.data.team ? teamsMap.get(p.data.team) : undefined;
-  const kd = (p.data.stats.kills / Math.max(p.data.stats.deaths, 1)).toFixed(2);
+  const kd = (p.data.stats?.kills || 0) / Math.max(p.data.stats?.deaths || 1, 1);
   const matchesPlayed = getMatchesPlayed(p.data.uid || p.id);
+  
   return {
     id: p.id,
     ign: p.data.ign,
     teamName: team ? team.data.name : '—',
     teamId: team ? team.id : '',
-    kills: p.data.stats.kills,
-    deaths: p.data.stats.deaths,
-    assists: p.data.stats.assists,
-    kd: parseFloat(kd),
-    kdDisplay: kd,
+    kills: p.data.stats?.kills || 0,
+    deaths: p.data.stats?.deaths || 0,
+    assists: p.data.stats?.assists || 0,
+    kd: parseFloat(kd.toFixed(2)),
+    kdDisplay: kd.toFixed(2),
     matches: matchesPlayed,
   };
 });
@@ -51,25 +52,35 @@ const teamNames = [...new Set(players.map(p => p.teamName).filter(t => t !== '�
     </div>
 
     <div class="table-wrap">
-      <table id="playersTable">
+      <table id="playersTable" class="players-table">
         <thead>
           <tr>
-            <th class="sortable" data-key="ign" style="cursor: pointer;">Player <span class="arrow"></span></th>
-            <th class="sortable" data-key="team" style="cursor: pointer;">Team <span class="arrow"></span></th>
-            <th class="sortable" data-key="kills" data-numeric="true" style="cursor: pointer;">Kills <span class="arrow"></span></th>
-            <th class="sortable" data-key="deaths" data-numeric="true" style="cursor: pointer;">Deaths <span class="arrow"></span></th>
-            <th class="sortable" data-key="assists" data-numeric="true" style="cursor: pointer;">Assists <span class="arrow"></span></th>
-            <th class="sortable" data-key="kd" data-numeric="true" style="cursor: pointer;">KDA Ratio <span class="arrow"></span></th>
-            <th class="sortable" data-key="matches" data-numeric="true" style="cursor: pointer;">Matches <span class="arrow"></span></th>
+            <th class="sortable" data-key="ign" data-numeric="false">Player <span class="arrow"></span></th>
+            <th class="sortable" data-key="team" data-numeric="false">Team <span class="arrow"></span></th>
+            <th class="sortable" data-key="kills" data-numeric="true">Kills <span class="arrow"></span></th>
+            <th class="sortable" data-key="deaths" data-numeric="true">Deaths <span class="arrow"></span></th>
+            <th class="sortable" data-key="assists" data-numeric="true">Assists <span class="arrow"></span></th>
+            <th class="sortable" data-key="kd" data-numeric="true">KDA Ratio <span class="arrow"></span></th>
+            <th class="sortable" data-key="matches" data-numeric="true">Matches <span class="arrow"></span></th>
           </tr>
         </thead>
         <tbody id="playersBody">
           {players.map(p => (
-            <tr data-ign={p.ign.toLowerCase()} data-team={p.teamName.toLowerCase()}
-                data-kills={p.kills} data-deaths={p.deaths} data-assists={p.assists}
-                data-kd={p.kd} data-matches={p.matches}>
+            <tr 
+              data-ign={p.ign.toLowerCase()} 
+              data-team={p.teamName.toLowerCase()}
+              data-kills={p.kills} 
+              data-deaths={p.deaths} 
+              data-assists={p.assists}
+              data-kd={p.kd} 
+              data-matches={p.matches}
+            >
               <td><a href={`/players/${p.id}`}><strong>{p.ign}</strong></a></td>
-              <td>{p.teamId ? <a href={`/teams/${p.teamId}`} style="color: var(--accent);">{p.teamName}</a> : '—'}</td>
+              <td>
+                {p.teamId ? (
+                  <a href={`/teams/${p.teamId}`} class="team-link">{p.teamName}</a>
+                ) : '—'}
+              </td>
               <td class="kda"><span class="kill">{p.kills}</span></td>
               <td class="kda"><span class="death">{p.deaths}</span></td>
               <td class="kda"><span class="assist">{p.assists}</span></td>
@@ -80,121 +91,133 @@ const teamNames = [...new Set(players.map(p => p.teamName).filter(t => t !== '�
         </tbody>
       </table>
     </div>
-    <p id="noResults" style="text-align: center; color: var(--text-muted); display: none; padding: 2rem;">No players found.</p>
+    
+    <p id="noResults" class="no-results">No players found.</p>
     <div class="pagination" id="pagination"></div>
   </div>
 
-  <script>
-    const searchInput = document.getElementById('searchInput');
-    const teamFilter = document.getElementById('teamFilter');
-    const tbody = document.getElementById('playersBody');
-    const noResults = document.getElementById('noResults');
-    const rows = Array.from(tbody.querySelectorAll('tr'));
-    const headers = document.querySelectorAll('.sortable');
-    const pagination = document.getElementById('pagination');
-    const perPage = 10;
-    let currentPage = 1;
-    let sortKey = 'kills';
-    let sortDir = 'desc';
-    let isNumeric = true;
+  <!-- NEW: is:inline ensures this runs exactly where it's placed, wrapped in DOMContentLoaded for safety -->
+  <script is:inline>
+    document.addEventListener('DOMContentLoaded', () => {
+      const searchInput = document.getElementById('searchInput');
+      const teamFilter = document.getElementById('teamFilter');
+      const tbody = document.getElementById('playersBody');
+      const noResults = document.getElementById('noResults');
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      const headers = document.querySelectorAll('.sortable');
+      const pagination = document.getElementById('pagination');
+      const perPage = 10;
+      
+      let currentPage = 1;
+      let sortKey = 'kills';
+      let sortDir = 'desc';
+      let isNumeric = true;
 
-    function getVisibleRows() {
-      const search = searchInput.value.toLowerCase();
-      const team = teamFilter.value;
-      return rows.filter(row => {
-        const matchesSearch = !search || row.dataset.ign.includes(search) || row.dataset.team.includes(search);
-        const matchesTeam = !team || row.dataset.team === team;
-        return matchesSearch && matchesTeam;
-      });
-    }
-
-    function sortRows(visible) {
-      visible.sort((a, b) => {
-        let valA, valB;
-        if (isNumeric) {
-          valA = parseFloat(a.dataset[sortKey]);
-          valB = parseFloat(b.dataset[sortKey]);
-          return sortDir === 'asc' ? valA - valB : valB - valA;
-        } else {
-          valA = a.dataset[sortKey];
-          valB = b.dataset[sortKey];
-          return sortDir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
-        }
-      });
-    }
-
-    function render() {
-      const visible = getVisibleRows();
-      sortRows(visible);
-
-      rows.forEach(row => { row.style.display = 'none'; tbody.appendChild(row); });
-
-      const totalPages = Math.ceil(visible.length / perPage);
-      if (currentPage > totalPages) currentPage = 1;
-
-      const start = (currentPage - 1) * perPage;
-      const end = start + perPage;
-      visible.slice(start, end).forEach(row => { row.style.display = ''; tbody.appendChild(row); });
-
-      noResults.style.display = visible.length === 0 ? 'block' : 'none';
-      renderPagination(totalPages);
-    }
-
-    function renderPagination(totalPages) {
-      pagination.innerHTML = '';
-      if (totalPages <= 1) return;
-
-      const prev = document.createElement('button');
-      prev.className = 'page-btn';
-      prev.textContent = '‹';
-      prev.disabled = currentPage === 1;
-      prev.addEventListener('click', () => { currentPage--; render(); window.scrollTo(0, 0); });
-      pagination.appendChild(prev);
-
-      for (let i = 1; i <= totalPages; i++) {
-        const btn = document.createElement('button');
-        btn.className = `page-btn ${i === currentPage ? 'active' : ''}`;
-        btn.textContent = i;
-        btn.addEventListener('click', () => { currentPage = i; render(); window.scrollTo(0, 0); });
-        pagination.appendChild(btn);
+      function getVisibleRows() {
+        const search = searchInput.value.toLowerCase();
+        const team = teamFilter.value;
+        return rows.filter(row => {
+          const matchesSearch = !search || row.dataset.ign.includes(search) || row.dataset.team.includes(search);
+          const matchesTeam = !team || row.dataset.team === team;
+          return matchesSearch && matchesTeam;
+        });
       }
 
-      const next = document.createElement('button');
-      next.className = 'page-btn';
-      next.textContent = '›';
-      next.disabled = currentPage === totalPages;
-      next.addEventListener('click', () => { currentPage++; render(); window.scrollTo(0, 0); });
-      pagination.appendChild(next);
-    }
-
-    headers.forEach(header => {
-      const arrow = header.querySelector('.arrow');
-      header.addEventListener('click', () => {
-        const key = header.dataset.key;
-        isNumeric = header.dataset.numeric === 'true';
-        if (sortKey === key) {
-          sortDir = sortDir === 'asc' ? 'desc' : 'asc';
-        } else {
-          sortKey = key;
-          sortDir = isNumeric ? 'desc' : 'asc';
-        }
-        headers.forEach(h => {
-          h.style.color = '';
-          h.querySelector('.arrow').textContent = '';
+      function sortRows(visible) {
+        visible.sort((a, b) => {
+          let valA, valB;
+          if (isNumeric) {
+            valA = parseFloat(a.dataset[sortKey]);
+            valB = parseFloat(b.dataset[sortKey]);
+            return sortDir === 'asc' ? valA - valB : valB - valA;
+          } else {
+            valA = a.dataset[sortKey];
+            valB = b.dataset[sortKey];
+            return sortDir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+          }
         });
-        header.style.color = 'var(--accent)';
-        arrow.textContent = sortDir === 'asc' ? ' ↑' : ' ↓';
-        render();
+      }
+
+      function render() {
+        const visible = getVisibleRows();
+        sortRows(visible);
+
+        rows.forEach(row => { row.style.display = 'none'; tbody.appendChild(row); });
+
+        const totalPages = Math.ceil(visible.length / perPage);
+        if (currentPage > totalPages) currentPage = 1;
+
+        const start = (currentPage - 1) * perPage;
+        const end = start + perPage;
+        visible.slice(start, end).forEach(row => { row.style.display = ''; tbody.appendChild(row); });
+
+        noResults.style.display = visible.length === 0 ? 'block' : 'none';
+        renderPagination(totalPages);
+      }
+
+      function renderPagination(totalPages) {
+        pagination.innerHTML = '';
+        if (totalPages <= 1) return;
+
+        const prev = document.createElement('button');
+        prev.className = 'page-btn';
+        prev.textContent = '‹';
+        prev.disabled = currentPage === 1;
+        prev.addEventListener('click', () => { currentPage--; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+        pagination.appendChild(prev);
+
+        for (let i = 1; i <= totalPages; i++) {
+          const btn = document.createElement('button');
+          btn.className = `page-btn ${i === currentPage ? 'active' : ''}`;
+          btn.textContent = i;
+          btn.addEventListener('click', () => { currentPage = i; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+          pagination.appendChild(btn);
+        }
+
+        const next = document.createElement('button');
+        next.className = 'page-btn';
+        next.textContent = '›';
+        next.disabled = currentPage === totalPages;
+        next.addEventListener('click', () => { currentPage++; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
+        pagination.appendChild(next);
+      }
+
+      headers.forEach(header => {
+        const arrow = header.querySelector('.arrow');
+        header.addEventListener('click', () => {
+          const key = header.dataset.key;
+          isNumeric = header.dataset.numeric === 'true';
+          
+          if (sortKey === key) {
+            sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+          } else {
+            sortKey = key;
+            sortDir = isNumeric ? 'desc' : 'asc';
+          }
+          
+          headers.forEach(h => {
+            h.classList.remove('active-sort');
+            h.querySelector('.arrow').textContent = '';
+          });
+          
+          header.classList.add('active-sort');
+          arrow.textContent = sortDir === 'asc' ? ' ↑' : ' ↓';
+          render();
+        });
       });
+
+      // Set default sort
+      const defaultHeader = document.querySelector('[data-key="kills"]');
+      if (defaultHeader) {
+        defaultHeader.classList.add('active-sort');
+        defaultHeader.querySelector('.arrow').textContent = ' ↓';
+      }
+
+      searchInput.addEventListener('input', () => { currentPage = 1; render(); });
+      teamFilter.addEventListener('change', () => { currentPage = 1; render(); });
+      
+      render();
     });
-
-    const defaultHeader = document.querySelector('[data-key="kills"]');
-    defaultHeader.style.color = 'var(--accent)';
-    defaultHeader.querySelector('.arrow').textContent = ' ↓';
-
-    searchInput.addEventListener('input', () => { currentPage = 1; render(); });
-    teamFilter.addEventListener('change', () => { currentPage = 1; render(); });
-    render();
   </script>
 </Layout>
 
@@ -203,29 +226,63 @@ const teamNames = [...new Set(players.map(p => p.teamName).filter(t => t !== '�
     display: flex;
     gap: 0.75rem;
     margin-bottom: 1.5rem;
-    flex-wrap: wrap;
   }
-  .players-search {
-    flex: 1;
-    min-width: 200px;
-    padding: 0.5rem 0.75rem;
+  @media (max-width: 480px) {
+    .players-toolbar { flex-direction: column; }
+    .players-search { width: 100%; }
+  }
+
+  .players-search, .players-filter {
+    padding: 0.6rem 0.75rem;
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     color: var(--text-primary);
     font-size: 0.9rem;
   }
-  .players-filter {
-    padding: 0.5rem 0.75rem;
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    color: var(--text-primary);
-    font-size: 0.9rem;
-    cursor: pointer;
-  }
+  .players-search { flex: 1; min-width: 200px; }
+  .players-filter { cursor: pointer; }
   .players-search:focus, .players-filter:focus {
     outline: none;
     border-color: var(--accent);
   }
+
+  /* NEW: Clean sortable header styling */
+  .sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.2s;
+  }
+  .sortable:hover {
+    color: var(--accent-hover);
+  }
+  .sortable.active-sort {
+    color: var(--accent);
+  }
+  .arrow {
+    font-size: 0.8rem;
+    margin-left: 0.25rem;
+  }
+
+  .team-link {
+    color: var(--accent);
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .team-link:hover {
+    color: var(--accent-hover);
+    text-decoration: underline;
+  }
+
+  .no-results {
+    text-align: center;
+    color: var(--text-muted);
+    display: none;
+    padding: 2rem;
+  }
+
+  /* 
+    NOTE: The sticky first/second column mobile behavior is already 
+    handled by the global CSS provided in the previous step! 
+  */
 </style>
