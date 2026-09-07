@@ -1,22 +1,44 @@
----
-const { current } = Astro.props;
-const navItems = [
-  { label: 'Home', href: '/' },
-  { label: 'Teams', href: '/teams' },
-  { label: 'Players', href: '/players' },
-  { label: 'Matches', href: '/matches' },
-  { label: 'Tournaments', href: '/tournament' },
-  { label: 'Veto', href: '/veto' },
-];
----
-
 <header class="site-header">
   <div class="container">
-    <a href="/" class="logo">CFL Esports ID Tournament Hub</a>
-    <nav class="nav">
-      {navItems.map(item => (
-        <a href={item.href} class={current === item.label ? 'active' : ''}>{item.label}</a>
-      ))}
+    <a href="/" class="logo">CFL<span>Esports</span></a>
+    
+    <!-- Mobile menu button -->
+    <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Toggle menu">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+    
+    <!-- Navigation -->
+    <nav class="nav" id="main-nav">
+      <a href="/" class:active={current === 'Home'}>Home</a>
+      <a href="/teams" class:active={current === 'Teams'}>Teams</a>
+      <a href="/players" class:active={current === 'Players'}>Players</a>
+      <a href="/matches" class:active={current === 'Matches'}>Matches</a>
+      <a href="/tournament" class:active={current === 'Tournaments'}>Tournaments</a>
+      <a href="/veto" class:active={current === 'Veto'}>Veto</a>
     </nav>
   </div>
 </header>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', () => {
+    const menuBtn = document.getElementById('mobile-menu-btn');
+    const nav = document.getElementById('main-nav');
+    
+    if (menuBtn && nav) {
+      menuBtn.addEventListener('click', () => {
+        nav.classList.toggle('active');
+        menuBtn.classList.toggle('active');
+      });
+      
+      // Close menu when clicking a link
+      nav.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', () => {
+          nav.classList.remove('active');
+          menuBtn.classList.remove('active');
+        });
+      });
+    }
+  });
+</script>
