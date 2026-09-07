@@ -40,23 +40,25 @@ const numRounds = Math.max(
   0
 );
 
-// Get player stats with player info
-const playerStats = (m.data.playerStats || []).map(ps => {
-  const player = playersMap.get(ps.uid);
-  const team = player ? teamsMap.get(player.data.team) : null;
-  const rounds = ps.rounds || [];
-  return {
-    uid: ps.uid,
-    ign: player ? player.data.ign : (ps.ign || ps.uid),
-    teamName: team ? team.data.name : '—',
-    teamTag: team ? team.data.tag : '—',
-    teamId: player ? player.data.team : '',
-    rounds,
-    totalKills: rounds.reduce((s, r) => s + (r.kills || 0), 0),
-    totalDeaths: rounds.reduce((s, r) => s + (r.deaths || 0), 0),
-    totalAssists: rounds.reduce((s, r) => s + (r.assists || 0), 0),
-  };
-});
+// Get player stats with player info (filter out null/missing uids)
+const playerStats = (m.data.playerStats || [])
+  .filter(ps => ps.uid)
+  .map(ps => {
+    const player = playersMap.get(ps.uid);
+    const team = player ? teamsMap.get(player.data.team) : null;
+    const rounds = ps.rounds || [];
+    return {
+      uid: ps.uid,
+      ign: player ? player.data.ign : (ps.ign || ps.uid),
+      teamName: team ? team.data.name : '—',
+      teamTag: team ? team.data.tag : '—',
+      teamId: player ? player.data.team : '',
+      rounds,
+      totalKills: rounds.reduce((s, r) => s + (r.kills || 0), 0),
+      totalDeaths: rounds.reduce((s, r) => s + (r.deaths || 0), 0),
+      totalAssists: rounds.reduce((s, r) => s + (r.assists || 0), 0),
+    };
+  });
 
 // Split by team
 const team1Players = playerStats.filter(p => p.teamId === m.data.team1);
