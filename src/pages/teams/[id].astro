@@ -43,6 +43,12 @@ teamPlayers.forEach(p => {
   totalAssists += p.data.stats.assists;
 });
 
+// Build tournament name → slug map for linking
+const tournamentSlugs = new Map();
+[...new Set(allMatches.map(m => m.data.tournament))].forEach(tName => {
+  tournamentSlugs.set(tName, tName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''));
+});
+
 // Round priority for sorting (Final first)
 const roundPriority = {
   'Final': 1,
@@ -112,7 +118,7 @@ const sortedMatches = [...teamMatches].sort((a, b) => {
     <h2 style="margin-bottom: 1rem;">Roster</h2>
     <div class="grid grid-3" style="margin-bottom: 2rem;">
       {teamPlayers.map(player => (
-        <div class="card" style="text-decoration: none; color: inherit;">
+        <a href={`/players/${player.id}`} class="card" style="text-decoration: none; color: inherit;">
           <div style="display: flex; align-items: center; gap: 1rem;">
             <div class="avatar">{player.data.ign.charAt(0).toUpperCase()}</div>
             <div style="flex: 1;">
@@ -123,7 +129,7 @@ const sortedMatches = [...teamMatches].sort((a, b) => {
               {player.data.status === 'inactive' ? 'Inactive' : 'Active'}
             </span>
           </div>
-        </div>
+        </a>
       ))}
     </div>
 
@@ -156,13 +162,14 @@ const sortedMatches = [...teamMatches].sort((a, b) => {
                 const resultText = m.data.status === 'completed'
                   ? (won ? 'Win' : 'Loss')
                   : m.data.status;
+                const tournamentSlug = tournamentSlugs.get(m.data.tournament);
                 return (
                   <tr>
                     <td style="color: var(--text-muted);">{m.data.date}</td>
-                    <td>{m.data.tournament}</td>
+                    <td><a href={`/tournament/${tournamentSlug}`}>{m.data.tournament}</a></td>
                     <td>{m.data.round}</td>
                     <td><a href={`/teams/${opponentId}`}>{opponent ? opponent.data.name : opponentId}</a></td>
-                    <td>{myScore} - {oppScore}</td>
+                    <td><a href={`/matches/${m.id}`}>{myScore} - {oppScore}</a></td>
                     <td><span class={`badge ${resultBadge}`}>{resultText}</span></td>
                   </tr>
                 );

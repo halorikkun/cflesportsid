@@ -48,6 +48,7 @@ const teams = (await getCollection('teams')).map(team => {
     totalDeaths,
     totalAssists,
     players: teamPlayers.map(p => ({
+      id: p.id,
       ign: p.data.ign,
       uid: p.data.uid,
       status: p.data.status || 'active',
@@ -124,7 +125,7 @@ const teams = (await getCollection('teams')).map(team => {
             <div class="team-players-label">Roster ({team.playerCount})</div>
             {team.players.map(p => (
               <div class="player-row">
-                <span class="player-ign">{p.ign}</span>
+                <a href={`/players/${p.id}`} class="player-ign">{p.ign}</a>
                 <span class="player-uid">{p.uid}</span>
                 <span class={`player-status ${p.status === 'active' ? 'status-active' : 'status-inactive'}`}>
                   {p.status === 'active' ? 'Active' : 'Inactive'}
@@ -346,6 +347,10 @@ const teams = (await getCollection('teams')).map(team => {
     font-weight: 600;
     font-size: 0.85rem;
     color: var(--text-primary);
+    text-decoration: none;
+  }
+  .player-ign:hover {
+    color: var(--accent);
   }
   .player-uid {
     font-family: monospace;
