@@ -116,9 +116,25 @@ const rounds = [...new Set(matches.map(m => m.data.round))];
             </div>
 
             <div class="match-card-score">
-              <span class="match-card-team1">{team1Name}</span>
+              <div class="match-card-team team-a">
+                <img 
+                  src={t1?.data.logo || `/logos/${team1Tag}.png`} 
+                  alt={team1Name} 
+                  class="team-logo"
+                  onerror="this.onerror=null; this.src='/logos/default.png'"
+                />
+                <span style={`color: ${t1Color};`}>{team1Name}</span>
+              </div>
               <span class="vs">{scoreText}</span>
-              <span class="match-card-team2">{team2Name}</span>
+              <div class="match-card-team team-b">
+                <img 
+                  src={t2?.data.logo || `/logos/${team2Tag}.png`} 
+                  alt={team2Name} 
+                  class="team-logo"
+                  onerror="this.onerror=null; this.src='/logos/default.png'"
+                />
+                <span style={`color: ${t2Color};`}>{team2Name}</span>
+              </div>
             </div>
 
             {m.data.status === 'completed' && (stats1.kills > 0 || stats2.kills > 0) && (
@@ -365,6 +381,27 @@ const rounds = [...new Set(matches.map(m => m.data.round))];
   .match-card-team1 { color: var(--t1-color); text-align: right; flex: 1; }
   .match-card-team2 { color: var(--t2-color); text-align: left; flex: 1; }
   .vs { color: var(--text-muted); font-weight: 400; font-size: 0.9rem; }
+
+  .match-card-team {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex: 1;
+  }
+
+  .match-card-team.team-b {
+    flex-direction: row-reverse;
+    text-align: right;
+  }
+
+  .team-logo {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    border-radius: 4px;
+    flex-shrink: 0;
+    background: transparent;
+  }
 
   .match-card-kda {
     display: flex;

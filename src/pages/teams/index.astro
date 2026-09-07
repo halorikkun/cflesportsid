@@ -91,6 +91,12 @@ const teams = (await getCollection('teams')).map(team => {
           data-kills={team.totalKills}
         >
           <div class="team-card-header">
+            <img 
+              src={team.logo || `/logos/${team.tag}.png`} 
+              alt={team.name} 
+              class="team-logo-small"
+              onerror="this.onerror=null; this.src='/logos/default.png'"
+            />
             <a href={`/teams/${team.id}`} class="team-name-link"><strong>{team.name}</strong></a>
             <span class="team-tag">[{team.tag}]</span>
             <span class="team-region">{team.region}</span>
@@ -379,6 +385,15 @@ const teams = (await getCollection('teams')).map(team => {
     border-radius: 4px;
     flex-shrink: 0;
   }
+
+  .team-logo-small {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+  
   .status-active { background: rgba(34, 197, 94, 0.15); color: var(--win); }
   .status-inactive { background: rgba(156, 163, 175, 0.15); color: var(--text-muted); }
   

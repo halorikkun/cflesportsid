@@ -111,16 +111,28 @@ const overallMVP = calcOverallMVP();
     </div>
     <a href="/matches" class="back-link">← Back to Matches</a>
 
-    <div class="match-detail-scoreboard" style={`--team1-color: ${t1Color}; --team2-color: ${t2Color};`}>
+    <div class="match-detail-scoreboard">
       <div class="match-detail-team">
-        <a href={`/teams/${m.data.team1}`}>{team1Name}</a>
+        <img 
+          src={t1?.data.logo || `/logos/${team1Tag}.png`} 
+          alt={team1Name} 
+          class="team-logo-large"
+          onerror="this.onerror=null; this.src='/logos/default.png'"
+        />
+        <a href={`/teams/${m.data.team1}`} style={`color: ${t1Color};`}>{team1Name}</a>
         <span class="tag">[{team1Tag}]</span>
       </div>
       <div class="match-detail-score">
         {m.data.status === 'completed' ? `${m.data.score1} - ${m.data.score2}` : 'VS'}
       </div>
       <div class="match-detail-team">
-        <a href={`/teams/${m.data.team2}`}>{team2Name}</a>
+        <img 
+          src={t2?.data.logo || `/logos/${team2Tag}.png`} 
+          alt={team2Name} 
+          class="team-logo-large"
+          onerror="this.onerror=null; this.src='/logos/default.png'"
+        />
+        <a href={`/teams/${m.data.team2}`} style={`color: ${t2Color};`}>{team2Name}</a>
         <span class="tag">[{team2Tag}]</span>
       </div>
     </div>
@@ -452,6 +464,22 @@ const overallMVP = calcOverallMVP();
   }
   
   .total-kda { font-weight: 700; font-size: 0.95rem; }
+
+  .team-logo-large {
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+    border-radius: 8px;
+    margin-bottom: 0.5rem;
+    background: transparent;
+  }
+
+  @media (max-width: 640px) {
+    .team-logo-large {
+      width: 48px;
+      height: 48px;
+    }
+  }
 
   @media (max-width: 600px) {
     /* Stack the team stats on very small screens */

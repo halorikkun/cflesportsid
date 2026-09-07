@@ -64,7 +64,12 @@ const initial = team.data.name.charAt(0).toUpperCase();
     
     <!-- NEW: Premium Detail Hero Section -->
     <div class="detail-hero">
-      <div class="avatar avatar-large">{initial}</div>
+      <img 
+        src={team.data.logo || `/logos/${team.data.tag}.png`} 
+        alt={team.data.name} 
+        class="team-logo-hero"
+        onerror="this.onerror=null; this.src='/logos/default.png'"
+      />
       <div class="detail-hero-info">
         <h1>{team.data.name} <span class="hero-tag">[{team.data.tag}]</span></h1>
         <p class="hero-subtitle">{team.data.region} · {activePlayerCount} active players</p>
@@ -266,6 +271,17 @@ const initial = team.data.name.charAt(0).toUpperCase();
   .roster-card-info span {
     font-size: 0.8rem;
     color: var(--text-muted);
+  }
+
+  .team-logo-hero {
+    width: 96px;
+    height: 96px;
+    object-fit: contain;
+    border-radius: 12px;
+    background: var(--bg-primary);
+    border: 2px solid var(--border);
+    padding: 4px;
+    flex-shrink: 0;
   }
 
   /* Table link styling */
