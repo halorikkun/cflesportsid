@@ -1,3 +1,12 @@
+---
+// 1. Define the 'current' prop so Astro knows it exists
+interface Props {
+  current?: string;
+}
+
+const { current } = Astro.props;
+---
+
 <header class="site-header">
   <div class="container">
     <a href="/" class="logo">CFL<span>Esports</span></a>
@@ -11,12 +20,12 @@
     
     <!-- Navigation -->
     <nav class="nav" id="main-nav">
-      <a href="/" class:active={current === 'Home'}>Home</a>
-      <a href="/teams" class:active={current === 'Teams'}>Teams</a>
-      <a href="/players" class:active={current === 'Players'}>Players</a>
-      <a href="/matches" class:active={current === 'Matches'}>Matches</a>
-      <a href="/tournament" class:active={current === 'Tournaments'}>Tournaments</a>
-      <a href="/veto" class:active={current === 'Veto'}>Veto</a>
+      <a href="/" class:list={[current === 'Home' && 'active']}>Home</a>
+      <a href="/teams" class:list={[current === 'Teams' && 'active']}>Teams</a>
+      <a href="/players" class:list={[current === 'Players' && 'active']}>Players</a>
+      <a href="/matches" class:list={[current === 'Matches' && 'active']}>Matches</a>
+      <a href="/tournament" class:list={[current === 'Tournaments' && 'active']}>Tournaments</a>
+      <a href="/veto" class:list={[current === 'Veto' && 'active']}>Veto</a>
     </nav>
   </div>
 </header>
@@ -42,3 +51,84 @@
     }
   });
 </script>
+
+<style>
+  /* Mobile menu button - hidden on desktop */
+  .mobile-menu-btn {
+    display: none;
+    flex-direction: column;
+    gap: 4px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.5rem;
+    z-index: 101;
+  }
+
+  .mobile-menu-btn span {
+    display: block;
+    width: 24px;
+    height: 2px;
+    background: var(--text-primary);
+    transition: all 0.3s;
+    border-radius: 2px;
+  }
+
+  /* Hamburger animation when active */
+  .mobile-menu-btn.active span:nth-child(1) {
+    transform: rotate(45deg) translate(5px, 5px);
+  }
+
+  .mobile-menu-btn.active span:nth-child(2) {
+    opacity: 0;
+  }
+
+  .mobile-menu-btn.active span:nth-child(3) {
+    transform: rotate(-45deg) translate(7px, -6px);
+  }
+
+  @media (max-width: 768px) {
+    .mobile-menu-btn {
+      display: flex;
+    }
+    
+    /* Mobile navigation - hidden by default */
+    .nav {
+      position: fixed;
+      top: 64px;
+      left: 0;
+      right: 0;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      flex-direction: column;
+      gap: 0;
+      padding: 0;
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+      z-index: 99;
+    }
+    
+    .nav.active {
+      max-height: 400px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+    
+    .nav a {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.95rem;
+      display: block;
+    }
+    
+    .nav a:last-child {
+      border-bottom: none;
+    }
+    
+    .nav a:hover,
+    .nav a.active {
+      background: var(--bg-card);
+      color: var(--accent);
+    }
+  }
+</style>
