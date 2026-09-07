@@ -16,6 +16,13 @@ const teamsMap = new Map(allTeams.map(t => [t.id, t]));
 const team = player.data.team ? teamsMap.get(player.data.team) : undefined;
 const allMatches = await getCollection('matches');
 
+// NEW: Build a map of tournament names to their numeric IDs for linking
+const tournamentNames = [...new Set(allMatches.map(m => m.data.tournament || 'CFL Esports ID Tournament'))];
+const tournamentIdMap = new Map();
+tournamentNames.forEach((name, i) => {
+  tournamentIdMap.set(name, i + 1);
+});
+
 const playerMatches = allMatches.filter(m => 
   m.data.playerStats && m.data.playerStats.some(ps => ps.uid === player.data.uid)
 );
@@ -46,10 +53,8 @@ const initial = player.data.ign.charAt(0).toUpperCase();
 <Layout title={`${player.data.ign} - CFL Tournament Hub`} current="Players">
   <div class="container">
     
-    <!-- 1. BACK LINK AT THE VERY TOP (Best UX Practice) -->
     <a href="/players" class="back-link">← Back to Players</a>
 
-    <!-- 2. EXACT SAME HERO LAYOUT AS TEAM DETAILS -->
     <div class="detail-hero">
       <div class="avatar avatar-large">{initial}</div>
       <div class="detail-hero-info">
@@ -82,7 +87,6 @@ const initial = player.data.ign.charAt(0).toUpperCase();
         <div class="stat-label">Assists</div>
       </div>
       <div class="stat-box stat-kd">
-        <!-- 3. FIXED: Added 'stat-value' class so it matches the font size of other stats -->
         <div class={`stat-value ${kdClass}`}>{kd}</div>
         <div class="stat-label">K/D Ratio</div>
       </div>
@@ -132,10 +136,14 @@ const initial = player.data.ign.charAt(0).toUpperCase();
                 const t1 = teamsMap.get(m.data.team1);
                 const t2 = teamsMap.get(m.data.team2);
                 const matchName = (t1 ? t1.data.name : m.data.team1) + ' vs ' + (t2 ? t2.data.name : m.data.team2);
+                const tourneyId = tournamentIdMap.get(m.data.tournament || 'CFL Esports ID Tournament');
+                
                 return (
                   <tr>
                     <td>{m.data.date}</td>
-                    <td>{m.data.tournament}</td>
+                    <td>
+                      <a href={`/tournament/${tourneyId}`} class="match-link">{m.data.tournament}</a>
+                    </td>
                     <td>{m.data.round}</td>
                     <td><a href={`/matches/${m.id}`} class="match-link">{matchName}</a></td>
                     <td>
@@ -176,6 +184,7 @@ const initial = player.data.ign.charAt(0).toUpperCase();
                 const t2 = teamsMap.get(m.data.team2);
                 const matchName = (t1 ? t1.data.name : m.data.team1) + ' vs ' + (t2 ? t2.data.name : m.data.team2);
                 const ps = m.data.playerStats.find(ps => ps.uid === player.data.uid);
+                const tourneyId = tournamentIdMap.get(m.data.tournament || 'CFL Esports ID Tournament');
                 
                 let pKills = 0, pDeaths = 0, pAssists = 0;
                 if (ps && ps.rounds) {
@@ -191,7 +200,9 @@ const initial = player.data.ign.charAt(0).toUpperCase();
                 return (
                   <tr>
                     <td>{m.data.date}</td>
-                    <td>{m.data.tournament}</td>
+                    <td>
+                      <a href={`/tournament/${tourneyId}`} class="match-link">{m.data.tournament}</a>
+                    </td>
                     <td>{m.data.round}</td>
                     <td><a href={`/matches/${m.id}`} class="match-link">{matchName}</a></td>
                     <td>
@@ -214,7 +225,6 @@ const initial = player.data.ign.charAt(0).toUpperCase();
 </Layout>
 
 <style>
-  /* BACK LINK STYLING (Top placement) */
   .back-link {
     display: inline-flex;
     align-items: center;
@@ -247,7 +257,6 @@ const initial = player.data.ign.charAt(0).toUpperCase();
   }
   .section-spacing { margin-bottom: 2.5rem; }
 
-  /* EXACT MATCH TO TEAM DETAIL HERO */
   .detail-hero {
     display: flex;
     align-items: center;
@@ -297,7 +306,6 @@ const initial = player.data.ign.charAt(0).toUpperCase();
     text-decoration: underline;
   }
 
-  /* Custom Stat Box Variants */
   .stat-kills { background: rgba(34, 197, 94, 0.12); border-color: rgba(34, 197, 94, 0.3); }
   .stat-kills .stat-value { color: #4ade80; }
   
@@ -316,21 +324,18 @@ const initial = player.data.ign.charAt(0).toUpperCase();
   .stat-mvp { background: rgba(250, 204, 21, 0.12); border-color: rgba(250, 204, 21, 0.3); }
   .stat-mvp .stat-value { color: #facc15; }
 
-  /* Socials */
   .socials-list { display: flex; gap: 0.75rem; flex-wrap: wrap; }
   .badge-discord { background: #5865F2; color: white; }
   .badge-youtube { background: #FF0000; color: white; text-decoration: none; }
   .badge-twitch { background: #9146FF; color: white; text-decoration: none; }
   .badge-youtube:hover, .badge-twitch:hover { opacity: 0.9; }
 
-  /* Table Helpers */
   .match-link { color: var(--text-primary); font-weight: 600; text-decoration: none; }
-  .match-link:hover { color: var(--accent); }
+  .match-link:hover { color: var(--accent); text-decoration: underline; }
   
   .mvp-rounds { display: flex; gap: 0.4rem; flex-wrap: wrap; }
   .match-kda { display: flex; align-items: center; gap: 0.5rem; }
 
-  /* Mobile Adjustments */
   @media (max-width: 600px) {
     .detail-hero { 
       flex-direction: column; 

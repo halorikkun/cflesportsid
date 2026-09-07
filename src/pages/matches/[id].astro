@@ -26,7 +26,6 @@ const team2Tag = t2 ? t2.data.tag : m.data.team2;
 const t1Won = m.data.winner === m.data.team1;
 const t2Won = m.data.winner === m.data.team2;
 
-// Clean CSS variables for colors
 const t1Color = m.data.status === 'completed' ? (t1Won ? 'var(--win)' : 'var(--text-muted)') : 'var(--text-primary)';
 const t2Color = m.data.status === 'completed' ? (t2Won ? 'var(--win)' : 'var(--text-muted)') : 'var(--text-primary)';
 
@@ -112,7 +111,6 @@ const overallMVP = calcOverallMVP();
     </div>
     <a href="/matches" class="back-link">← Back to Matches</a>
 
-    <!-- NEW: Premium VS Scoreboard -->
     <div class="match-detail-scoreboard" style={`--team1-color: ${t1Color}; --team2-color: ${t2Color};`}>
       <div class="match-detail-team">
         <a href={`/teams/${m.data.team1}`}>{team1Name}</a>
@@ -176,7 +174,8 @@ const overallMVP = calcOverallMVP();
         )}
 
         <h2 class="section-title">Team Stats</h2>
-        <div class="stat-grid section-spacing">
+        <!-- NEW: Added 'team-stats-grid' class to center the 2 boxes -->
+        <div class="stat-grid section-spacing team-stats-grid">
           <div class="stat-box">
             <div class="stat-value stat-value-small">
               <span class="kda"><span class="kill">{team1Kills}</span>/<span class="death">{team1Deaths}</span>/<span class="assist">{team1Assists}</span></span>
@@ -325,7 +324,6 @@ const overallMVP = calcOverallMVP();
   .text-muted { color: var(--text-muted); }
   .empty-state { text-align: center; color: var(--text-muted); padding: 3rem 1rem; font-size: 1.1rem; }
 
-  /* Premium VS Scoreboard */
   .match-detail-scoreboard {
     display: flex;
     align-items: center;
@@ -382,7 +380,6 @@ const overallMVP = calcOverallMVP();
     .match-detail-team { width: 100%; }
   }
 
-  /* MVP Grid */
   .mvp-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -415,10 +412,17 @@ const overallMVP = calcOverallMVP();
   .overall-mvp-kda { font-size: 1.1rem; color: var(--accent); font-weight: 700; font-family: monospace; }
   .overall-mvp-ratio { color: var(--text-muted); font-weight: 400; font-size: 0.9rem; margin-left: 0.5rem; }
 
-  /* Team Stats Boxes */
   .stat-value-small { font-size: 1.5rem !important; }
 
-  /* Team Headers */
+  /* NEW: Center the 2-column team stats grid on desktop */
+  .team-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    max-width: 600px;
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
   .team-header {
     margin-bottom: 1rem;
     font-size: 1.15rem;
@@ -427,7 +431,6 @@ const overallMVP = calcOverallMVP();
   .team-header a:hover { text-decoration: underline; }
   .team-header .tag { color: var(--text-muted); font-weight: 600; }
 
-  /* NEW: Mobile Sticky Columns for Wide Tables */
   .match-stats-table th:first-child,
   .match-stats-table td:first-child {
     position: sticky;
@@ -438,15 +441,23 @@ const overallMVP = calcOverallMVP();
     min-width: 120px;
   }
   .match-stats-table th:first-child {
-    background: rgba(255, 77, 46, 0.08); /* Match header bg */
+    background: rgba(255, 77, 46, 0.08);
     z-index: 3;
   }
   .match-stats-table tbody tr:nth-child(even) td:first-child {
-    background: rgba(255, 255, 255, 0.02); /* Match even row bg */
+    background: rgba(255, 255, 255, 0.02);
   }
   .match-stats-table tbody tr:hover td:first-child {
-    background: var(--bg-card-hover); /* Match hover bg */
+    background: var(--bg-card-hover);
   }
   
   .total-kda { font-weight: 700; font-size: 0.95rem; }
+
+  @media (max-width: 600px) {
+    /* Stack the team stats on very small screens */
+    .team-stats-grid {
+      grid-template-columns: 1fr;
+      max-width: 100%;
+    }
+  }
 </style>
