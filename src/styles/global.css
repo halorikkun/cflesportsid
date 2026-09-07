@@ -509,8 +509,8 @@ tr:hover td {
 
 /* 3. Team Detail Hero (Increased from 96px to 128px) */
 .team-logo-hero {
-  width: 128px;
-  height: 128px;
+  width: 160px;
+  height: 160px;
   object-fit: contain;
   border-radius: 16px;
   background: var(--bg-card);
@@ -521,14 +521,14 @@ tr:hover td {
 
 /* 4. Teams Index Cards (Increased from 28px to 36px) */
 .team-logo-small {
-  width: 36px;
-  height: 36px;
+  width: 64px;
+  height: 64px;
   object-fit: contain;
-  border-radius: 6px;
+  border-radius: 8px;
   flex-shrink: 0;
   background: var(--bg-card);
   border: 1px solid var(--border);
-  padding: 4px;
+  padding: 6px;
 }
 
 /* Mobile adjustments */
@@ -547,5 +547,9 @@ tr:hover td {
   /* --- NEW: 1 column for stats on very small screens --- */
   .stat-grid {
     grid-template-columns: 1fr;
+  }
+  .team-logo-hero {
+    width: 100px;
+    height: 100px;
   }
 }

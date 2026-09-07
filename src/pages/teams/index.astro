@@ -241,7 +241,7 @@ const teams = (await getCollection('teams')).map(team => {
   /* NEW: Responsive grid instead of single column */
   .teams-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: repeat(2, 1fr); 
     gap: 1.5rem;
   }
 
@@ -255,6 +255,9 @@ const teams = (await getCollection('teams')).map(team => {
   @media (max-width: 480px) {
     .teams-toolbar { flex-direction: column; }
     .teams-search { width: 100%; }
+    .teams-grid { 
+      grid-template-columns: 1fr; 
+    }
   }
 
   .teams-search, .teams-sort {
