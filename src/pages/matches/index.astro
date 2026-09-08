@@ -1,6 +1,11 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
+import {
+  getTeamMap,
+  getMatchTeam1Id,
+  getMatchTeam2Id,
+} from '../../utils/content';
 
 const allTeams = await getCollection('teams');
 const teamsMap = new Map(allTeams.map(t => [t.id, t]));
@@ -24,6 +29,8 @@ const matches = (await getCollection('matches')).sort((a, b) => {
   const rB = roundOrder[b.data.round] || 99;
   return rB - rA;
 });
+
+const teamMap = await getTeamMap();
 
 function getTeamKDA(match, teamId) {
   const team = teamsMap.get(teamId);
@@ -79,12 +86,17 @@ const rounds = [...new Set(matches.map(m => m.data.round))];
 
     <div id="matchesGrid" class="matches-grid">
       {matches.map(m => {
-        const t1 = teamsMap.get(m.data.team1);
-        const t2 = teamsMap.get(m.data.team2);
-        const team1Name = t1 ? t1.data.name : m.data.team1;
-        const team2Name = t2 ? t2.data.name : m.data.team2;
-        const team1Tag = t1 ? t1.data.tag : m.data.team1;
-        const team2Tag = t2 ? t2.data.tag : m.data.team2;
+        const team1Id = getMatchTeam1Id(m);
+        const team2Id = getMatchTeam2Id(m);
+
+        const t1 = team1Id ? teamsMap.get(team1Id) : undefined;
+        const t2 = team2Id ? teamsMap.get(team2Id) : undefined;
+
+        const team1Name = t1 ? t1.data.name : team1Id;
+        const team2Name = t2 ? t2.data.name : team2Id;
+
+        const team1Tag = t1 ? t1.data.tag : team1Id;
+        const team2Tag = t2 ? t2.data.tag : team2Id;
         const scoreText = m.data.status === 'completed' ? `${m.data.score1} - ${m.data.score2}` : 'VS';
         const t1Won = m.data.winner === m.data.team1;
         const t2Won = m.data.winner === m.data.team2;

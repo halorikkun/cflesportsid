@@ -10,90 +10,229 @@
   "winner": "g2c-prmx",
   "status": "completed",
   "roundDetails": [
-    { "round_number": 1, "map": "Desert", "mvp": "1654611590" },
-    { "round_number": 2, "map": "Eagle Eye", "mvp": "1654611590" },
-    { "round_number": 3, "map": "Satellite", "mvp": "1551933778" }
+    {
+      "round_number": 1,
+      "map": "Desert",
+      "mvp": "1654611590",
+      "mapId": "desert"
+    },
+    {
+      "round_number": 2,
+      "map": "Eagle Eye",
+      "mvp": "1654611590",
+      "mapId": "eagle-eye"
+    },
+    {
+      "round_number": 3,
+      "map": "Satellite",
+      "mvp": "1551933778",
+      "mapId": "satellite"
+    }
   ],
   "playerStats": [
     {
       "uid": "1654611590",
       "rounds": [
-        { "kills": 13, "deaths": 4, "assists": 2 },
-        { "kills": 14, "deaths": 3, "assists": 3 },
-        { "kills": 8, "deaths": 6, "assists": 3 }
+        {
+          "kills": 13,
+          "deaths": 4,
+          "assists": 2
+        },
+        {
+          "kills": 14,
+          "deaths": 3,
+          "assists": 3
+        },
+        {
+          "kills": 8,
+          "deaths": 6,
+          "assists": 3
+        }
       ]
     },
     {
       "uid": "1551933778",
       "rounds": [
-        { "kills": 11, "deaths": 6, "assists": 3 },
-        { "kills": 5, "deaths": 5, "assists": 6 },
-        { "kills": 13, "deaths": 7, "assists": 6 }
+        {
+          "kills": 11,
+          "deaths": 6,
+          "assists": 3
+        },
+        {
+          "kills": 5,
+          "deaths": 5,
+          "assists": 6
+        },
+        {
+          "kills": 13,
+          "deaths": 7,
+          "assists": 6
+        }
       ]
     },
     {
       "uid": "1710216868",
       "rounds": [
-        { "kills": 10, "deaths": 7, "assists": 1 },
-        { "kills": 3, "deaths": 5, "assists": 1 },
-        { "kills": 9, "deaths": 5, "assists": 0 }
+        {
+          "kills": 10,
+          "deaths": 7,
+          "assists": 1
+        },
+        {
+          "kills": 3,
+          "deaths": 5,
+          "assists": 1
+        },
+        {
+          "kills": 9,
+          "deaths": 5,
+          "assists": 0
+        }
       ]
     },
     {
       "uid": "1080212105",
       "rounds": [
-        { "kills": 5, "deaths": 7, "assists": 7 },
-        { "kills": 7, "deaths": 4, "assists": 2 },
-        { "kills": 9, "deaths": 7, "assists": 6 }
+        {
+          "kills": 5,
+          "deaths": 7,
+          "assists": 7
+        },
+        {
+          "kills": 7,
+          "deaths": 4,
+          "assists": 2
+        },
+        {
+          "kills": 9,
+          "deaths": 7,
+          "assists": 6
+        }
       ]
     },
     {
       "uid": "1087933161",
       "rounds": [
-        { "kills": 4, "deaths": 8, "assists": 2 },
-        { "kills": 9, "deaths": 5, "assists": 5 },
-        { "kills": 6, "deaths": 8, "assists": 4 }
+        {
+          "kills": 4,
+          "deaths": 8,
+          "assists": 2
+        },
+        {
+          "kills": 9,
+          "deaths": 5,
+          "assists": 5
+        },
+        {
+          "kills": 6,
+          "deaths": 8,
+          "assists": 4
+        }
       ]
     },
     {
       "uid": "1741676947",
       "rounds": [
-        { "kills": 9, "deaths": 9, "assists": 1 },
-        { "kills": 4, "deaths": 8, "assists": 4 },
-        { "kills": 8, "deaths": 10, "assists": 1 }
+        {
+          "kills": 9,
+          "deaths": 9,
+          "assists": 1
+        },
+        {
+          "kills": 4,
+          "deaths": 8,
+          "assists": 4
+        },
+        {
+          "kills": 8,
+          "deaths": 10,
+          "assists": 1
+        }
       ]
     },
     {
       "uid": "1909691954",
       "rounds": [
-        { "kills": 8, "deaths": 8, "assists": 5 },
-        { "kills": 2, "deaths": 8, "assists": 1 },
-        { "kills": 9, "deaths": 9, "assists": 3 }
+        {
+          "kills": 8,
+          "deaths": 8,
+          "assists": 5
+        },
+        {
+          "kills": 2,
+          "deaths": 8,
+          "assists": 1
+        },
+        {
+          "kills": 9,
+          "deaths": 9,
+          "assists": 3
+        }
       ]
     },
     {
       "uid": "1677388751",
       "rounds": [
-        { "kills": 8, "deaths": 9, "assists": 1 },
-        { "kills": 8, "deaths": 7, "assists": 3 },
-        { "kills": 12, "deaths": 8, "assists": 2 }
+        {
+          "kills": 8,
+          "deaths": 9,
+          "assists": 1
+        },
+        {
+          "kills": 8,
+          "deaths": 7,
+          "assists": 3
+        },
+        {
+          "kills": 12,
+          "deaths": 8,
+          "assists": 2
+        }
       ]
     },
     {
       "uid": "1725554211",
       "rounds": [
-        { "kills": 4, "deaths": 9, "assists": 3 },
-        { "kills": 4, "deaths": 7, "assists": 0 },
-        { "kills": 2, "deaths": 9, "assists": 4 }
+        {
+          "kills": 4,
+          "deaths": 9,
+          "assists": 3
+        },
+        {
+          "kills": 4,
+          "deaths": 7,
+          "assists": 0
+        },
+        {
+          "kills": 2,
+          "deaths": 9,
+          "assists": 4
+        }
       ]
     },
     {
       "uid": "1121853330",
       "rounds": [
-        { "kills": 3, "deaths": 8, "assists": 3 },
-        { "kills": 3, "deaths": 8, "assists": 2 },
-        { "kills": 2, "deaths": 9, "assists": 5 }
+        {
+          "kills": 3,
+          "deaths": 8,
+          "assists": 3
+        },
+        {
+          "kills": 3,
+          "deaths": 8,
+          "assists": 2
+        },
+        {
+          "kills": 2,
+          "deaths": 9,
+          "assists": 5
+        }
       ]
     }
-  ]
+  ],
+  "tournamentId": "clash-for-glory-s1",
+  "team1Id": "g2c-prmx",
+  "team2Id": "anv",
+  "winnerId": "g2c-prmx"
 }

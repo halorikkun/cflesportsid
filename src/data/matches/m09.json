@@ -10,95 +10,234 @@
   "winner": "howl-tvj",
   "status": "completed",
   "roundDetails": [
-    { "round_number": 1, "map": "Satellite", "mvp": "1404929791" },
-    { "round_number": 2, "map": "Greece", "mvp": "1404929791" },
-    { "round_number": 3, "map": "Port", "mvp": "1756514782" }
+    {
+      "round_number": 1,
+      "map": "Satellite",
+      "mvp": "1404929791",
+      "mapId": "satellite"
+    },
+    {
+      "round_number": 2,
+      "map": "Greece",
+      "mvp": "1404929791",
+      "mapId": "greece"
+    },
+    {
+      "round_number": 3,
+      "map": "Port",
+      "mvp": "1756514782",
+      "mapId": "port"
+    }
   ],
   "playerStats": [
     {
       "uid": "1404929791",
       "rounds": [
-        { "kills": 15, "deaths": 6, "assists": 4 },
-        { "kills": 19, "deaths": 9, "assists": 7 },
-        { "kills": 5, "deaths": 9, "assists": 2 }
+        {
+          "kills": 15,
+          "deaths": 6,
+          "assists": 4
+        },
+        {
+          "kills": 19,
+          "deaths": 9,
+          "assists": 7
+        },
+        {
+          "kills": 5,
+          "deaths": 9,
+          "assists": 2
+        }
       ]
     },
     {
       "uid": "1465434411",
       "rounds": [
-        { "kills": 11, "deaths": 5, "assists": 2 },
-        { "kills": 6, "deaths": 10, "assists": 6 },
-        { "kills": 9, "deaths": 8, "assists": 2 }
+        {
+          "kills": 11,
+          "deaths": 5,
+          "assists": 2
+        },
+        {
+          "kills": 6,
+          "deaths": 10,
+          "assists": 6
+        },
+        {
+          "kills": 9,
+          "deaths": 8,
+          "assists": 2
+        }
       ]
     },
     {
       "uid": "1240400080",
       "rounds": [
-        { "kills": 10, "deaths": 8, "assists": 1 },
-        { "kills": 8, "deaths": 10, "assists": 1 },
-        { "kills": 4, "deaths": 9, "assists": 3 }
+        {
+          "kills": 10,
+          "deaths": 8,
+          "assists": 1
+        },
+        {
+          "kills": 8,
+          "deaths": 10,
+          "assists": 1
+        },
+        {
+          "kills": 4,
+          "deaths": 9,
+          "assists": 3
+        }
       ]
     },
     {
       "uid": "1500132162",
       "rounds": [
-        { "kills": 5, "deaths": 7, "assists": 3 },
-        { "kills": 9, "deaths": 10, "assists": 5 },
-        { "kills": 6, "deaths": 8, "assists": 4 }
+        {
+          "kills": 5,
+          "deaths": 7,
+          "assists": 3
+        },
+        {
+          "kills": 9,
+          "deaths": 10,
+          "assists": 5
+        },
+        {
+          "kills": 6,
+          "deaths": 8,
+          "assists": 4
+        }
       ]
     },
     {
       "uid": "1168546633",
       "rounds": [
-        { "kills": 3, "deaths": 7, "assists": 6 },
-        { "kills": 7, "deaths": 9, "assists": 3 }
+        {
+          "kills": 3,
+          "deaths": 7,
+          "assists": 6
+        },
+        {
+          "kills": 7,
+          "deaths": 9,
+          "assists": 3
+        }
       ]
     },
     {
       "uid": "1085527004",
       "rounds": [
-        { "kills": 4, "deaths": 10, "assists": 3 }
+        {
+          "kills": 4,
+          "deaths": 10,
+          "assists": 3
+        }
       ]
     },
     {
       "uid": "1422279951",
       "rounds": [
-        { "kills": 9, "deaths": 7, "assists": 1 },
-        { "kills": 13, "deaths": 11, "assists": 3 },
-        { "kills": 10, "deaths": 8, "assists": 1 }
+        {
+          "kills": 9,
+          "deaths": 7,
+          "assists": 1
+        },
+        {
+          "kills": 13,
+          "deaths": 11,
+          "assists": 3
+        },
+        {
+          "kills": 10,
+          "deaths": 8,
+          "assists": 1
+        }
       ]
     },
     {
       "uid": "1225759000",
       "rounds": [
-        { "kills": 7, "deaths": 8, "assists": 0 },
-        { "kills": 12, "deaths": 9, "assists": 1 },
-        { "kills": 5, "deaths": 5, "assists": 1 }
+        {
+          "kills": 7,
+          "deaths": 8,
+          "assists": 0
+        },
+        {
+          "kills": 12,
+          "deaths": 9,
+          "assists": 1
+        },
+        {
+          "kills": 5,
+          "deaths": 5,
+          "assists": 1
+        }
       ]
     },
     {
       "uid": "1083796629",
       "rounds": [
-        { "kills": 7, "deaths": 10, "assists": 5 },
-        { "kills": 6, "deaths": 12, "assists": 7 },
-        { "kills": 10, "deaths": 7, "assists": 2 }
+        {
+          "kills": 7,
+          "deaths": 10,
+          "assists": 5
+        },
+        {
+          "kills": 6,
+          "deaths": 12,
+          "assists": 7
+        },
+        {
+          "kills": 10,
+          "deaths": 7,
+          "assists": 2
+        }
       ]
     },
     {
       "uid": "1756514782",
       "rounds": [
-        { "kills": 5, "deaths": 9, "assists": 1 },
-        { "kills": 5, "deaths": 8, "assists": 5 },
-        { "kills": 10, "deaths": 5, "assists": 6 }
+        {
+          "kills": 5,
+          "deaths": 9,
+          "assists": 1
+        },
+        {
+          "kills": 5,
+          "deaths": 8,
+          "assists": 5
+        },
+        {
+          "kills": 10,
+          "deaths": 5,
+          "assists": 6
+        }
       ]
     },
     {
       "uid": "1096392869",
       "rounds": [
-        { "kills": 5, "deaths": 10, "assists": 5 },
-        { "kills": 13, "deaths": 6, "assists": 5 },
-        { "kills": 8, "deaths": 6, "assists": 2 }
+        {
+          "kills": 5,
+          "deaths": 10,
+          "assists": 5
+        },
+        {
+          "kills": 13,
+          "deaths": 6,
+          "assists": 5
+        },
+        {
+          "kills": 8,
+          "deaths": 6,
+          "assists": 2
+        }
       ]
     }
-  ]
+  ],
+  "tournamentId": "clash-for-glory-s1",
+  "team1Id": "solidarity",
+  "team2Id": "howl-tvj",
+  "winnerId": "howl-tvj"
 }

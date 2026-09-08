@@ -10,90 +10,229 @@
   "winner": "cha-tra-mue",
   "status": "completed",
   "roundDetails": [
-    { "round_number": 1, "map": "Satellite", "mvp": "1962941896" },
-    { "round_number": 2, "map": "Greece", "mvp": "1120432314" },
-    { "round_number": 3, "map": "Port", "mvp": "1962941896" }
+    {
+      "round_number": 1,
+      "map": "Satellite",
+      "mvp": "1962941896",
+      "mapId": "satellite"
+    },
+    {
+      "round_number": 2,
+      "map": "Greece",
+      "mvp": "1120432314",
+      "mapId": "greece"
+    },
+    {
+      "round_number": 3,
+      "map": "Port",
+      "mvp": "1962941896",
+      "mapId": "port"
+    }
   ],
   "playerStats": [
     {
       "uid": "1962941896",
       "rounds": [
-        { "kills": 11, "deaths": 3, "assists": 1 },
-        { "kills": 4, "deaths": 7, "assists": 4 },
-        { "kills": 10, "deaths": 3, "assists": 1 }
+        {
+          "kills": 11,
+          "deaths": 3,
+          "assists": 1
+        },
+        {
+          "kills": 4,
+          "deaths": 7,
+          "assists": 4
+        },
+        {
+          "kills": 10,
+          "deaths": 3,
+          "assists": 1
+        }
       ]
     },
     {
       "uid": "1120432314",
       "rounds": [
-        { "kills": 8, "deaths": 2, "assists": 5 },
-        { "kills": 12, "deaths": 5, "assists": 6 },
-        { "kills": 5, "deaths": 3, "assists": 7 }
+        {
+          "kills": 8,
+          "deaths": 2,
+          "assists": 5
+        },
+        {
+          "kills": 12,
+          "deaths": 5,
+          "assists": 6
+        },
+        {
+          "kills": 5,
+          "deaths": 3,
+          "assists": 7
+        }
       ]
     },
     {
       "uid": "1345266890",
       "rounds": [
-        { "kills": 6, "deaths": 3, "assists": 2 },
-        { "kills": 8, "deaths": 4, "assists": 5 },
-        { "kills": 5, "deaths": 4, "assists": 6 }
+        {
+          "kills": 6,
+          "deaths": 3,
+          "assists": 2
+        },
+        {
+          "kills": 8,
+          "deaths": 4,
+          "assists": 5
+        },
+        {
+          "kills": 5,
+          "deaths": 4,
+          "assists": 6
+        }
       ]
     },
     {
       "uid": "1741846753",
       "rounds": [
-        { "kills": 5, "deaths": 1, "assists": 2 },
-        { "kills": 6, "deaths": 3, "assists": 7 },
-        { "kills": 9, "deaths": 0, "assists": 2 }
+        {
+          "kills": 5,
+          "deaths": 1,
+          "assists": 2
+        },
+        {
+          "kills": 6,
+          "deaths": 3,
+          "assists": 7
+        },
+        {
+          "kills": 9,
+          "deaths": 0,
+          "assists": 2
+        }
       ]
     },
     {
       "uid": "1099707998",
       "rounds": [
-        { "kills": 4, "deaths": 3, "assists": 4 },
-        { "kills": 10, "deaths": 7, "assists": 1 },
-        { "kills": 6, "deaths": 2, "assists": 3 }
+        {
+          "kills": 4,
+          "deaths": 3,
+          "assists": 4
+        },
+        {
+          "kills": 10,
+          "deaths": 7,
+          "assists": 1
+        },
+        {
+          "kills": 6,
+          "deaths": 2,
+          "assists": 3
+        }
       ]
     },
     {
       "uid": "1613117529",
       "rounds": [
-        { "kills": 6, "deaths": 7, "assists": 0 },
-        { "kills": 10, "deaths": 7, "assists": 0 },
-        { "kills": 3, "deaths": 7, "assists": 0 }
+        {
+          "kills": 6,
+          "deaths": 7,
+          "assists": 0
+        },
+        {
+          "kills": 10,
+          "deaths": 7,
+          "assists": 0
+        },
+        {
+          "kills": 3,
+          "deaths": 7,
+          "assists": 0
+        }
       ]
     },
     {
       "uid": "1078362342",
       "rounds": [
-        { "kills": 3, "deaths": 7, "assists": 1 },
-        { "kills": 6, "deaths": 8, "assists": 1 },
-        { "kills": 2, "deaths": 7, "assists": 0 }
+        {
+          "kills": 3,
+          "deaths": 7,
+          "assists": 1
+        },
+        {
+          "kills": 6,
+          "deaths": 8,
+          "assists": 1
+        },
+        {
+          "kills": 2,
+          "deaths": 7,
+          "assists": 0
+        }
       ]
     },
     {
       "uid": "1656689899",
       "rounds": [
-        { "kills": 1, "deaths": 3, "assists": 1 },
-        { "kills": 1, "deaths": 9, "assists": 5 },
-        { "kills": 3, "deaths": 7, "assists": 1 }
+        {
+          "kills": 1,
+          "deaths": 3,
+          "assists": 1
+        },
+        {
+          "kills": 1,
+          "deaths": 9,
+          "assists": 5
+        },
+        {
+          "kills": 3,
+          "deaths": 7,
+          "assists": 1
+        }
       ]
     },
     {
       "uid": "1161370373",
       "rounds": [
-        { "kills": 1, "deaths": 7, "assists": 1 },
-        { "kills": 4, "deaths": 8, "assists": 3 },
-        { "kills": 2, "deaths": 7, "assists": 2 }
+        {
+          "kills": 1,
+          "deaths": 7,
+          "assists": 1
+        },
+        {
+          "kills": 4,
+          "deaths": 8,
+          "assists": 3
+        },
+        {
+          "kills": 2,
+          "deaths": 7,
+          "assists": 2
+        }
       ]
     },
     {
       "uid": "1192380567",
       "rounds": [
-        { "kills": 1, "deaths": 7, "assists": 2 },
-        { "kills": 5, "deaths": 8, "assists": 0 },
-        { "kills": 2, "deaths": 7, "assists": 0 }
+        {
+          "kills": 1,
+          "deaths": 7,
+          "assists": 2
+        },
+        {
+          "kills": 5,
+          "deaths": 8,
+          "assists": 0
+        },
+        {
+          "kills": 2,
+          "deaths": 7,
+          "assists": 0
+        }
       ]
     }
-  ]
+  ],
+  "tournamentId": "clash-for-glory-s1",
+  "team1Id": "cha-tra-mue",
+  "team2Id": "team-69",
+  "winnerId": "cha-tra-mue"
 }
