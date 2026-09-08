@@ -1,0 +1,25 @@
+{
+  "name": "Clash for Glory: Road to All-Star S1",
+  "game": "crossfire-legends",
+  "region": "ID",
+  "startDate": "2026-08-22",
+  "endDate": "2026-08-23",
+  "status": "completed",
+  "format": "single-elimination",
+  "teams": [
+    "chatramue",
+    "scissor-rex",
+    "familia-nova",
+    "endevour-tvj",
+    "g2c-prmx",
+    "glory-solidarity",
+    "howl-tvj",
+    "brotherhood",
+    "solidarity",
+    "team-69",
+    "tvj-ghoib",
+    "unclexsederhana",
+    "anv"
+  ],
+  "winner": "chatramue"
+}

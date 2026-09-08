@@ -1,6 +1,21 @@
 import { defineCollection, z } from 'astro:content';
 import { glob } from 'astro/loaders';
 
+const tournaments = defineCollection({
+  loader: glob({ pattern: '**/*.json', base: './src/data/tournaments' }),
+  schema: z.object({
+    name: z.string(),
+    game: z.string().default('crossfire-legends'),
+    region: z.string().default('ID'),
+    startDate: z.string(),
+    endDate: z.string(),
+    status: z.enum(['upcoming', 'ongoing', 'completed']).default('upcoming'),
+    format: z.string(),
+    teams: z.array(z.string()).default([]),
+    winner: z.string().optional(),
+  }),
+});
+
 const teams = defineCollection({
   loader: glob({ pattern: '**/*.json', base: './src/data/teams' }),
   schema: z.object({
@@ -92,4 +107,4 @@ const matches = defineCollection({
   }),
 });
 
-export const collections = { teams, players, matches };
+export const collections = { tournaments, teams, players, matches };
