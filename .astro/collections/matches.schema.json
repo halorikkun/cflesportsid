@@ -130,6 +130,17 @@
           "items": {
             "type": "object",
             "properties": {
+              "teamId": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
               "uid": {
                 "type": [
                   "string",
@@ -162,12 +173,12 @@
                 "default": []
               }
             },
+            "required": [
+              "teamId"
+            ],
             "additionalProperties": false
           },
           "default": []
-        },
-        "$schema": {
-          "type": "string"
         }
       },
       "required": [

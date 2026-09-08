@@ -59,3 +59,19 @@ export function slugify(value: string) {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
 }
+
+// Match-time team attribution must never fall back to a player's current roster.
+export function getTeamMatchStats(matches: CollectionEntry<'matches'>[], teamId: string) {
+  const totals = { kills: 0, deaths: 0, assists: 0 };
+  for (const match of matches) {
+    for (const playerStats of match.data.playerStats) {
+      if (playerStats.teamId !== teamId) continue;
+      for (const round of playerStats.rounds) {
+        totals.kills += round.kills;
+        totals.deaths += round.deaths;
+        totals.assists += round.assists;
+      }
+    }
+  }
+  return totals;
+}

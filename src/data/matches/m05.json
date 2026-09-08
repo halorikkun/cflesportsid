@@ -24,6 +24,7 @@
   ],
   "playerStats": [
     {
+      "teamId": "tvj-ghoib",
       "uid": "1933423444",
       "rounds": [
         {
@@ -44,16 +45,7 @@
       ]
     },
     {
-      "uid": null,
-      "rounds": [
-        {
-          "kills": 8,
-          "deaths": 8,
-          "assists": 3
-        }
-      ]
-    },
-    {
+      "teamId": "tvj-ghoib",
       "uid": "1885517837",
       "rounds": [
         {
@@ -74,6 +66,7 @@
       ]
     },
     {
+      "teamId": "tvj-ghoib",
       "uid": "1080417050",
       "rounds": [
         {
@@ -94,6 +87,7 @@
       ]
     },
     {
+      "teamId": "tvj-ghoib",
       "uid": "1663336378",
       "rounds": [
         {
@@ -114,6 +108,7 @@
       ]
     },
     {
+      "teamId": "tvj-ghoib",
       "uid": "1604459118",
       "rounds": [
         {
@@ -129,6 +124,7 @@
       ]
     },
     {
+      "teamId": "howl-tvj",
       "uid": "1756514782",
       "rounds": [
         {
@@ -149,6 +145,7 @@
       ]
     },
     {
+      "teamId": "howl-tvj",
       "uid": "1083796629",
       "rounds": [
         {
@@ -169,6 +166,7 @@
       ]
     },
     {
+      "teamId": "howl-tvj",
       "uid": "1422279951",
       "rounds": [
         {
@@ -189,6 +187,7 @@
       ]
     },
     {
+      "teamId": "howl-tvj",
       "uid": "1096392869",
       "rounds": [
         {
@@ -204,6 +203,7 @@
       ]
     },
     {
+      "teamId": "howl-tvj",
       "uid": "1225759000",
       "rounds": [
         {
@@ -224,6 +224,7 @@
       ]
     },
     {
+      "teamId": "howl-tvj",
       "uid": "1968963523",
       "rounds": [
         {

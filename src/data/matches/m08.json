@@ -24,6 +24,7 @@
   ],
   "playerStats": [
     {
+      "teamId": "glory-solidarity",
       "uid": "1223657312",
       "rounds": [
         {
@@ -44,6 +45,7 @@
       ]
     },
     {
+      "teamId": "glory-solidarity",
       "uid": "1132797822",
       "rounds": [
         {
@@ -54,6 +56,7 @@
       ]
     },
     {
+      "teamId": "glory-solidarity",
       "uid": "1138196067",
       "rounds": [
         {
@@ -74,6 +77,7 @@
       ]
     },
     {
+      "teamId": "glory-solidarity",
       "uid": "1665270296",
       "rounds": [
         {
@@ -94,6 +98,7 @@
       ]
     },
     {
+      "teamId": "glory-solidarity",
       "uid": "1677933945",
       "rounds": [
         {
@@ -114,6 +119,7 @@
       ]
     },
     {
+      "teamId": "glory-solidarity",
       "uid": "1058015660",
       "rounds": [
         {
@@ -129,6 +135,7 @@
       ]
     },
     {
+      "teamId": "scissor-rex",
       "uid": "1991717590",
       "rounds": [
         {
@@ -149,6 +156,7 @@
       ]
     },
     {
+      "teamId": "scissor-rex",
       "uid": "1687813060",
       "rounds": [
         {
@@ -169,6 +177,7 @@
       ]
     },
     {
+      "teamId": "scissor-rex",
       "uid": "1786643099",
       "rounds": [
         {
@@ -179,6 +188,7 @@
       ]
     },
     {
+      "teamId": "scissor-rex",
       "uid": "1185225620",
       "rounds": [
         {
@@ -199,6 +209,7 @@
       ]
     },
     {
+      "teamId": "scissor-rex",
       "uid": "1865383788",
       "rounds": [
         {
@@ -219,6 +230,7 @@
       ]
     },
     {
+      "teamId": "scissor-rex",
       "uid": "1741464352",
       "rounds": [
         {

@@ -106,6 +106,7 @@ const matches = defineCollection({
       assists: z.number().default(0),
     }).default({ kills: 0, deaths: 0, assists: 0 }),
     playerStats: z.array(z.object({
+      teamId: z.string().min(1).nullable(),
       uid: z.string().nullable().optional(),
       ign: z.string().optional(),
       rounds: z.array(z.object({
@@ -114,6 +115,18 @@ const matches = defineCollection({
         assists: z.number().default(0),
       })).default([]),
     })).default([]),
+  }).superRefine((match, ctx) => {
+    match.playerStats.forEach((playerStats, index) => {
+      if (playerStats.teamId !== null &&
+          playerStats.teamId !== match.team1Id &&
+          playerStats.teamId !== match.team2Id) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['playerStats', index, 'teamId'],
+          message: 'Player match team must be one of the two match teams, or null if unknown.',
+        });
+      }
+    });
   }),
 });
 

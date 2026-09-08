@@ -3,6 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
 import {
   getTournamentMap,
+  getTeamMatchStats,
   getMatchTournamentId,
   getMatchTeam1Id,
   getMatchTeam2Id,
@@ -40,12 +41,8 @@ completedMatches.forEach(m => {
 });
 const matchesPlayed = completedMatches.length;
 
-let totalKills = 0, totalDeaths = 0, totalAssists = 0;
-teamPlayers.forEach(p => {
-  totalKills += p.data.stats?.kills || 0;
-  totalDeaths += p.data.stats?.deaths || 0;
-  totalAssists += p.data.stats?.assists || 0;
-});
+const { kills: totalKills, deaths: totalDeaths, assists: totalAssists } =
+  getTeamMatchStats(completedMatches, team.id);
 
 const tournamentsMap = await getTournamentMap();
 

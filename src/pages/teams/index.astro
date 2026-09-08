@@ -1,7 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
-import { getMatchTeam1Id, getMatchTeam2Id } from '../../utils/content';
+import { getMatchTeam1Id, getMatchTeam2Id, getTeamMatchStats } from '../../utils/content';
 
 const allMatches = await getCollection('matches');
 const completedMatches = allMatches.filter(m => m.data.status === 'completed');
@@ -36,10 +36,9 @@ const teams = (await getCollection('teams')).map(team => {
     teamPlayers = allPlayers.filter(p => p.data.team === team.id);
   }
   
-  const totalKills = teamPlayers.reduce((sum, p) => sum + (p.data.stats?.kills || 0), 0);
-  const totalDeaths = teamPlayers.reduce((sum, p) => sum + (p.data.stats?.deaths || 0), 0);
-  const totalAssists = teamPlayers.reduce((sum, p) => sum + (p.data.stats?.assists || 0), 0);
-  
+  const { kills: totalKills, deaths: totalDeaths, assists: totalAssists } =
+    getTeamMatchStats(completedMatches, team.id);
+
   return {
     id: team.id,
     name: team.data.name,

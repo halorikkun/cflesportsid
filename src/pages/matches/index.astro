@@ -3,6 +3,7 @@ import Layout from '../../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
 import {
   getTeamMap,
+  getTeamMatchStats,
   getTournamentMap,
   getMatchTournamentId,
   getMatchWinnerId,
@@ -32,26 +33,6 @@ const matches = (await getCollection('matches')).sort((a, b) => {
   const rB = roundOrder[b.data.round] || 99;
   return rB - rA;
 });
-
-function getTeamKDA(match, teamId) {
-  const team = teamsMap.get(teamId);
-  if (!team || !team.data.players) return { kills: 0, deaths: 0, assists: 0 };
-  const teamPlayerUids = new Set(team.data.players);
-  let kills = 0, deaths = 0, assists = 0;
-  if (match.data.playerStats) {
-    match.data.playerStats.forEach(ps => {
-      if (!teamPlayerUids.has(ps.uid)) return;
-      if (ps.rounds) {
-        ps.rounds.forEach(r => {
-          kills += r.kills || 0;
-          deaths += r.deaths || 0;
-          assists += r.assists || 0;
-        });
-      }
-    });
-  }
-  return { kills, deaths, assists };
-}
 
 const rounds = [...new Set(matches.map(m => m.data.round))];
 ---
@@ -110,8 +91,8 @@ const rounds = [...new Set(matches.map(m => m.data.round))];
         const t1Color = m.data.status === 'completed' ? (t1Won ? 'var(--win)' : 'var(--text-muted)') : 'var(--text-primary)';
         const t2Color = m.data.status === 'completed' ? (t2Won ? 'var(--win)' : 'var(--text-muted)') : 'var(--text-primary)';
         
-        const stats1 = getTeamKDA(m, team1Id);
-        const stats2 = getTeamKDA(m, team2Id);
+        const stats1 = getTeamMatchStats([m], team1Id ?? '');
+        const stats2 = getTeamMatchStats([m], team2Id ?? '');
         const searchText = [tournamentName, tournamentId, team1Name, team2Name, team1Tag, team2Tag, team1Id, team2Id].filter(Boolean).join(' ').toLowerCase();
         
         return (

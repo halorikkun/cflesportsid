@@ -3,6 +3,7 @@ import Layout from '../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
 import {
   getMatchTournamentId,
+  getTeamMatchStats,
   getMatchTeam1Id,
   getMatchTeam2Id,
   getMatchWinnerId,
@@ -63,7 +64,7 @@ function getPlacementPoints(teamId) {
 }
 
 function getTeamKillPoints(teamId) {
-  return players.filter(p => p.data.team === teamId).reduce((sum, p) => sum + p.data.stats.kills, 0);
+  return getTeamMatchStats(completedMatches, teamId).kills;
 }
 
 function getTeamRecord(teamId) {

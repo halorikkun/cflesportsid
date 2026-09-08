@@ -4,7 +4,7 @@
   "bracketSlot": 1,
   "date": "2026-08-22",
   "team1Id": "team-69",
-  "team2Id": "endevour-tvj",
+  "team2Id": "endeavours-tvj",
   "score1": 3,
   "score2": 0,
   "winnerId": "team-69",
@@ -16,6 +16,7 @@
   ],
   "playerStats": [
     {
+      "teamId": "team-69",
       "uid": "1656689899",
       "rounds": [
         { "kills": 10, "deaths": 3, "assists": 5 },
@@ -24,6 +25,7 @@
       ]
     },
     {
+      "teamId": "team-69",
       "uid": "1192380567",
       "rounds": [
         { "kills": 9, "deaths": 2, "assists": 3 },
@@ -32,6 +34,7 @@
       ]
     },
     {
+      "teamId": "team-69",
       "uid": "1161370373",
       "rounds": [
         { "kills": 6, "deaths": 3, "assists": 6 },
@@ -40,6 +43,7 @@
       ]
     },
     {
+      "teamId": "team-69",
       "uid": "1078362342",
       "rounds": [
         { "kills": 6, "deaths": 4, "assists": 6 },
@@ -48,6 +52,7 @@
       ]
     },
     {
+      "teamId": "team-69",
       "uid": "1613117529",
       "rounds": [
         { "kills": 4, "deaths": 4, "assists": 1 },
@@ -56,6 +61,7 @@
       ]
     },
     {
+      "teamId": "endeavours-tvj",
       "uid": "1047666366",
       "rounds": [
         { "kills": 4, "deaths": 7, "assists": 0 },
@@ -64,12 +70,14 @@
       ]
     },
     {
+      "teamId": "endeavours-tvj",
       "uid": "1105151021",
       "rounds": [
         { "kills": 3, "deaths": 7, "assists": 3 }
       ]
     },
     {
+      "teamId": "endeavours-tvj",
       "uid": "1213356890",
       "rounds": [
         { "kills": 3, "deaths": 7, "assists": 2 },
@@ -78,6 +86,7 @@
       ]
     },
     {
+      "teamId": "endeavours-tvj",
       "uid": "1246129555",
       "rounds": [
         { "kills": 3, "deaths": 7, "assists": 0 },
@@ -86,6 +95,7 @@
       ]
     },
     {
+      "teamId": "endeavours-tvj",
       "uid": "1370124271",
       "rounds": [
         { "kills": 3, "deaths": 7, "assists": 1 },
@@ -94,6 +104,7 @@
       ]
     },
     {
+      "teamId": "endeavours-tvj",
       "uid": "1895789462",
       "rounds": [
         { "kills": 4, "deaths": 7, "assists": 1 }

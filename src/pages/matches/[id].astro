@@ -83,14 +83,14 @@ const playerStats = (m.data.playerStats || [])
   .filter(ps => ps.uid)
   .map(ps => {
     const player = playersMap.get(ps.uid);
-    const team = player ? teamsMap.get(player.data.team) : null;
+    const team = ps.teamId ? teamsMap.get(ps.teamId) : undefined;
     const rounds = ps.rounds || [];
     return {
       uid: ps.uid,
       ign: player ? player.data.ign : (ps.ign || ps.uid),
       teamName: team ? team.data.name : '—',
       teamTag: team ? team.data.tag : '—',
-      teamId: player ? player.data.team : '',
+      teamId: ps.teamId,
       rounds,
       totalKills: rounds.reduce((s, r) => s + (r.kills || 0), 0),
       totalDeaths: rounds.reduce((s, r) => s + (r.deaths || 0), 0),
