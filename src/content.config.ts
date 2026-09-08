@@ -16,6 +16,15 @@ const tournaments = defineCollection({
   }),
 });
 
+const maps = defineCollection({
+  loader: glob({ pattern: '**/*.json', base: './src/data/maps' }),
+  schema: z.object({
+    name: z.string(),
+    game: z.string().default('crossfire-legends'),
+    active: z.boolean().default(true),
+  }),
+});
+
 const teams = defineCollection({
   loader: glob({ pattern: '**/*.json', base: './src/data/teams' }),
   schema: z.object({
@@ -88,6 +97,7 @@ const matches = defineCollection({
     roundDetails: z.array(z.object({
       round_number: z.number(),
       map: z.string().default(''),
+      mapId: z.string().optional(),
       mvp: z.string().nullable().optional(),
     })).default([]),
     duration: z.string().optional(),
@@ -114,4 +124,4 @@ const matches = defineCollection({
   }),
 });
 
-export const collections = { tournaments, teams, players, matches };
+export const collections = { tournaments, maps, teams, players, matches };

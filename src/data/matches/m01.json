@@ -16,9 +16,9 @@
   "winnerId": "team-69",
   "status": "completed",
   "roundDetails": [
-    { "round_number": 1, "map": "Desert", "mvp": "1656689899" },
-    { "round_number": 2, "map": "Eagle Eye", "mvp": "1370124271" },
-    { "round_number": 3, "map": "Satellite", "mvp": "1078362342" }
+    { "round_number": 1, "map": "Desert", "mapId": "desert", "mvp": "1656689899" },
+    { "round_number": 2, "map": "Eagle Eye", "mapId": "eagle-eye", "mvp": "1370124271" },
+    { "round_number": 3, "map": "Satellite", "mapId": "satellite", "mvp": "1078362342" }
   ],
   "playerStats": [
     {

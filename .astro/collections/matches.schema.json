@@ -76,6 +76,9 @@
                 "type": "string",
                 "default": ""
               },
+              "mapId": {
+                "type": "string"
+              },
               "mvp": {
                 "type": [
                   "string",
