@@ -1,4 +1,4 @@
-import { getCollection } from 'astro:content';
+import { getCollection, type CollectionEntry } from 'astro:content';
 
 export async function getTeamMap() {
   const teams = await getCollection('teams');
@@ -32,24 +32,24 @@ export async function getMapMap() {
   );
 }
 
-export function getMatchTournamentId(match: any) {
+export function getMatchTournamentId(match: CollectionEntry<'matches'>) {
   return match.data.tournamentId ?? null;
 }
 
-export function getMatchTeam1Id(match: any) {
-  return match.data.team1Id ?? match.data.team1 ?? null;
+export function getMatchTeam1Id(match: CollectionEntry<'matches'>) {
+  return match.data.team1Id ?? null;
 }
 
-export function getMatchTeam2Id(match: any) {
-  return match.data.team2Id ?? match.data.team2 ?? null;
+export function getMatchTeam2Id(match: CollectionEntry<'matches'>) {
+  return match.data.team2Id ?? null;
 }
 
-export function getMatchWinnerId(match: any) {
-  return match.data.winnerId ?? match.data.winner ?? null;
+export function getMatchWinnerId(match: CollectionEntry<'matches'>) {
+  return match.data.winnerId ?? null;
 }
 
-export function getRoundMapId(round: any) {
-  return round.mapId ?? slugify(round.map ?? '');
+export function getRoundMapId(round: CollectionEntry<'matches'>['data']['roundDetails'][number]) {
+  return round.mapId;
 }
 
 export function slugify(value: string) {

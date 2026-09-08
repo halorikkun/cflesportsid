@@ -1,6 +1,13 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
+import {
+  getTournamentMap,
+  getMatchTournamentId,
+  getMatchTeam1Id,
+  getMatchTeam2Id,
+  getMatchWinnerId,
+} from '../../utils/content';
 
 export async function getStaticPaths() {
   const teams = await getCollection('teams');
@@ -18,15 +25,15 @@ const playersMap = new Map(allPlayers.map(p => [p.id, p]));
 const teamPlayers = team.data.players.map(pid => playersMap.get(pid)).filter(Boolean);
 const allMatches = await getCollection('matches');
 
-const teamMatches = allMatches.filter(m => m.data.team1 === team.id || m.data.team2 === team.id);
+const teamMatches = allMatches.filter(m => getMatchTeam1Id(m) === team.id || getMatchTeam2Id(m) === team.id);
 const completedMatches = teamMatches.filter(m => m.data.status === 'completed');
 
 let wins = 0, losses = 0;
 completedMatches.forEach(m => {
-  if (m.data.team1 === team.id) {
+  if (getMatchTeam1Id(m) === team.id) {
     if (m.data.score1 > m.data.score2) wins++;
     else if (m.data.score1 < m.data.score2) losses++;
-  } else if (m.data.team2 === team.id) {
+  } else if (getMatchTeam2Id(m) === team.id) {
     if (m.data.score2 > m.data.score1) wins++;
     else if (m.data.score2 < m.data.score1) losses++;
   }
@@ -40,9 +47,7 @@ teamPlayers.forEach(p => {
   totalAssists += p.data.stats?.assists || 0;
 });
 
-const tournamentNames = [...new Set(allMatches.map(m => m.data.tournament || 'CFL Esports ID Tournament'))];
-const tournamentIds = new Map();
-tournamentNames.forEach((name, i) => { tournamentIds.set(name, String(i + 1)); });
+const tournamentsMap = await getTournamentMap();
 
 const roundPriority = { 'Final': 1, 'Semifinal': 2, 'Quarter Final': 3, 'Top 16': 4, 'Round 3': 5, 'Round 2': 6, 'Round 1': 7 };
 
@@ -148,22 +153,32 @@ const initial = team.data.name.charAt(0).toUpperCase();
             </thead>
             <tbody>
               {sortedMatches.map(m => {
-                const isTeam1 = m.data.team1 === team.id;
-                const opponentId = isTeam1 ? m.data.team2 : m.data.team1;
+                const isTeam1 = getMatchTeam1Id(m) === team.id;
+                const opponentId = isTeam1 ? getMatchTeam2Id(m) : getMatchTeam1Id(m);
                 const opponent = teamsMap.get(opponentId);
                 const myScore = isTeam1 ? m.data.score1 : m.data.score2;
                 const oppScore = isTeam1 ? m.data.score2 : m.data.score1;
-                const won = m.data.winner === team.id;
+                const won = getMatchWinnerId(m) === team.id;
                 const resultBadge = m.data.status === 'completed' ? (won ? 'badge-win' : 'badge-loss') : 'badge-upcoming';
                 const resultText = m.data.status === 'completed' ? (won ? 'Win' : 'Loss') : m.data.status;
-                const tournamentId = tournamentIds.get(m.data.tournament);
+                const tournamentId = getMatchTournamentId(m);
+                const tournament = tournamentId ? tournamentsMap.get(tournamentId) : undefined;
+                const tournamentName = tournament?.data.name ?? tournamentId ?? 'TBD';
                 
                 return (
                   <tr>
                     <td>{m.data.date}</td>
-                    <td><a href={`/tournament/${tournamentId}`}>{m.data.tournament}</a></td>
+                    <td>
+                      {tournament ? (
+                        <a href={`/tournament/${tournament.id}`}>{tournamentName}</a>
+                      ) : tournamentName}
+                    </td>
                     <td>{m.data.round}</td>
-                    <td><a href={`/teams/${opponentId}`} class="opponent-link">{opponent ? opponent.data.name : opponentId}</a></td>
+                    <td>
+                      {opponent ? (
+                        <a href={`/teams/${opponent.id}`} class="opponent-link">{opponent.data.name}</a>
+                      ) : (opponentId ?? 'TBD')}
+                    </td>
                     <td><a href={`/matches/${m.id}`} class="score-link">{myScore} - {oppScore}</a></td>
                     <td><span class={`badge ${resultBadge}`}>{resultText}</span></td>
                   </tr>

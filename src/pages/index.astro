@@ -1,10 +1,17 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
+import {
+  getMatchTournamentId,
+  getMatchTeam1Id,
+  getMatchTeam2Id,
+  getMatchWinnerId,
+} from '../utils/content';
 
 const teams = await getCollection('teams');
 const players = await getCollection('players');
 const matches = await getCollection('matches');
+const allTournaments = await getCollection('tournaments');
 
 const totalTeams = teams.length;
 const totalPlayers = players.length;
@@ -13,28 +20,31 @@ const completedMatches = matches.filter(m => m.data.status === 'completed');
 const upcomingMatches = matches.filter(m => m.data.status !== 'completed');
 const totalKills = players.reduce((sum, p) => sum + p.data.stats.kills, 0);
 
-// Group matches by tournament name (falls back to single tournament if no field)
-const tournamentNames = [...new Set(matches.map(m => m.data.tournament || 'CFL Esports ID Tournament'))];
-
-// Build tournament data with winners for each tournament
-const tournaments = tournamentNames.map(tName => {
-  const tMatches = matches.filter(m => (m.data.tournament || 'CFL Esports ID Tournament') === tName);
+// Resolve each tournament and its matches by canonical ID.
+const tournaments = allTournaments.map(tournament => {
+  const tMatches = matches.filter(m => getMatchTournamentId(m) === tournament.id);
   const finalMatch = tMatches.find(m => m.data.round === 'Final' && m.data.status === 'completed');
   const bronzeMatch = tMatches.find(m => m.data.round === 'Bronze Match' && m.data.status === 'completed');
 
   let winnerTeams = [];
 
   if (finalMatch) {
-    const winner = teams.find(t => t.id === finalMatch.data.winner);
-    const runnerUp = teams.find(t => t.id === (finalMatch.data.team1 === finalMatch.data.winner ? finalMatch.data.team2 : finalMatch.data.team1));
-    const thirdPlace = bronzeMatch ? teams.find(t => t.id === bronzeMatch.data.winner) : null;
+    const winner = teams.find(t => t.id === getMatchWinnerId(finalMatch));
+    const finalWinnerId = getMatchWinnerId(finalMatch);
+    const finalTeam1Id = getMatchTeam1Id(finalMatch);
+    const finalTeam2Id = getMatchTeam2Id(finalMatch);
+    const runnerUpId = finalWinnerId && finalWinnerId === finalTeam1Id
+      ? finalTeam2Id
+      : finalWinnerId && finalWinnerId === finalTeam2Id ? finalTeam1Id : null;
+    const runnerUp = teams.find(t => t.id === runnerUpId);
+    const thirdPlace = bronzeMatch ? teams.find(t => t.id === getMatchWinnerId(bronzeMatch)) : null;
 
     if (winner) winnerTeams.push({ team: winner, place: 1 });
     if (runnerUp) winnerTeams.push({ team: runnerUp, place: 2 });
     if (thirdPlace) winnerTeams.push({ team: thirdPlace, place: 3 });
   }
 
-  return { name: tName, winnerTeams };
+  return { id: tournament.id, name: tournament.data.name, winnerTeams };
 });
 
 // Calculate placement points from Final and Bronze Match
@@ -42,12 +52,12 @@ function getPlacementPoints(teamId) {
   const finalMatch = matches.find(m => m.data.round === 'Final' && m.data.status === 'completed');
   const bronzeMatch = matches.find(m => m.data.round === 'Bronze Match' && m.data.status === 'completed');
   if (finalMatch) {
-    if (finalMatch.data.winner === teamId) return 10;
-    if (finalMatch.data.team1 === teamId || finalMatch.data.team2 === teamId) return 6;
+    if (getMatchWinnerId(finalMatch) === teamId) return 10;
+    if (getMatchTeam1Id(finalMatch) === teamId || getMatchTeam2Id(finalMatch) === teamId) return 6;
   }
   if (bronzeMatch) {
-    if (bronzeMatch.data.winner === teamId) return 4;
-    if (bronzeMatch.data.team1 === teamId || bronzeMatch.data.team2 === teamId) return 2;
+    if (getMatchWinnerId(bronzeMatch) === teamId) return 4;
+    if (getMatchTeam1Id(bronzeMatch) === teamId || getMatchTeam2Id(bronzeMatch) === teamId) return 2;
   }
   return 0;
 }
@@ -59,10 +69,10 @@ function getTeamKillPoints(teamId) {
 function getTeamRecord(teamId) {
   let wins = 0, losses = 0;
   completedMatches.forEach(m => {
-    if (m.data.team1 === teamId) {
+    if (getMatchTeam1Id(m) === teamId) {
       if (m.data.score1 > m.data.score2) wins++;
       else if (m.data.score1 < m.data.score2) losses++;
-    } else if (m.data.team2 === teamId) {
+    } else if (getMatchTeam2Id(m) === teamId) {
       if (m.data.score2 > m.data.score1) wins++;
       else if (m.data.score2 < m.data.score1) losses++;
     }

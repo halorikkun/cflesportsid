@@ -1,14 +1,15 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
+import { getMatchTournamentId, getMatchWinnerId } from '../../utils/content';
 
 const matches = await getCollection('matches');
 const teams = await getCollection('teams');
 
-const tournamentNames = [...new Set(matches.map(m => m.data.tournament || 'CFL Esports ID Tournament'))];
+const allTournaments = await getCollection('tournaments');
 
-const tournaments = tournamentNames.map((name, i) => {
-  const tMatches = matches.filter(m => (m.data.tournament || 'CFL Esports ID Tournament') === name);
+const tournaments = allTournaments.map((tournament) => {
+  const tMatches = matches.filter(m => getMatchTournamentId(m) === tournament.id);
   const completed = tMatches.filter(m => m.data.status === 'completed');
   const upcoming = tMatches.filter(m => m.data.status !== 'completed');
   const rounds = [...new Set(tMatches.map(m => m.data.round).filter(Boolean))];
@@ -25,11 +26,11 @@ const tournaments = tournamentNames.map((name, i) => {
 
   const dates = tMatches.map(m => m.data.date).filter(Boolean).sort();
   const finalMatch = tMatches.find(m => m.data.round === 'Final' && m.data.status === 'completed');
-  const winner = finalMatch ? teams.find(t => t.id === finalMatch.data.winner) : null;
+  const winner = finalMatch ? teams.find(t => t.id === getMatchWinnerId(finalMatch)) : null;
 
   return {
-    name,
-    id: i + 1,
+    name: tournament.data.name,
+    id: tournament.id,
     totalMatches: tMatches.length,
     completedMatches: completed.length,
     upcomingMatches: upcoming.length,

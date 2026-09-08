@@ -1,24 +1,27 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
+import { getMatchTournamentId, getMatchTeam1Id, getMatchTeam2Id, getMatchWinnerId } from '../../utils/content';
 
 export async function getStaticPaths() {
-  const matches = await getCollection('matches');
-  const tournamentNames = [...new Set(matches.map(m => m.data.tournament || 'CFL Esports ID Tournament'))];
-  return tournamentNames.map((name, i) => ({
-    params: { id: String(i + 1) },
-    props: { tournamentName: name },
-  }));
+  const tournaments = await getCollection('tournaments');
+  return tournaments.flatMap(tournament => {
+    const paths = [{ params: { id: tournament.id }, props: { tournament } }];
+    // Preserve the existing URL while the remaining pages are migrated.
+    if (tournament.id === 'clash-for-glory-s1') {
+      paths.push({ params: { id: '1' }, props: { tournament } });
+    }
+    return paths;
+  });
 }
 
-const { tournamentName } = Astro.props;
-
+const { tournament } = Astro.props;
+const tournamentName = tournament.data.name;
 const matches = await getCollection('matches');
 const teams = await getCollection('teams');
-
-const tMatches = matches.filter(m => (m.data.tournament || 'CFL Esports ID Tournament') === tournamentName);
-const tournamentNamesList = [...new Set(matches.map(m => m.data.tournament || 'CFL Esports ID Tournament'))];
-const tournaments = tournamentNamesList.map((name, i) => ({ name, id: i + 1 }));
+const allTournaments = await getCollection('tournaments');
+const tMatches = matches.filter(m => getMatchTournamentId(m) === tournament.id);
+const tournaments = allTournaments.map(t => ({ name: t.data.name, id: t.id }));
 
 const ROUND_ORDER = ['First Round', 'Second Round', 'Third Round', 'Top 16', 'Quarter Final', 'Semi Final', 'Final'];
 const SPECIAL_ROUNDS = ['Bronze Match'];
@@ -68,8 +71,8 @@ rounds.forEach((round, roundIdx) => {
         if (targetMatch) {
           const pairedSlot = slot % 2 === 1 ? slot + 1 : slot - 1;
           const pairedMatch = byRound[round].find(m => (m.data.bracketSlot || 0) === pairedSlot);
-          const pairedWinner = pairedMatch?.data.winner;
-          const byeTeam = pairedWinner === targetMatch.data.team1 ? targetMatch.data.team2 : targetMatch.data.team1;
+          const pairedWinner = pairedMatch ? getMatchWinnerId(pairedMatch) : null;
+          const byeTeam = pairedWinner === getMatchTeam1Id(targetMatch) ? getMatchTeam2Id(targetMatch) : getMatchTeam1Id(targetMatch);
           entries.push({ type: 'bye', slot, team: byeTeam });
         }
       }
@@ -104,7 +107,7 @@ function formatDate(d) {
       <a href="/tournament" class="back-link">← All Tournaments</a>
       <select id="tourney-select" onchange="if(this.value) window.location.href='/tournament/'+this.value">
         {tournaments.map(t => (
-          <option value={t.id} selected={t.name === tournamentName}>{t.name}</option>
+          <option value={t.id} selected={t.id === tournament.id}>{t.name}</option>
         ))}
       </select>
     </div>
@@ -147,10 +150,10 @@ function formatDate(d) {
                     }
                     const m = entry.match;
                     const isCompleted = m.data.status === 'completed';
-                    const team1 = getTeam(m.data.team1);
-                    const team2 = getTeam(m.data.team2);
-                    const win1 = isCompleted && m.data.winner === m.data.team1;
-                    const win2 = isCompleted && m.data.winner === m.data.team2;
+                    const team1 = getTeam(getMatchTeam1Id(m));
+                    const team2 = getTeam(getMatchTeam2Id(m));
+                    const win1 = isCompleted && Boolean(getMatchWinnerId(m)) && getMatchWinnerId(m) === getMatchTeam1Id(m);
+                    const win2 = isCompleted && Boolean(getMatchWinnerId(m)) && getMatchWinnerId(m) === getMatchTeam2Id(m);
                     
                     return (
                       <a href={`/matches/${m.id}`} class={`bracket-match ${isCompleted ? '' : 'upcoming'}`} data-slot={entry.slot} data-round={round} data-match-id={m.id}>
@@ -179,10 +182,10 @@ function formatDate(d) {
                     <div class="bracket-round-title">Bronze Match</div>
                     {specialMatches.map(m => {
                       const isCompleted = m.data.status === 'completed';
-                      const team1 = getTeam(m.data.team1);
-                      const team2 = getTeam(m.data.team2);
-                      const win1 = isCompleted && m.data.winner === m.data.team1;
-                      const win2 = isCompleted && m.data.winner === m.data.team2;
+                      const team1 = getTeam(getMatchTeam1Id(m));
+                      const team2 = getTeam(getMatchTeam2Id(m));
+                      const win1 = isCompleted && Boolean(getMatchWinnerId(m)) && getMatchWinnerId(m) === getMatchTeam1Id(m);
+                      const win2 = isCompleted && Boolean(getMatchWinnerId(m)) && getMatchWinnerId(m) === getMatchTeam2Id(m);
                       
                       return (
                         <a href={`/matches/${m.id}`} class={`bracket-match ${isCompleted ? '' : 'upcoming'}`} data-slot={m.data.bracketSlot || 0} data-round={m.data.round} data-match-id={m.id}>

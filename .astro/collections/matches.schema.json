@@ -4,11 +4,9 @@
     "matches": {
       "type": "object",
       "properties": {
-        "tournament": {
-          "type": "string"
-        },
         "tournamentId": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         },
         "round": {
           "type": "string"
@@ -16,17 +14,13 @@
         "date": {
           "type": "string"
         },
-        "team1": {
-          "type": "string"
-        },
         "team1Id": {
-          "type": "string"
-        },
-        "team2": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         },
         "team2Id": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         },
         "score1": {
           "type": "number",
@@ -36,11 +30,9 @@
           "type": "number",
           "default": 0
         },
-        "winner": {
-          "type": "string"
-        },
         "winnerId": {
-          "type": "string"
+          "type": "string",
+          "minLength": 1
         },
         "status": {
           "type": "string",
@@ -54,16 +46,6 @@
         "bracketSlot": {
           "type": "number"
         },
-        "map": {
-          "type": "string"
-        },
-        "maps": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          },
-          "default": []
-        },
         "roundDetails": {
           "type": "array",
           "items": {
@@ -72,12 +54,9 @@
               "round_number": {
                 "type": "number"
               },
-              "map": {
-                "type": "string",
-                "default": ""
-              },
               "mapId": {
-                "type": "string"
+                "type": "string",
+                "minLength": 1
               },
               "mvp": {
                 "type": [
@@ -87,7 +66,8 @@
               }
             },
             "required": [
-              "round_number"
+              "round_number",
+              "mapId"
             ],
             "additionalProperties": false
           },
@@ -191,6 +171,7 @@
         }
       },
       "required": [
+        "tournamentId",
         "round",
         "date"
       ],

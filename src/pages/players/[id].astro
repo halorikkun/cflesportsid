@@ -1,6 +1,14 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
+import {
+  getTournamentMap,
+  getMapMap,
+  getMatchTournamentId,
+  getMatchTeam1Id,
+  getMatchTeam2Id,
+  getRoundMapId,
+} from '../../utils/content';
 
 export async function getStaticPaths() {
   const players = await getCollection('players');
@@ -16,12 +24,8 @@ const teamsMap = new Map(allTeams.map(t => [t.id, t]));
 const team = player.data.team ? teamsMap.get(player.data.team) : undefined;
 const allMatches = await getCollection('matches');
 
-// NEW: Build a map of tournament names to their numeric IDs for linking
-const tournamentNames = [...new Set(allMatches.map(m => m.data.tournament || 'CFL Esports ID Tournament'))];
-const tournamentIdMap = new Map();
-tournamentNames.forEach((name, i) => {
-  tournamentIdMap.set(name, i + 1);
-});
+const tournamentsMap = await getTournamentMap();
+const mapsMap = await getMapMap();
 
 const playerMatches = allMatches.filter(m => 
   m.data.playerStats && m.data.playerStats.some(ps => ps.uid === player.data.uid)
@@ -42,7 +46,7 @@ playerMatches.forEach(m => {
     mvpMatches.push({
       match: m,
       mvpRounds: mvpsThisMatch.map(rd => rd.round_number),
-      maps: mvpsThisMatch.map(rd => rd.map),
+      maps: mvpsThisMatch.map(rd => mapsMap.get(getRoundMapId(rd))?.data.name ?? 'TBD'),
     });
   }
 });
@@ -133,16 +137,22 @@ const initial = player.data.ign.charAt(0).toUpperCase();
             </thead>
             <tbody>
               {mvpMatches.map(({ match: m, mvpRounds, maps }) => {
-                const t1 = teamsMap.get(m.data.team1);
-                const t2 = teamsMap.get(m.data.team2);
-                const matchName = (t1 ? t1.data.name : m.data.team1) + ' vs ' + (t2 ? t2.data.name : m.data.team2);
-                const tourneyId = tournamentIdMap.get(m.data.tournament || 'CFL Esports ID Tournament');
+                const team1Id = getMatchTeam1Id(m);
+                const team2Id = getMatchTeam2Id(m);
+                const t1 = team1Id ? teamsMap.get(team1Id) : undefined;
+                const t2 = team2Id ? teamsMap.get(team2Id) : undefined;
+                const matchName = `${t1?.data.name ?? team1Id ?? 'TBD'} vs ${t2?.data.name ?? team2Id ?? 'TBD'}`;
+                const tournamentId = getMatchTournamentId(m);
+                const tournament = tournamentId ? tournamentsMap.get(tournamentId) : undefined;
+                const tournamentName = tournament?.data.name ?? tournamentId ?? 'TBD';
                 
                 return (
                   <tr>
                     <td>{m.data.date}</td>
                     <td>
-                      <a href={`/tournament/${tourneyId}`} class="match-link">{m.data.tournament}</a>
+                      {tournament ? (
+                        <a href={`/tournament/${tournament.id}`} class="match-link">{tournamentName}</a>
+                      ) : tournamentName}
                     </td>
                     <td>{m.data.round}</td>
                     <td><a href={`/matches/${m.id}`} class="match-link">{matchName}</a></td>
@@ -180,11 +190,15 @@ const initial = player.data.ign.charAt(0).toUpperCase();
             </thead>
             <tbody>
               {playerMatches.slice(0, 10).map(m => {
-                const t1 = teamsMap.get(m.data.team1);
-                const t2 = teamsMap.get(m.data.team2);
-                const matchName = (t1 ? t1.data.name : m.data.team1) + ' vs ' + (t2 ? t2.data.name : m.data.team2);
+                const team1Id = getMatchTeam1Id(m);
+                const team2Id = getMatchTeam2Id(m);
+                const t1 = team1Id ? teamsMap.get(team1Id) : undefined;
+                const t2 = team2Id ? teamsMap.get(team2Id) : undefined;
+                const matchName = `${t1?.data.name ?? team1Id ?? 'TBD'} vs ${t2?.data.name ?? team2Id ?? 'TBD'}`;
                 const ps = m.data.playerStats.find(ps => ps.uid === player.data.uid);
-                const tourneyId = tournamentIdMap.get(m.data.tournament || 'CFL Esports ID Tournament');
+                const tournamentId = getMatchTournamentId(m);
+                const tournament = tournamentId ? tournamentsMap.get(tournamentId) : undefined;
+                const tournamentName = tournament?.data.name ?? tournamentId ?? 'TBD';
                 
                 let pKills = 0, pDeaths = 0, pAssists = 0;
                 if (ps && ps.rounds) {
@@ -201,7 +215,9 @@ const initial = player.data.ign.charAt(0).toUpperCase();
                   <tr>
                     <td>{m.data.date}</td>
                     <td>
-                      <a href={`/tournament/${tourneyId}`} class="match-link">{m.data.tournament}</a>
+                      {tournament ? (
+                        <a href={`/tournament/${tournament.id}`} class="match-link">{tournamentName}</a>
+                      ) : tournamentName}
                     </td>
                     <td>{m.data.round}</td>
                     <td><a href={`/matches/${m.id}`} class="match-link">{matchName}</a></td>

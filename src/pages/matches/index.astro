@@ -3,12 +3,15 @@ import Layout from '../../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
 import {
   getTeamMap,
+  getTournamentMap,
+  getMatchTournamentId,
+  getMatchWinnerId,
   getMatchTeam1Id,
   getMatchTeam2Id,
 } from '../../utils/content';
 
-const allTeams = await getCollection('teams');
-const teamsMap = new Map(allTeams.map(t => [t.id, t]));
+const teamsMap = await getTeamMap();
+const tournamentsMap = await getTournamentMap();
 
 const roundOrder = {
   'Final': 8, 'Bronze Match': 7, 'Semi Final': 6, 'Quarter Final': 5,
@@ -29,8 +32,6 @@ const matches = (await getCollection('matches')).sort((a, b) => {
   const rB = roundOrder[b.data.round] || 99;
   return rB - rA;
 });
-
-const teamMap = await getTeamMap();
 
 function getTeamKDA(match, teamId) {
   const team = teamsMap.get(teamId);
@@ -88,26 +89,30 @@ const rounds = [...new Set(matches.map(m => m.data.round))];
       {matches.map(m => {
         const team1Id = getMatchTeam1Id(m);
         const team2Id = getMatchTeam2Id(m);
+        const winnerId = getMatchWinnerId(m);
+        const tournamentId = getMatchTournamentId(m);
+        const tournament = tournamentId ? tournamentsMap.get(tournamentId) : undefined;
+        const tournamentName = tournament?.data.name ?? tournamentId ?? 'TBD';
 
         const t1 = team1Id ? teamsMap.get(team1Id) : undefined;
         const t2 = team2Id ? teamsMap.get(team2Id) : undefined;
 
-        const team1Name = t1 ? t1.data.name : team1Id;
-        const team2Name = t2 ? t2.data.name : team2Id;
+        const team1Name = t1?.data.name ?? team1Id ?? 'TBD';
+        const team2Name = t2?.data.name ?? team2Id ?? 'TBD';
 
-        const team1Tag = t1 ? t1.data.tag : team1Id;
-        const team2Tag = t2 ? t2.data.tag : team2Id;
+        const team1Tag = t1?.data.tag ?? team1Id ?? 'TBD';
+        const team2Tag = t2?.data.tag ?? team2Id ?? 'TBD';
         const scoreText = m.data.status === 'completed' ? `${m.data.score1} - ${m.data.score2}` : 'VS';
-        const t1Won = m.data.winner === m.data.team1;
-        const t2Won = m.data.winner === m.data.team2;
+        const t1Won = Boolean(winnerId && winnerId === team1Id);
+        const t2Won = Boolean(winnerId && winnerId === team2Id);
         
         // Use CSS variables instead of inline color styles
         const t1Color = m.data.status === 'completed' ? (t1Won ? 'var(--win)' : 'var(--text-muted)') : 'var(--text-primary)';
         const t2Color = m.data.status === 'completed' ? (t2Won ? 'var(--win)' : 'var(--text-muted)') : 'var(--text-primary)';
         
-        const stats1 = getTeamKDA(m, m.data.team1);
-        const stats2 = getTeamKDA(m, m.data.team2);
-        const searchText = (m.data.tournament + ' ' + team1Name + ' ' + team2Name + ' ' + team1Tag + ' ' + team2Tag).toLowerCase();
+        const stats1 = getTeamKDA(m, team1Id);
+        const stats2 = getTeamKDA(m, team2Id);
+        const searchText = [tournamentName, tournamentId, team1Name, team2Name, team1Tag, team2Tag, team1Id, team2Id].filter(Boolean).join(' ').toLowerCase();
         
         return (
           <a href={`/matches/${m.id}`} class="match-card"
@@ -116,11 +121,12 @@ const rounds = [...new Set(matches.map(m => m.data.round))];
             data-round={m.data.round}
             data-date={m.data.date}
             data-round-order={roundOrder[m.data.round] || 99}
-            data-tournament={m.data.tournament}
+            data-tournament={tournamentName}
+            data-tournament-id={tournamentId}
             style={`--t1-color: ${t1Color}; --t2-color: ${t2Color};`}
           >
             <div class="match-card-header">
-              <div class="match-card-tournament">{m.data.tournament}</div>
+              <div class="match-card-tournament">{tournamentName}</div>
               <div class="match-card-date">{m.data.date}</div>
               <div class="match-card-round">
                 <span class={`badge badge-${m.data.status}`}>{m.data.round}</span>

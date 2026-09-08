@@ -1,6 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
+import { getMatchTeam1Id, getMatchTeam2Id } from '../../utils/content';
 
 const allMatches = await getCollection('matches');
 const completedMatches = allMatches.filter(m => m.data.status === 'completed');
@@ -8,10 +9,10 @@ const completedMatches = allMatches.filter(m => m.data.status === 'completed');
 function getTeamRecord(teamId) {
   let wins = 0, losses = 0;
   completedMatches.forEach(m => {
-    if (m.data.team1 === teamId) {
+    if (getMatchTeam1Id(m) === teamId) {
       if (m.data.score1 > m.data.score2) wins++;
       else if (m.data.score1 < m.data.score2) losses++;
-    } else if (m.data.team2 === teamId) {
+    } else if (getMatchTeam2Id(m) === teamId) {
       if (m.data.score2 > m.data.score1) wins++;
       else if (m.data.score2 < m.data.score1) losses++;
     }

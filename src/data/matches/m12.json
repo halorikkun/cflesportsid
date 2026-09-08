@@ -1,30 +1,23 @@
 {
-  "tournament": "Clash for Glory: Road to All-Star S1",
   "round": "Bronze Match",
   "bracketSlot": 1,
   "date": "2026-08-23",
-  "team1": "familia-nova",
-  "team2": "howl-tvj",
   "score1": 3,
   "score2": 0,
-  "winner": "familia-nova",
   "status": "completed",
   "roundDetails": [
     {
       "round_number": 1,
-      "map": "Black Widow",
       "mvp": "1203260549",
       "mapId": "black-widow"
     },
     {
       "round_number": 2,
-      "map": "Power Supply",
       "mvp": "1871603006",
       "mapId": "power-supply"
     },
     {
       "round_number": 3,
-      "map": "Satellite",
       "mvp": "1871603006",
       "mapId": "satellite"
     }

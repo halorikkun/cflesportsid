@@ -1,30 +1,23 @@
 {
-  "tournament": "Clash for Glory: Road to All-Star S1",
   "round": "Semi Final",
   "bracketSlot": 1,
   "date": "2026-08-23",
-  "team1": "cha-tra-mue",
-  "team2": "familia-nova",
   "score1": 3,
   "score2": 0,
-  "winner": "cha-tra-mue",
   "status": "completed",
   "roundDetails": [
     {
       "round_number": 1,
-      "map": "Power Supply",
       "mvp": "1099707998",
       "mapId": "power-supply"
     },
     {
       "round_number": 2,
-      "map": "Satellite",
       "mvp": "1896132194",
       "mapId": "satellite"
     },
     {
       "round_number": 3,
-      "map": "Ankara",
       "mvp": "1099707998",
       "mapId": "ankara"
     }

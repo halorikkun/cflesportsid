@@ -1,30 +1,23 @@
 {
-  "tournament": "Clash for Glory: Road to All-Star S1",
   "round": "Top 16",
   "bracketSlot": 3,
   "date": "2026-08-22",
-  "team1": "g2c-prmx",
-  "team2": "anv",
   "score1": 3,
   "score2": 0,
-  "winner": "g2c-prmx",
   "status": "completed",
   "roundDetails": [
     {
       "round_number": 1,
-      "map": "Desert",
       "mvp": "1654611590",
       "mapId": "desert"
     },
     {
       "round_number": 2,
-      "map": "Eagle Eye",
       "mvp": "1654611590",
       "mapId": "eagle-eye"
     },
     {
       "round_number": 3,
-      "map": "Satellite",
       "mvp": "1551933778",
       "mapId": "satellite"
     }

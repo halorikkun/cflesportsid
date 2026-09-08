@@ -1,27 +1,39 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
+import { getTeamMap, getTournamentMap, getMapMap, getMatchTeam1Id, getMatchTeam2Id, getMatchTournamentId } from '../utils/content';
 
 const matches = await getCollection('matches');
-const teams = await getCollection('teams');
-const teamsMap = new Map(teams.map(t => [t.id, t]));
+const teamsMap = await getTeamMap();
+const tournamentsMap = await getTournamentMap();
+const mapsMap = await getMapMap();
 
-// ===== Competitive map pool =====
-const MAPS = [
-  'Desert', 'Sub Base', 'Satellite', 'Island',
-  'Ankara', 'Eagle Eye', 'Power Supply', 'Greece',
-  'Black Widow', 'Port'
+// Preserve the competitive pool and its display order using canonical IDs.
+const poolIds = [
+  'desert', 'sub-base', 'satellite', 'island',
+  'ankara', 'eagle-eye', 'power-supply', 'greece',
+  'black-widow', 'port'
 ];
+const MAPS = poolIds.map(id => {
+  const map = mapsMap.get(id);
+  if (!map) throw new Error(`Missing veto map: ${id}`);
+  return { id: map.id, name: map.data.name };
+});
 
 const matchData = matches.map(m => {
-  const t1 = teamsMap.get(m.data.team1);
-  const t2 = teamsMap.get(m.data.team2);
+  const team1Id = getMatchTeam1Id(m);
+  const team2Id = getMatchTeam2Id(m);
+  const tournamentId = getMatchTournamentId(m);
+  const t1 = team1Id ? teamsMap.get(team1Id) : undefined;
+  const t2 = team2Id ? teamsMap.get(team2Id) : undefined;
+  const tournament = tournamentId ? tournamentsMap.get(tournamentId) : undefined;
   return {
     id: m.id,
-    tournament: m.data.tournament,
+    tournamentId,
+    tournament: tournament?.data.name ?? tournamentId ?? 'TBD',
     round: m.data.round,
-    team1: { name: t1?.data.name || m.data.team1, tag: t1?.data.tag || '?' },
-    team2: { name: t2?.data.name || m.data.team2, tag: t2?.data.tag || '?' },
+    team1: { id: team1Id, name: t1?.data.name ?? team1Id ?? 'TBD', tag: t1?.data.tag ?? team1Id ?? '?' },
+    team2: { id: team2Id, name: t2?.data.name ?? team2Id ?? 'TBD', tag: t2?.data.tag ?? team2Id ?? '?' },
     status: m.data.status,
   };
 });
@@ -452,7 +464,10 @@ const matchData = matches.map(m => {
 <script is:inline>
   (function() {
     const matchData = JSON.parse(document.getElementById('match-data').textContent);
-    const MAPS = JSON.parse(document.getElementById('maps-data').textContent);
+    const mapData = JSON.parse(document.getElementById('maps-data').textContent);
+    const MAPS = mapData.map(map => map.id);
+    const mapNames = new Map(mapData.map(map => [map.id, map.name]));
+    const mapName = id => mapNames.get(id) ?? id ?? '—';
 
     const PICK_TIME = 20;
     const RESERVE_TIME = 120;
@@ -638,7 +653,7 @@ const matchData = matches.map(m => {
       if (state.voidedPicks.A) {
         cardA.classList.add('voided'); mapA.textContent = 'VOID'; statusA.textContent = '⏱ No pick (time expired)';
       } else if (state.picks.A) {
-        cardA.classList.add('filled'); mapA.textContent = state.picks.A; statusA.textContent = '✓ Picked';
+        cardA.classList.add('filled'); mapA.textContent = mapName(state.picks.A); statusA.textContent = '✓ Picked';
       } else {
         mapA.textContent = '—'; statusA.textContent = 'Waiting…';
       }
@@ -648,7 +663,7 @@ const matchData = matches.map(m => {
       if (state.voidedPicks.B) {
         cardB.classList.add('voided'); mapB.textContent = 'VOID'; statusB.textContent = '⏱ No pick (time expired)';
       } else if (state.picks.B) {
-        cardB.classList.add('filled'); mapB.textContent = state.picks.B; statusB.textContent = '✓ Picked';
+        cardB.classList.add('filled'); mapB.textContent = mapName(state.picks.B); statusB.textContent = '✓ Picked';
       } else {
         mapB.textContent = '—'; statusB.textContent = 'Waiting…';
       }
@@ -663,11 +678,11 @@ const matchData = matches.map(m => {
         const history = state.vetoHistory[i];
         const cls = `veto-step team-${step.team.toLowerCase()} ${active && state.phase === 'veto' ? 'active' : ''} ${done ? 'done' : ''}`;
         const tag = step.team === 'A' ? tagA : tagB;
-        let mapHtml = history ? (history.voided ? `<span class="step-void">VOID</span>` : `<span class="step-map">${history.map}</span>`) : '';
+        let mapHtml = history ? (history.voided ? `<span class="step-void">VOID</span>` : `<span class="step-map">${mapName(history.map)}</span>`) : '';
         return `<div class="${cls}" role="listitem"><span class="step-team">${tag}</span><span class="step-action ${step.action}">${step.action === 'ban' ? 'Ban' : 'Pick'}</span>${mapHtml}</div>`;
       }).join('') + `<div class="veto-step ${state.phase === 'wheel' ? 'active' : ''} ${state.phase === 'result' ? 'done' : ''}" role="listitem">
         <span class="step-team" style="color:#facc15">★</span><span class="step-action">Wheel</span>
-        ${state.picks.decider ? `<span class="step-map">${state.picks.decider}</span>` : ''}
+        ${state.picks.decider ? `<span class="step-map">${mapName(state.picks.decider)}</span>` : ''}
       </div>`;
       $('veto-steps').innerHTML = html;
     }
@@ -701,8 +716,8 @@ const matchData = matches.map(m => {
         
         const cls = `veto-map-card ${statusClass} ${clickable ? '' : (isAvail ? 'disabled' : '')}`;
         // NEW: Render as button for accessibility
-        return `<button class="${cls}" data-map="${map}" ${clickable ? '' : 'disabled'} aria-label="${map} ${statusLabel || 'available'}">
-          <div class="veto-map-name">${map}</div>
+        return `<button class="${cls}" data-map="${map}" ${clickable ? '' : 'disabled'} aria-label="${mapName(map)} ${statusLabel || 'available'}">
+          <div class="veto-map-name">${mapName(map)}</div>
           ${statusLabel ? `<div class="veto-map-status">${statusLabel}</div>` : ''}
         </button>`;
       }).join('');
@@ -765,7 +780,7 @@ const matchData = matches.map(m => {
         ctx.save(); ctx.translate(cx, cy); ctx.rotate(a1 + segAngle / 2);
         ctx.textAlign = 'right'; ctx.fillStyle = '#fff'; ctx.font = 'bold 13px "Segoe UI", sans-serif';
         ctx.shadowColor = 'rgba(0,0,0,0.5)'; ctx.shadowBlur = 3;
-        ctx.fillText(map, radius - 15, 5); ctx.restore();
+        ctx.fillText(mapName(map), radius - 15, 5); ctx.restore();
       });
 
       ctx.beginPath(); ctx.arc(cx, cy, 20, 0, 2 * Math.PI);
@@ -810,7 +825,7 @@ const matchData = matches.map(m => {
 
       const mapsHtml = pickResults.map(r => {
         const cls = r.voided ? 'voided-pick' : r.cls;
-        const name = r.voided ? 'Void' : (r.map || '—');
+        const name = r.voided ? 'Void' : mapName(r.map);
         const label = r.voided ? `${r.labelHtml} — <span class="void-tag">No pick (time expired)</span>` : r.labelHtml;
         return `<div class="result-map-card ${cls}">
           <div class="result-map-num">${r.num}</div>
@@ -825,7 +840,7 @@ const matchData = matches.map(m => {
       const bannedHtml = state.vetoHistory.filter(h => h.action === 'ban' && !h.voided).map(h =>
         `<div class="banned-map-item team-${h.team.toLowerCase()}-ban">
           <span class="b-team ${h.team.toLowerCase()}">${h.team === 'A' ? state.match.team1.tag : state.match.team2.tag}</span>
-          <span class="b-map">${h.map}</span>
+          <span class="b-map">${mapName(h.map)}</span>
         </div>`
       ).join('');
       $('results-banned-list').innerHTML = bannedHtml;
@@ -838,12 +853,12 @@ const matchData = matches.map(m => {
         `${state.match.tournament} — ${state.match.round}`,
         `${state.match.team1.name} vs ${state.match.team2.name}`, '',
         'Maps to Play:',
-        `1. ${state.voidedPicks.A ? 'VOID (no pick)' : state.picks.A || '—'} — ${state.match.team1.name}'s Pick${state.voidedPicks.A ? ' (time expired)' : ''}`,
-        `2. ${state.voidedPicks.B ? 'VOID (no pick)' : state.picks.B || '—'} — ${state.match.team2.name}'s Pick${state.voidedPicks.B ? ' (time expired)' : ''}`,
-        `3. ${state.picks.decider || '—'} — Decider`, '',
+        `1. ${state.voidedPicks.A ? 'VOID (no pick)' : mapName(state.picks.A)} — ${state.match.team1.name}'s Pick${state.voidedPicks.A ? ' (time expired)' : ''}`,
+        `2. ${state.voidedPicks.B ? 'VOID (no pick)' : mapName(state.picks.B)} — ${state.match.team2.name}'s Pick${state.voidedPicks.B ? ' (time expired)' : ''}`,
+        `3. ${mapName(state.picks.decider)} — Decider`, '',
         'Banned Maps:',
         ...state.vetoHistory.filter(h => h.action === 'ban' && !h.voided).map(h =>
-          `- ${h.map} (${h.team === 'A' ? state.match.team1.name : state.match.team2.name})`
+          `- ${mapName(h.map)} (${h.team === 'A' ? state.match.team1.name : state.match.team2.name})`
         ),
       ];
       if (voidedSteps.length > 0) {

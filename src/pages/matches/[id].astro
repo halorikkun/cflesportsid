@@ -2,6 +2,14 @@
 import Layout from '../../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
 
+import {
+  getMatchTeam1Id,
+  getMatchTeam2Id,
+  getMatchWinnerId,
+  getMatchTournamentId,
+  getRoundMapId,
+} from '../../utils/content';
+
 export async function getStaticPaths() {
   const matches = await getCollection('matches');
   return matches.map(m => ({
@@ -12,25 +20,57 @@ export async function getStaticPaths() {
 
 const { match } = Astro.props;
 const m = match;
+
 const allTeams = await getCollection('teams');
 const allPlayers = await getCollection('players');
-const teamsMap = new Map(allTeams.map(t => [t.id, t]));
-const playersMap = new Map(allPlayers.map(p => [p.data.uid, p]));
+const allTournaments = await getCollection('tournaments');
+const allMaps = await getCollection('maps');
 
-const t1 = teamsMap.get(m.data.team1);
-const t2 = teamsMap.get(m.data.team2);
-const team1Name = t1 ? t1.data.name : m.data.team1;
-const team2Name = t2 ? t2.data.name : m.data.team2;
-const team1Tag = t1 ? t1.data.tag : m.data.team1;
-const team2Tag = t2 ? t2.data.tag : m.data.team2;
-const t1Won = m.data.winner === m.data.team1;
-const t2Won = m.data.winner === m.data.team2;
+const teamsMap = new Map(
+  allTeams.map((team) => [team.id, team])
+);
+
+const playersMap = new Map(
+  allPlayers.map((player) => [player.data.uid, player])
+);
+
+const tournamentsMap = new Map(
+  allTournaments.map((tournament) => [tournament.id, tournament])
+);
+
+const mapsMap = new Map(
+  allMaps.map((map) => [map.id, map])
+);
+
+const team1Id = getMatchTeam1Id(m);
+const team2Id = getMatchTeam2Id(m);
+const winnerId = getMatchWinnerId(m);
+const tournamentId = getMatchTournamentId(m);
+
+const t1 = team1Id ? teamsMap.get(team1Id) : undefined;
+const t2 = team2Id ? teamsMap.get(team2Id) : undefined;
+
+const tournament = tournamentId
+  ? tournamentsMap.get(tournamentId)
+  : undefined;
+
+const team1Name = t1?.data.name ?? team1Id ?? 'TBD';
+const team2Name = t2?.data.name ?? team2Id ?? 'TBD';
+
+const team1Tag = t1?.data.tag ?? team1Id ?? 'TBD';
+const team2Tag = t2?.data.tag ?? team2Id ?? 'TBD';
+
+const t1Won = Boolean(winnerId && winnerId === team1Id);
+const t2Won = Boolean(winnerId && winnerId === team2Id);
 
 const t1Color = m.data.status === 'completed' ? (t1Won ? 'var(--win)' : 'var(--text-muted)') : 'var(--text-primary)';
 const t2Color = m.data.status === 'completed' ? (t2Won ? 'var(--win)' : 'var(--text-muted)') : 'var(--text-primary)';
 
 const roundDetails = m.data.roundDetails || [];
-const maps = roundDetails.map(rd => rd.map || '');
+const roundMapNames = roundDetails.map((rd) => {
+  const mapId = getRoundMapId(rd);
+  return mapsMap.get(mapId)?.data.name ?? 'TBD';
+});
 const roundMVPuids = roundDetails.map(rd => rd.mvp || null);
 
 const numRounds = Math.max(
@@ -58,8 +98,8 @@ const playerStats = (m.data.playerStats || [])
     };
   });
 
-const team1Players = playerStats.filter(p => p.teamId === m.data.team1);
-const team2Players = playerStats.filter(p => p.teamId === m.data.team2);
+const team1Players = playerStats.filter(p => p.teamId === team1Id);
+const team2Players = playerStats.filter(p => p.teamId === team2Id);
 
 const team1Kills = team1Players.reduce((s, p) => s + p.totalKills, 0);
 const team1Deaths = team1Players.reduce((s, p) => s + p.totalDeaths, 0);
@@ -107,7 +147,7 @@ const overallMVP = calcOverallMVP();
   <div class="container">
     <div class="page-header">
       <h1>{team1Name} vs {team2Name}</h1>
-      <p>{m.data.tournament} · {m.data.round} · {m.data.date}</p>
+      <p>{tournament?.data.name ?? tournamentId ?? 'TBD'} · {m.data.round} · {m.data.date}</p>
     </div>
     <a href="/matches" class="back-link">← Back to Matches</a>
 
@@ -119,7 +159,7 @@ const overallMVP = calcOverallMVP();
           class="team-logo-large"
           onerror="this.onerror=null; this.src='/logos/default.png'"
         />
-        <a href={`/teams/${m.data.team1}`} style={`color: ${t1Color};`}>{team1Name}</a>
+        <a href={`/teams/${team1Id}`} style={`color: ${t1Color};`}>{team1Name}</a>
         <span class="tag">[{team1Tag}]</span>
       </div>
       <div class="match-detail-score">
@@ -132,14 +172,14 @@ const overallMVP = calcOverallMVP();
           class="team-logo-large"
           onerror="this.onerror=null; this.src='/logos/default.png'"
         />
-        <a href={`/teams/${m.data.team2}`} style={`color: ${t2Color};`}>{team2Name}</a>
+        <a href={`/teams/${team2Id}`} style={`color: ${t2Color};`}>{team2Name}</a>
         <span class="tag">[{team2Tag}]</span>
       </div>
     </div>
 
     <div class="match-status-center">
       <span class={`badge badge-${m.data.status}`}>
-        {m.data.status === 'completed' ? (t1Won ? `${team1Name} wins` : `${team2Name} wins`) : m.data.status}
+        {m.data.status === 'completed' ? (t1Won ? `${team1Name} wins` : t2Won ? `${team2Name} wins` : 'Completed') : m.data.status}
       </span>
     </div>
 
@@ -151,7 +191,7 @@ const overallMVP = calcOverallMVP();
             <div class="mvp-grid">
               {Array.from({ length: numRounds }, (_, i) => {
                 const mvp = roundMVPs[i];
-                const mapName = maps[i] || 'TBD';
+                const mapName = roundMapNames[i] || 'TBD';
                 return (
                   <div class="mvp-card">
                     <div class="mvp-round-label">Round {i + 1}</div>
@@ -207,7 +247,7 @@ const overallMVP = calcOverallMVP();
         {team1Players.length > 0 && (
           <div class="section-spacing" style={`--team-color: ${t1Color};`}>
             <h3 class="team-header">
-              <a href={`/teams/${m.data.team1}`}>{team1Name}</a>
+              <a href={`/teams/${team1Id}`}>{team1Name}</a>
               <span class="tag"> [{team1Tag}]</span>
             </h3>
             <div class="table-wrap">
@@ -216,7 +256,7 @@ const overallMVP = calcOverallMVP();
                   <tr>
                     <th>Player</th>
                     {numRounds > 1 && Array.from({ length: numRounds }, (_, i) => (
-                      <th>Round {i + 1}{maps[i] ? ` — ${maps[i]}` : ''}</th>
+                      <th>Round {i + 1}{roundMapNames[i] ? ` — ${roundMapNames[i]}` : ''}</th>
                     ))}
                     <th>Total</th>
                   </tr>
@@ -243,7 +283,7 @@ const overallMVP = calcOverallMVP();
         {team2Players.length > 0 && (
           <div class="section-spacing" style={`--team-color: ${t2Color};`}>
             <h3 class="team-header">
-              <a href={`/teams/${m.data.team2}`}>{team2Name}</a>
+              <a href={`/teams/${team2Id}`}>{team2Name}</a>
               <span class="tag"> [{team2Tag}]</span>
             </h3>
             <div class="table-wrap">
@@ -252,7 +292,7 @@ const overallMVP = calcOverallMVP();
                   <tr>
                     <th>Player</th>
                     {numRounds > 1 && Array.from({ length: numRounds }, (_, i) => (
-                      <th>Round {i + 1}{maps[i] ? ` — ${maps[i]}` : ''}</th>
+                      <th>Round {i + 1}{roundMapNames[i] ? ` — ${roundMapNames[i]}` : ''}</th>
                     ))}
                     <th>Total</th>
                   </tr>
