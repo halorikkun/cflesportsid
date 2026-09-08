@@ -1,0 +1,60 @@
+{
+  "$ref": "#/definitions/tournaments",
+  "definitions": {
+    "tournaments": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "game": {
+          "type": "string",
+          "default": "crossfire-legends"
+        },
+        "region": {
+          "type": "string",
+          "default": "ID"
+        },
+        "startDate": {
+          "type": "string"
+        },
+        "endDate": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "upcoming",
+            "ongoing",
+            "completed"
+          ],
+          "default": "upcoming"
+        },
+        "format": {
+          "type": "string"
+        },
+        "teams": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "winner": {
+          "type": "string"
+        },
+        "$schema": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "startDate",
+        "endDate",
+        "format"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

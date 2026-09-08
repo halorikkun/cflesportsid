@@ -66,14 +66,21 @@ const players = defineCollection({
 const matches = defineCollection({
   loader: glob({ pattern: '**/*.json', base: './src/data/matches' }),
   schema: z.object({
-    tournament: z.string(),
+    tournament: z.string().optional(),
+    tournamentId: z.string().optional(),
+
     round: z.string(),
     date: z.string(),
-    team1: z.string(),
-    team2: z.string(),
+
+    team1: z.string().optional(),
+    team1Id: z.string().optional(),
+
+    team2: z.string().optional(),
+    team2Id: z.string().optional(),
     score1: z.number().default(0),
     score2: z.number().default(0),
     winner: z.string().optional(),
+    winnerId: z.string().optional(),
     status: z.enum(['upcoming', 'live', 'completed']).default('upcoming'),
     bracketSlot: z.number().optional(),
     map: z.string().optional(),

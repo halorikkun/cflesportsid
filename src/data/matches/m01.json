@@ -1,13 +1,19 @@
 {
   "tournament": "Clash for Glory: Road to All-Star S1",
-  "round": "Top 16",
-  "bracketSlot": 1,
-  "date": "2026-08-22",
+  "tournamentId": "clash-for-glory-s1",
+
+  "round": "...",
+  "date": "...",
+
   "team1": "team-69",
+  "team1Id": "team-69",
+
   "team2": "endevour-tvj",
+  "team2Id": "endevour-tvj",
   "score1": 3,
   "score2": 0,
   "winner": "team-69",
+  "winnerId": "team-69",
   "status": "completed",
   "roundDetails": [
     { "round_number": 1, "map": "Desert", "mvp": "1656689899" },

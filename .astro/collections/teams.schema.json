@@ -1,0 +1,77 @@
+{
+  "$ref": "#/definitions/teams",
+  "definitions": {
+    "teams": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "tag": {
+          "type": "string"
+        },
+        "logo": {
+          "type": "string"
+        },
+        "region": {
+          "type": "string"
+        },
+        "founded": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "placementPoints": {
+          "type": "number",
+          "default": 0
+        },
+        "players": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "stats": {
+          "type": "object",
+          "properties": {
+            "wins": {
+              "type": "number",
+              "default": 0
+            },
+            "losses": {
+              "type": "number",
+              "default": 0
+            },
+            "draws": {
+              "type": "number",
+              "default": 0
+            },
+            "matchesPlayed": {
+              "type": "number",
+              "default": 0
+            }
+          },
+          "additionalProperties": false,
+          "default": {
+            "wins": 0,
+            "losses": 0,
+            "draws": 0,
+            "matchesPlayed": 0
+          }
+        },
+        "$schema": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "tag",
+        "region"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}
