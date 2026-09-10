@@ -66,7 +66,7 @@ function formatDate(d) {
       {tournaments.map(t => (
         <a href={`/tournament/${t.id}`} class="tourney-card">
           <div class="tourney-header">
-            <div class="tourney-icon">🏆</div>
+            <div class="tourney-icon"><img src="/icons/trophy.png" alt="" /></div>
             <h3>{t.name}</h3>
           </div>
           
@@ -86,7 +86,7 @@ function formatDate(d) {
           
           {t.winner && (
             <div class="tourney-winner">
-              <span class="winner-icon">🥇</span> 
+              <span class="winner-icon"><img src="/icons/gold-medal.png" alt="" /></span> 
               <span>Champion: <strong>{t.winner.data.name}</strong></span>
             </div>
           )}
@@ -131,10 +131,36 @@ function formatDate(d) {
     gap: 0.75rem;
   }
 
-  .tourney-icon { 
-    font-size: 1.75rem; 
-    line-height: 1; 
+  .tourney-icon {
+    width: 28px;
+    height: 28px;
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .tourney-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+
+  .winner-icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .winner-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
   }
 
   .tourney-card h3 { 

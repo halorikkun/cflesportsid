@@ -337,5 +337,27 @@ playerMatches.forEach(m => {
     .detail-hero-info h1 { font-size: 1.5rem; }
   }
 </style>
-<style>.teammate-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}.teammate-card{display:flex;align-items:center;gap:12px;padding:16px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:10px;color:var(--text-primary)}.teammate-card img{object-fit:cover;border-radius:6px}.teammate-card>span:nth-child(2){flex:1;min-width:0;overflow-wrap:anywhere}.teammate-card small{display:block;color:var(--text-muted)}@media(max-width:640px){.teammate-grid{grid-template-columns:minmax(0,1fr)}}
+<style>.teammate-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}.teammate-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+
+  text-decoration: none;
+
+  transition:
+    transform 0.2s,
+    border-color 0.2s,
+    background 0.2s;
+}
+
+.teammate-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  background: var(--bg-card-hover);
+}.teammate-card img{object-fit:cover;border-radius:6px}.teammate-card>span:nth-child(2){flex:1;min-width:0;overflow-wrap:anywhere}.teammate-card small{display:block;color:var(--text-muted)}@media(max-width:640px){.teammate-grid{grid-template-columns:minmax(0,1fr)}}
 </style>
