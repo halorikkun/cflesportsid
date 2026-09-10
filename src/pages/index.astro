@@ -1,31 +1,34 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
+import { calculateStatistics, emptyStats } from '../utils/statistics';
+import { getMatchRound } from '../utils/tournament';
 import {
   getMatchTournamentId,
-  getTeamMatchStats,
   getMatchTeam1Id,
   getMatchTeam2Id,
   getMatchWinnerId,
 } from '../utils/content';
 
 const teams = await getCollection('teams');
-const players = await getCollection('players');
+const allPlayers = await getCollection('players');
 const matches = await getCollection('matches');
 const allTournaments = await getCollection('tournaments');
+const calculated = calculateStatistics(matches);
+const players = allPlayers.map(player => ({ ...player, data: { ...player.data, stats: calculated.players.get(player.data.uid || player.id) ?? emptyStats() } }));
 
 const totalTeams = teams.length;
 const totalPlayers = players.length;
 const totalMatches = matches.length;
 const completedMatches = matches.filter(m => m.data.status === 'completed');
 const upcomingMatches = matches.filter(m => m.data.status !== 'completed');
-const totalKills = players.reduce((sum, p) => sum + p.data.stats.kills, 0);
+const totalKills = calculated.totals.kills;
 
 // Resolve each tournament and its matches by canonical ID.
 const tournaments = allTournaments.map(tournament => {
   const tMatches = matches.filter(m => getMatchTournamentId(m) === tournament.id);
-  const finalMatch = tMatches.find(m => m.data.round === 'Final' && m.data.status === 'completed');
-  const bronzeMatch = tMatches.find(m => m.data.round === 'Bronze Match' && m.data.status === 'completed');
+  const finalMatch = tMatches.find(m => getMatchRound(m, tournament)?.placement === 1 && m.data.status === 'completed');
+  const bronzeMatch = tMatches.find(m => getMatchRound(m, tournament)?.placement === 3 && m.data.status === 'completed');
 
   let winnerTeams = [];
 
@@ -45,26 +48,26 @@ const tournaments = allTournaments.map(tournament => {
     if (thirdPlace) winnerTeams.push({ team: thirdPlace, place: 3 });
   }
 
-  return { id: tournament.id, name: tournament.data.name, winnerTeams };
+  return { id: tournament.id, name: tournament.data.name, winnerTeams, finalMatch, bronzeMatch };
 });
 
 // Calculate placement points from Final and Bronze Match
 function getPlacementPoints(teamId) {
-  const finalMatch = matches.find(m => m.data.round === 'Final' && m.data.status === 'completed');
-  const bronzeMatch = matches.find(m => m.data.round === 'Bronze Match' && m.data.status === 'completed');
-  if (finalMatch) {
-    if (getMatchWinnerId(finalMatch) === teamId) return 10;
-    if (getMatchTeam1Id(finalMatch) === teamId || getMatchTeam2Id(finalMatch) === teamId) return 6;
-  }
-  if (bronzeMatch) {
-    if (getMatchWinnerId(bronzeMatch) === teamId) return 4;
-    if (getMatchTeam1Id(bronzeMatch) === teamId || getMatchTeam2Id(bronzeMatch) === teamId) return 2;
-  }
-  return 0;
+  return tournaments.reduce((total, { finalMatch, bronzeMatch }) => {
+    if (finalMatch) {
+      if (getMatchWinnerId(finalMatch) === teamId) return total + 10;
+      if (getMatchTeam1Id(finalMatch) === teamId || getMatchTeam2Id(finalMatch) === teamId) return total + 6;
+    }
+    if (bronzeMatch) {
+      if (getMatchWinnerId(bronzeMatch) === teamId) return total + 4;
+      if (getMatchTeam1Id(bronzeMatch) === teamId || getMatchTeam2Id(bronzeMatch) === teamId) return total + 2;
+    }
+    return total;
+  }, 0);
 }
 
 function getTeamKillPoints(teamId) {
-  return getTeamMatchStats(completedMatches, teamId).kills;
+  return calculated.teams.get(teamId)?.kills ?? 0;
 }
 
 function getTeamRecord(teamId) {
@@ -106,18 +109,9 @@ const standings = teams.map(team => {
 const topFraggers = [...players].sort((a, b) => b.data.stats.kills - a.data.stats.kills).slice(0, 5);
 const topAssistsPlayers = [...players].sort((a, b) => b.data.stats.assists - a.data.stats.assists).slice(0, 5);
 
-// Calculate MVP counts from roundDetails across all completed matches
-const mvpCounts = new Map();
-completedMatches.forEach(m => {
-  (m.data.roundDetails || []).forEach(rd => {
-    if (rd.mvp) {
-      mvpCounts.set(rd.mvp, (mvpCounts.get(rd.mvp) || 0) + 1);
-    }
-  });
-});
-const totalMVPs = [...mvpCounts.values()].reduce((s, v) => s + v, 0);
+const totalMVPs = calculated.totals.mvpCount;
 const topMVPPlayers = players
-  .map(p => ({ player: p, mvpCount: mvpCounts.get(p.data.uid) || 0 }))
+  .map(p => ({ player: p, mvpCount: p.data.stats.mvpCount }))
   .filter(p => p.mvpCount > 0)
   .sort((a, b) => b.mvpCount - a.mvpCount)
   .slice(0, 5);
@@ -140,7 +134,7 @@ const topMVPPlayers = players
         <div class="stat-label">Total Players</div>
       </div>
       <div class="stat-box stat-fixtures">
-        <div class="stat-value">{totalMatches}</div>
+        <div class="stat-value">{completedMatches.length}</div>
         <div class="stat-label">Fixtures Played</div>
       </div>
       <div class="stat-box stat-upcoming">

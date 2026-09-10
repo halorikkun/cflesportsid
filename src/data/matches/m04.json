@@ -1,5 +1,6 @@
 {
-  "round": "Top 16",
+  "stageId": "playoffs",
+  "roundId": "top-16",
   "bracketSlot": 5,
   "date": "2026-08-22",
   "score1": 0,
@@ -30,17 +31,20 @@
         {
           "kills": 7,
           "deaths": 8,
-          "assists": 4
+          "assists": 4,
+          "round_number": 1
         },
         {
           "kills": 13,
           "deaths": 11,
-          "assists": 7
+          "assists": 7,
+          "round_number": 2
         },
         {
           "kills": 4,
           "deaths": 9,
-          "assists": 2
+          "assists": 2,
+          "round_number": 3
         }
       ]
     },
@@ -51,17 +55,20 @@
         {
           "kills": 6,
           "deaths": 8,
-          "assists": 3
+          "assists": 3,
+          "round_number": 1
         },
         {
           "kills": 8,
           "deaths": 11,
-          "assists": 8
+          "assists": 8,
+          "round_number": 2
         },
         {
           "kills": 3,
           "deaths": 9,
-          "assists": 1
+          "assists": 1,
+          "round_number": 3
         }
       ]
     },
@@ -72,17 +79,20 @@
         {
           "kills": 5,
           "deaths": 8,
-          "assists": 1
+          "assists": 1,
+          "round_number": 1
         },
         {
           "kills": 12,
           "deaths": 10,
-          "assists": 1
+          "assists": 1,
+          "round_number": 2
         },
         {
           "kills": 0,
           "deaths": 9,
-          "assists": 0
+          "assists": 0,
+          "round_number": 3
         }
       ]
     },
@@ -93,17 +103,20 @@
         {
           "kills": 4,
           "deaths": 8,
-          "assists": 5
+          "assists": 5,
+          "round_number": 1
         },
         {
           "kills": 7,
           "deaths": 10,
-          "assists": 4
+          "assists": 4,
+          "round_number": 2
         },
         {
           "kills": 2,
           "deaths": 9,
-          "assists": 4
+          "assists": 4,
+          "round_number": 3
         }
       ]
     },
@@ -114,17 +127,20 @@
         {
           "kills": 4,
           "deaths": 8,
-          "assists": 3
+          "assists": 3,
+          "round_number": 1
         },
         {
           "kills": 9,
           "deaths": 11,
-          "assists": 4
+          "assists": 4,
+          "round_number": 2
         },
         {
           "kills": 5,
           "deaths": 7,
-          "assists": 0
+          "assists": 0,
+          "round_number": 3
         }
       ]
     },
@@ -135,12 +151,14 @@
         {
           "kills": 14,
           "deaths": 3,
-          "assists": 3
+          "assists": 3,
+          "round_number": 1
         },
         {
           "kills": 13,
           "deaths": 5,
-          "assists": 4
+          "assists": 4,
+          "round_number": 3
         }
       ]
     },
@@ -151,17 +169,20 @@
         {
           "kills": 8,
           "deaths": 6,
-          "assists": 7
+          "assists": 7,
+          "round_number": 1
         },
         {
           "kills": 10,
           "deaths": 10,
-          "assists": 5
+          "assists": 5,
+          "round_number": 2
         },
         {
           "kills": 6,
           "deaths": 3,
-          "assists": 2
+          "assists": 2,
+          "round_number": 3
         }
       ]
     },
@@ -172,17 +193,20 @@
         {
           "kills": 7,
           "deaths": 5,
-          "assists": 5
+          "assists": 5,
+          "round_number": 1
         },
         {
           "kills": 13,
           "deaths": 8,
-          "assists": 3
+          "assists": 3,
+          "round_number": 2
         },
         {
           "kills": 15,
           "deaths": 2,
-          "assists": 3
+          "assists": 3,
+          "round_number": 3
         }
       ]
     },
@@ -193,17 +217,20 @@
         {
           "kills": 7,
           "deaths": 6,
-          "assists": 4
+          "assists": 4,
+          "round_number": 1
         },
         {
           "kills": 10,
           "deaths": 11,
-          "assists": 9
+          "assists": 9,
+          "round_number": 2
         },
         {
           "kills": 3,
           "deaths": 2,
-          "assists": 12
+          "assists": 12,
+          "round_number": 3
         }
       ]
     },
@@ -214,17 +241,20 @@
         {
           "kills": 4,
           "deaths": 6,
-          "assists": 7
+          "assists": 7,
+          "round_number": 1
         },
         {
           "kills": 13,
           "deaths": 9,
-          "assists": 6
+          "assists": 6,
+          "round_number": 2
         },
         {
           "kills": 6,
           "deaths": 2,
-          "assists": 4
+          "assists": 4,
+          "round_number": 3
         }
       ]
     },
@@ -235,7 +265,8 @@
         {
           "kills": 7,
           "deaths": 11,
-          "assists": 5
+          "assists": 5,
+          "round_number": 2
         }
       ]
     }

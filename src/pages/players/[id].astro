@@ -1,6 +1,8 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
+import { calculateStatistics, emptyStats, kdRatio } from '../../utils/statistics';
+import { getRoundName, getParticipantLabel } from '../../utils/tournament';
 import {
   getTournamentMap,
   getMapMap,
@@ -28,21 +30,21 @@ const tournamentsMap = await getTournamentMap();
 const mapsMap = await getMapMap();
 
 const playerMatches = allMatches.filter(m => 
-  m.data.playerStats && m.data.playerStats.some(ps => ps.uid === player.data.uid)
-);
+  m.data.status === 'completed' && m.data.playerStats && m.data.playerStats.some(ps => ps.uid === player.data.uid)
+).sort((a, b) => b.data.date.localeCompare(a.data.date) || b.id.localeCompare(a.id));
 
-const matchesPlayed = playerMatches.length;
-const kd = ((player.data.stats?.kills || 0) / Math.max(player.data.stats?.deaths || 1, 1)).toFixed(2);
+const careerStats = calculateStatistics(allMatches).players.get(player.data.uid || player.id) ?? emptyStats();
+const matchesPlayed = careerStats.matchesPlayed;
+const kd = kdRatio(careerStats).toFixed(2);
 const kdClass = parseFloat(kd) >= 1 ? 'kd-positive' : 'kd-negative';
 const hasSocials = player.data.socials && Object.values(player.data.socials).some(v => v);
 
-let mvpCount = 0;
+const mvpCount = careerStats.mvpCount;
 const mvpMatches = [];
 playerMatches.forEach(m => {
   const roundDetails = m.data.roundDetails || [];
   const mvpsThisMatch = roundDetails.filter(rd => rd.mvp === player.data.uid);
   if (mvpsThisMatch.length > 0) {
-    mvpCount += mvpsThisMatch.length;
     mvpMatches.push({
       match: m,
       mvpRounds: mvpsThisMatch.map(rd => rd.round_number),
@@ -79,15 +81,15 @@ const initial = player.data.ign.charAt(0).toUpperCase();
     <h2 class="section-title">Career Statistics</h2>
     <div class="stat-grid section-spacing">
       <div class="stat-box stat-kills">
-        <div class="stat-value">{player.data.stats?.kills || 0}</div>
+        <div class="stat-value">{careerStats.kills}</div>
         <div class="stat-label">Kills</div>
       </div>
       <div class="stat-box stat-deaths">
-        <div class="stat-value">{player.data.stats?.deaths || 0}</div>
+        <div class="stat-value">{careerStats.deaths}</div>
         <div class="stat-label">Deaths</div>
       </div>
       <div class="stat-box stat-assists">
-        <div class="stat-value">{player.data.stats?.assists || 0}</div>
+        <div class="stat-value">{careerStats.assists}</div>
         <div class="stat-label">Assists</div>
       </div>
       <div class="stat-box stat-kd">
@@ -141,7 +143,7 @@ const initial = player.data.ign.charAt(0).toUpperCase();
                 const team2Id = getMatchTeam2Id(m);
                 const t1 = team1Id ? teamsMap.get(team1Id) : undefined;
                 const t2 = team2Id ? teamsMap.get(team2Id) : undefined;
-                const matchName = `${t1?.data.name ?? team1Id ?? 'TBD'} vs ${t2?.data.name ?? team2Id ?? 'TBD'}`;
+                const matchName = `${t1?.data.name ?? team1Id ?? getParticipantLabel(m, 1)} vs ${t2?.data.name ?? team2Id ?? getParticipantLabel(m, 2)}`;
                 const tournamentId = getMatchTournamentId(m);
                 const tournament = tournamentId ? tournamentsMap.get(tournamentId) : undefined;
                 const tournamentName = tournament?.data.name ?? tournamentId ?? 'TBD';
@@ -154,7 +156,7 @@ const initial = player.data.ign.charAt(0).toUpperCase();
                         <a href={`/tournament/${tournament.id}`} class="match-link">{tournamentName}</a>
                       ) : tournamentName}
                     </td>
-                    <td>{m.data.round}</td>
+                    <td>{getRoundName(m, tournamentsMap)}</td>
                     <td><a href={`/matches/${m.id}`} class="match-link">{matchName}</a></td>
                     <td>
                       <div class="mvp-rounds">
@@ -194,7 +196,7 @@ const initial = player.data.ign.charAt(0).toUpperCase();
                 const team2Id = getMatchTeam2Id(m);
                 const t1 = team1Id ? teamsMap.get(team1Id) : undefined;
                 const t2 = team2Id ? teamsMap.get(team2Id) : undefined;
-                const matchName = `${t1?.data.name ?? team1Id ?? 'TBD'} vs ${t2?.data.name ?? team2Id ?? 'TBD'}`;
+                const matchName = `${t1?.data.name ?? team1Id ?? getParticipantLabel(m, 1)} vs ${t2?.data.name ?? team2Id ?? getParticipantLabel(m, 2)}`;
                 const ps = m.data.playerStats.find(ps => ps.uid === player.data.uid);
                 const tournamentId = getMatchTournamentId(m);
                 const tournament = tournamentId ? tournamentsMap.get(tournamentId) : undefined;
@@ -219,7 +221,7 @@ const initial = player.data.ign.charAt(0).toUpperCase();
                         <a href={`/tournament/${tournament.id}`} class="match-link">{tournamentName}</a>
                       ) : tournamentName}
                     </td>
-                    <td>{m.data.round}</td>
+                    <td>{getRoundName(m, tournamentsMap)}</td>
                     <td><a href={`/matches/${m.id}`} class="match-link">{matchName}</a></td>
                     <td>
                       <div class="match-kda">

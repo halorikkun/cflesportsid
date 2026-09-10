@@ -1,30 +1,28 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
+import { calculateStatistics, emptyStats, kdRatio } from '../../utils/statistics';
 
 const allTeams = await getCollection('teams');
 const teamsMap = new Map(allTeams.map(t => [t.id, t]));
 const allMatches = await getCollection('matches');
 
-function getMatchesPlayed(uid) {
-  return allMatches.filter(m =>
-    m.data.playerStats && m.data.playerStats.some(ps => ps.uid === uid)
-  ).length;
-}
+const calculated = calculateStatistics(allMatches);
 
 const players = (await getCollection('players')).map(p => {
   const team = p.data.team ? teamsMap.get(p.data.team) : undefined;
-  const kd = (p.data.stats?.kills || 0) / Math.max(p.data.stats?.deaths || 1, 1);
-  const matchesPlayed = getMatchesPlayed(p.data.uid || p.id);
+  const stats = calculated.players.get(p.data.uid || p.id) ?? emptyStats();
+  const kd = kdRatio(stats);
+  const matchesPlayed = stats.matchesPlayed;
   
   return {
     id: p.id,
     ign: p.data.ign,
     teamName: team ? team.data.name : 'â€”',
     teamId: team ? team.id : '',
-    kills: p.data.stats?.kills || 0,
-    deaths: p.data.stats?.deaths || 0,
-    assists: p.data.stats?.assists || 0,
+    kills: stats.kills,
+    deaths: stats.deaths,
+    assists: stats.assists,
     kd: parseFloat(kd.toFixed(2)),
     kdDisplay: kd.toFixed(2),
     matches: matchesPlayed,
@@ -60,7 +58,7 @@ const teamNames = [...new Set(players.map(p => p.teamName).filter(t => t !== 'â€
             <th class="sortable" data-key="kills" data-numeric="true">Kills <span class="arrow"></span></th>
             <th class="sortable" data-key="deaths" data-numeric="true">Deaths <span class="arrow"></span></th>
             <th class="sortable" data-key="assists" data-numeric="true">Assists <span class="arrow"></span></th>
-            <th class="sortable" data-key="kd" data-numeric="true">KDA Ratio <span class="arrow"></span></th>
+            <th class="sortable" data-key="kd" data-numeric="true">K/D Ratio <span class="arrow"></span></th>
             <th class="sortable" data-key="matches" data-numeric="true">Matches <span class="arrow"></span></th>
           </tr>
         </thead>

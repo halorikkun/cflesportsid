@@ -1,16 +1,20 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { getCollection } from 'astro:content';
-import { getMatchTournamentId, getMatchTeam1Id, getMatchTeam2Id, getMatchWinnerId } from '../../utils/content';
+import { getCollection, type CollectionEntry } from 'astro:content';
+import { getParticipantLabel, getSourceNode, resolveSourceTeam, validateTournament } from '../../utils/tournament';
 
 export async function getStaticPaths() {
   const tournaments = await getCollection('tournaments');
+  const matches = await getCollection('matches');
+  const teams = await getCollection('teams');
+  const tournamentIds = new Set(tournaments.map(t => t.id));
+  for (const match of matches) {
+    if (!tournamentIds.has(match.data.tournamentId)) throw new Error(`${match.id}: unknown tournament ${match.data.tournamentId}`);
+  }
   return tournaments.flatMap(tournament => {
+    validateTournament(tournament, matches, new Set(teams.map(team => team.id)));
     const paths = [{ params: { id: tournament.id }, props: { tournament } }];
-    // Preserve the existing URL while the remaining pages are migrated.
-    if (tournament.id === 'clash-for-glory-s1') {
-      paths.push({ params: { id: '1' }, props: { tournament } });
-    }
+    if (tournament.id === 'clash-for-glory-s1') paths.push({ params: { id: '1' }, props: { tournament } });
     return paths;
   });
 }
@@ -18,81 +22,21 @@ export async function getStaticPaths() {
 const { tournament } = Astro.props;
 const tournamentName = tournament.data.name;
 const matches = await getCollection('matches');
-const teams = await getCollection('teams');
-const allTournaments = await getCollection('tournaments');
-const tMatches = matches.filter(m => getMatchTournamentId(m) === tournament.id);
-const tournaments = allTournaments.map(t => ({ name: t.data.name, id: t.id }));
-
-const ROUND_ORDER = ['First Round', 'Second Round', 'Third Round', 'Top 16', 'Quarter Final', 'Semi Final', 'Final'];
-const SPECIAL_ROUNDS = ['Bronze Match'];
-
-const bracketMatches = tMatches.filter(m => ROUND_ORDER.includes(m.data.round));
-const specialMatches = tMatches.filter(m => SPECIAL_ROUNDS.includes(m.data.round));
-
-const byRound = {};
-bracketMatches.forEach(m => {
-  const round = m.data.round;
-  if (!byRound[round]) byRound[round] = [];
-  byRound[round].push(m);
-});
-
-const rounds = Object.keys(byRound).sort((a, b) => {
-  const ia = ROUND_ORDER.indexOf(a);
-  const ib = ROUND_ORDER.indexOf(b);
-  if (ia === -1 && ib === -1) return a.localeCompare(b);
-  if (ia === -1) return 1;
-  if (ib === -1) return -1;
-  return ia - ib;
-});
-
-rounds.forEach(r => {
-  byRound[r].sort((a, b) => (a.data.bracketSlot || 0) - (b.data.bracketSlot || 0));
-});
-
-const roundEntries = {};
-rounds.forEach((round, roundIdx) => {
-  const entries = [];
-  const existingSlots = new Set();
-
-  byRound[round].forEach(m => {
-    const slot = m.data.bracketSlot || 0;
-    existingSlots.add(slot);
-    entries.push({ type: 'match', slot, match: m });
-  });
-
-  if (roundIdx < rounds.length - 1) {
-    const nextRound = rounds[roundIdx + 1];
-    const nextMatches = byRound[nextRound];
-    const expectedSlots = nextMatches.length * 2;
-
-    for (let slot = 1; slot <= expectedSlots; slot++) {
-      if (!existingSlots.has(slot)) {
-        const targetMatch = nextMatches.find(m => (m.data.bracketSlot || 0) === Math.ceil(slot / 2));
-        if (targetMatch) {
-          const pairedSlot = slot % 2 === 1 ? slot + 1 : slot - 1;
-          const pairedMatch = byRound[round].find(m => (m.data.bracketSlot || 0) === pairedSlot);
-          const pairedWinner = pairedMatch ? getMatchWinnerId(pairedMatch) : null;
-          const byeTeam = pairedWinner === getMatchTeam1Id(targetMatch) ? getMatchTeam2Id(targetMatch) : getMatchTeam1Id(targetMatch);
-          entries.push({ type: 'bye', slot, team: byeTeam });
-        }
-      }
-    }
-  }
-  entries.sort((a, b) => a.slot - b.slot);
-  roundEntries[round] = entries;
-});
-
+const teamsMap = new Map((await getCollection('teams')).map(t => [t.id, t]));
+const tournaments = await getCollection('tournaments');
+const tMatches = matches.filter(m => m.data.tournamentId === tournament.id);
 const completedCount = tMatches.filter(m => m.data.status === 'completed').length;
-
-function getTeam(teamId) {
-  return teams.find(t => t.id === teamId);
+type Stage = CollectionEntry<'tournaments'>['data']['stages'][number];
+function getEntries(stage: Stage, roundId: string) {
+  return [
+    ...tMatches.filter(m => m.data.stageId === stage.id && m.data.roundId === roundId)
+      .map(match => ({ kind: 'match' as const, slot: match.data.bracketSlot, match })),
+    ...stage.byes.filter(b => b.roundId === roundId)
+      .map(bye => ({ kind: 'bye' as const, slot: bye.slot, bye })),
+  ].sort((a, b) => a.slot - b.slot);
 }
-
-function formatDate(d) {
-  if (!d) return null;
-  const date = new Date(d);
-  if (isNaN(date)) return d;
-  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+function formatDate(value: string) {
+  return new Date(value).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
 ---
 
@@ -102,123 +46,100 @@ function formatDate(d) {
       <h1>{tournamentName}</h1>
       <p>{completedCount} / {tMatches.length} matches played</p>
     </div>
-
     <div class="bracket-nav">
       <a href="/tournament" class="back-link">← All Tournaments</a>
       <select id="tourney-select" onchange="if(this.value) window.location.href='/tournament/'+this.value">
-        {tournaments.map(t => (
-          <option value={t.id} selected={t.id === tournament.id}>{t.name}</option>
-        ))}
+        {tournaments.map(t => <option value={t.id} selected={t.id === tournament.id}>{t.data.name}</option>)}
       </select>
     </div>
-
-    <div class="bracket-scroll">
-      <div class="bracket-wrapper">
-        <div class="bracket" id="bracket">
-          {rounds.map((round, roundIdx) => {
-            const entries = roundEntries[round];
-            const roundMatches = byRound[round];
-            const dates = [...new Set(roundMatches.map(m => m.data.date).filter(Boolean))];
-            const dateStr = dates.length > 0 ? dates.map(formatDate).join(' & ') : '';
-            
-            return (
-              <div class="bracket-round" data-round={round}>
-                <div class="bracket-round-header">
-                  <div class="bracket-round-title">{round}</div>
-                  {dateStr && <div class="bracket-round-date">{dateStr}</div>}
-                </div>
-                <div class="bracket-round-matches">
-                  {entries.map(entry => {
-                    if (entry.type === 'bye') {
-                      const team = getTeam(entry.team);
+    {tournament.data.stages.map(stage => {
+      const rounds = stage.rounds.filter(r => r.placement !== 3).sort((a, b) => a.order - b.order);
+      const placementRounds = stage.rounds.filter(r => r.placement === 3).sort((a, b) => a.order - b.order);
+      return (
+        <section class="tournament-stage">
+          <h2>{stage.name}</h2>
+          <p class="series-format">All {stage.series.mapCount} maps played per match</p>
+          <div class="bracket-scroll">
+            <div class="bracket-wrapper">
+              <div class="bracket">
+                {rounds.map((round, index) => (
+                  <div class="bracket-round">
+                    {[round, ...(index === rounds.length - 1 ? placementRounds : [])].map(section => {
+                      const entries = getEntries(stage, section.id);
+                      const dates = [...new Set(tMatches.filter(m => m.data.stageId === stage.id && m.data.roundId === section.id).map(m => m.data.date))];
                       return (
-                        <div class="bracket-match bye" data-slot={entry.slot} data-round={round}>
-                          <div class="bracket-team-row winner">
-                            <div class="bracket-team-info">
-                              <span class="bracket-team-tag">{team?.data.tag || 'TBD'}</span>
-                              <span class="bracket-team-name">{team?.data.name || 'TBD'}</span>
-                            </div>
-                            <span class="bracket-bye-label">BYE</span>
+                        <div class={section.placement === 3 ? 'bracket-bronze' : 'bracket-main-section'}>
+                          <div class="bracket-round-header">
+                            <div class="bracket-round-title">{section.name}</div>
+                            {dates.length > 0 && <div class="bracket-round-date">{dates.map(formatDate).join(' & ')}</div>}
                           </div>
-                          <div class="bracket-team-row empty">
-                            <div class="bracket-team-info">
-                              <span class="bracket-team-name">No opponent</span>
-                            </div>
+                          <div class="bracket-round-matches">
+                            {entries.length === 0 && <p class="bracket-empty">Matches not scheduled yet</p>}
+                            {entries.map(entry => {
+                              if (entry.kind === 'bye') {
+                                const team = teamsMap.get(entry.bye.teamId);
+                                return (
+                                  <div class="bracket-match bye" data-node={`${stage.id}:${entry.bye.id}`}>
+                                    <div class="bracket-team-row winner">
+                                      <div class="bracket-team-info">
+                                        <span class="bracket-team-tag">{team?.data.tag ?? entry.bye.teamId}</span>
+                                        <span class="bracket-team-name">{team?.data.name ?? entry.bye.teamId}</span>
+                                      </div>
+                                      <span class="bracket-bye-label">BYE</span>
+                                    </div>
+                                    <div class="bracket-team-row empty"><span class="bracket-team-name">No opponent</span></div>
+                                  </div>
+                                );
+                              }
+                              const m = entry.match;
+                              const complete = m.data.status === 'completed';
+                              const team1Id = m.data.team1Id ?? resolveSourceTeam(m, 1, tournament, tMatches);
+                              const team2Id = m.data.team2Id ?? resolveSourceTeam(m, 2, tournament, tMatches);
+                              const team1 = team1Id ? teamsMap.get(team1Id) : undefined;
+                              const team2 = team2Id ? teamsMap.get(team2Id) : undefined;
+                              const win1 = complete && Boolean(m.data.winnerId) && m.data.winnerId === team1Id;
+                              const win2 = complete && Boolean(m.data.winnerId) && m.data.winnerId === team2Id;
+                              return (
+                                <a href={`/matches/${m.id}`} class={`bracket-match ${complete ? '' : 'upcoming'}`}
+                                  data-node={m.id} data-source1={getSourceNode(m, 1)} data-source2={getSourceNode(m, 2)}
+                                  data-source-kind1={m.data.team1Source?.type} data-source-kind2={m.data.team2Source?.type}>
+                                  <div class={`bracket-team-row ${win1 ? 'winner' : win2 ? 'loser' : ''}`}>
+                                    <div class="bracket-team-info">
+                                      <span class="bracket-team-tag">{team1?.data.tag ?? 'TBD'}</span>
+                                      <span class="bracket-team-name">{team1?.data.name ?? team1Id ?? getParticipantLabel(m, 1)}</span>
+                                    </div>
+                                    <span class="bracket-team-score">{complete ? m.data.score1 : '–'}</span>
+                                  </div>
+                                  <div class={`bracket-team-row ${win2 ? 'winner' : win1 ? 'loser' : ''}`}>
+                                    <div class="bracket-team-info">
+                                      <span class="bracket-team-tag">{team2?.data.tag ?? 'TBD'}</span>
+                                      <span class="bracket-team-name">{team2?.data.name ?? team2Id ?? getParticipantLabel(m, 2)}</span>
+                                    </div>
+                                    <span class="bracket-team-score">{complete ? m.data.score2 : '–'}</span>
+                                  </div>
+                                </a>
+                              );
+                            })}
                           </div>
                         </div>
-                      );
-                    }
-                    const m = entry.match;
-                    const isCompleted = m.data.status === 'completed';
-                    const team1 = getTeam(getMatchTeam1Id(m));
-                    const team2 = getTeam(getMatchTeam2Id(m));
-                    const win1 = isCompleted && Boolean(getMatchWinnerId(m)) && getMatchWinnerId(m) === getMatchTeam1Id(m);
-                    const win2 = isCompleted && Boolean(getMatchWinnerId(m)) && getMatchWinnerId(m) === getMatchTeam2Id(m);
-                    
-                    return (
-                      <a href={`/matches/${m.id}`} class={`bracket-match ${isCompleted ? '' : 'upcoming'}`} data-slot={entry.slot} data-round={round} data-match-id={m.id}>
-                        <div class={`bracket-team-row ${win1 ? 'winner' : (win2 ? 'loser' : '')}`}>
-                          <div class="bracket-team-info">
-                            <span class="bracket-team-tag">{team1?.data.tag || 'TBD'}</span>
-                            <span class="bracket-team-name">{team1?.data.name || 'TBD'}</span>
-                          </div>
-                          <span class="bracket-team-score">{isCompleted ? m.data.score1 : '–'}</span>
-                        </div>
-                        <div class={`bracket-team-row ${win2 ? 'winner' : (win1 ? 'loser' : '')}`}>
-                          <div class="bracket-team-info">
-                            <span class="bracket-team-tag">{team2?.data.tag || 'TBD'}</span>
-                            <span class="bracket-team-name">{team2?.data.name || 'TBD'}</span>
-                          </div>
-                          <span class="bracket-team-score">{isCompleted ? m.data.score2 : '–'}</span>
-                        </div>
-                      </a>
-                    );
-                  })}
-                </div>
-
-                {roundIdx === rounds.length - 1 && specialMatches.length > 0 && (
-                  <div class="bracket-bronze">
-                    <div class="bracket-bronze-divider"></div>
-                    <div class="bracket-round-title">Bronze Match</div>
-                    {specialMatches.map(m => {
-                      const isCompleted = m.data.status === 'completed';
-                      const team1 = getTeam(getMatchTeam1Id(m));
-                      const team2 = getTeam(getMatchTeam2Id(m));
-                      const win1 = isCompleted && Boolean(getMatchWinnerId(m)) && getMatchWinnerId(m) === getMatchTeam1Id(m);
-                      const win2 = isCompleted && Boolean(getMatchWinnerId(m)) && getMatchWinnerId(m) === getMatchTeam2Id(m);
-                      
-                      return (
-                        <a href={`/matches/${m.id}`} class={`bracket-match ${isCompleted ? '' : 'upcoming'}`} data-slot={m.data.bracketSlot || 0} data-round={m.data.round} data-match-id={m.id}>
-                          <div class={`bracket-team-row ${win1 ? 'winner' : (win2 ? 'loser' : '')}`}>
-                            <div class="bracket-team-info">
-                              <span class="bracket-team-tag">{team1?.data.tag || 'TBD'}</span>
-                              <span class="bracket-team-name">{team1?.data.name || 'TBD'}</span>
-                            </div>
-                            <span class="bracket-team-score">{isCompleted ? m.data.score1 : '–'}</span>
-                          </div>
-                          <div class={`bracket-team-row ${win2 ? 'winner' : (win1 ? 'loser' : '')}`}>
-                            <div class="bracket-team-info">
-                              <span class="bracket-team-tag">{team2?.data.tag || 'TBD'}</span>
-                              <span class="bracket-team-name">{team2?.data.name || 'TBD'}</span>
-                            </div>
-                            <span class="bracket-team-score">{isCompleted ? m.data.score2 : '–'}</span>
-                          </div>
-                        </a>
                       );
                     })}
                   </div>
-                )}
+                ))}
               </div>
-            );
-          })}
-        </div>
-        <svg class="bracket-connectors" id="bracket-connectors"></svg>
-      </div>
-    </div>
+              <svg class="bracket-connectors" aria-hidden="true"></svg>
+            </div>
+          </div>
+        </section>
+      );
+    })}
   </div>
 </Layout>
 
 <style>
+  .tournament-stage { margin-bottom: 2rem; }
+  .series-format, .bracket-empty { color: var(--text-muted); margin: 0.5rem 0 1rem; }
+  .bracket-main-section { display: flex; flex-direction: column; flex: 1; }
   .bracket-nav {
     display: flex;
     align-items: center;
@@ -393,83 +314,44 @@ function formatDate(d) {
   }
 </style>
 
-<!-- NEW: is:inline prevents Astro from hoisting this script to the <head>, ensuring DOM elements exist -->
+
 <script is:inline>
-  function drawConnectors() {
-    const svg = document.getElementById('bracket-connectors');
-    if (!svg) return;
-    svg.innerHTML = '';
-
-    const wrapper = document.querySelector('.bracket-wrapper');
-    const rounds = document.querySelectorAll('.bracket-round');
-
-    if (rounds.length < 2) return;
-
-    const wrapperRect = wrapper.getBoundingClientRect();
-    svg.setAttribute('width', wrapperRect.width);
-    svg.setAttribute('height', wrapperRect.height);
-    svg.setAttribute('viewBox', `0 0 ${wrapperRect.width} ${wrapperRect.height}`);
-
-    const roundData = Array.from(rounds).map(round => {
-      const roundRect = round.getBoundingClientRect();
-      const matches = round.querySelectorAll('.bracket-match');
-      return {
-        name: round.dataset.round,
-        right: roundRect.right - wrapperRect.left,
-        matches: Array.from(matches).map(m => {
-          const r = m.getBoundingClientRect();
-          return {
-            el: m,
-            slot: parseInt(m.dataset.slot || '0'),
-            round: m.dataset.round,
-            left: r.left - wrapperRect.left,
-            right: r.right - wrapperRect.left,
-            top: r.top - wrapperRect.top,
-            bottom: r.bottom - wrapperRect.top,
-            centerY: r.top - wrapperRect.top + r.height / 2,
-          };
-        }),
-      };
-    });
-
-    const NS = 'http://www.w3.org/2000/svg';
-
-    for (let i = 0; i < roundData.length - 1; i++) {
-      const currentRound = roundData[i];
-      const nextRound = roundData[i + 1];
-
-      currentRound.matches.forEach(match => {
-        const targetSlot = Math.ceil(match.slot / 2);
-        const targetMatch = nextRound.matches.find(m => m.slot === targetSlot);
-
-        if (!targetMatch) return;
-
-        const startX = match.right;
-        const startY = match.centerY;
-        const endX = targetMatch.left;
-        const endY = targetMatch.centerY;
-        const midX = (startX + endX) / 2;
-
-        const path = document.createElementNS(NS, 'path');
-        path.setAttribute('d', `M ${startX} ${startY} L ${midX} ${startY} L ${midX} ${endY} L ${endX} ${endY}`);
-        path.setAttribute('stroke', '#3a4258'); /* Slightly lighter than border for visibility */
-        path.setAttribute('stroke-width', '2');
-        path.setAttribute('fill', 'none');
-        path.setAttribute('opacity', '0.8');
-        svg.appendChild(path);
+  (() => {
+    function drawConnectors() {
+      document.querySelectorAll('.bracket-wrapper').forEach(wrapper => {
+        const svg = wrapper.querySelector('.bracket-connectors');
+        svg.replaceChildren();
+        const bounds = wrapper.getBoundingClientRect();
+        svg.setAttribute('viewBox', `0 0 ${bounds.width} ${bounds.height}`);
+        const nodes = new Map(Array.from(wrapper.querySelectorAll('[data-node]')).map(node => [node.dataset.node, node]));
+        nodes.forEach(target => {
+          for (const side of [1, 2]) {
+            const source = nodes.get(target.dataset[`source${side}`]);
+            if (!source) continue;
+            const from = source.getBoundingClientRect();
+            const row = target.querySelectorAll('.bracket-team-row')[side - 1].getBoundingClientRect();
+            const x1 = from.right - bounds.left;
+            const y1 = from.top + from.height / 2 - bounds.top;
+            const x2 = row.left - bounds.left;
+            const y2 = row.top + row.height / 2 - bounds.top;
+            const middle = (x1 + x2) / 2;
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.setAttribute('d', `M ${x1} ${y1} H ${middle} V ${y2} H ${x2}`);
+            path.setAttribute('stroke', '#3a4258');
+            path.setAttribute('stroke-width', '2');
+            path.setAttribute('fill', 'none');
+            if (target.dataset[`sourceKind${side}`] === 'loser') path.setAttribute('stroke-dasharray', '5 4');
+            svg.appendChild(path);
+          }
+        });
       });
     }
-  }
-
-  // Ensure DOM is fully loaded and fonts are rendered before drawing
-  document.addEventListener('DOMContentLoaded', () => {
-    drawConnectors();
-    setTimeout(drawConnectors, 150); // Fallback for late font loading
-  });
-  
-  window.addEventListener('resize', () => {
-    // Debounce resize for performance
-    clearTimeout(window.resizeTimer);
-    window.resizeTimer = setTimeout(drawConnectors, 100);
-  });
+    document.addEventListener('DOMContentLoaded', drawConnectors);
+    document.fonts.ready.then(drawConnectors);
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(drawConnectors, 100);
+    });
+  })();
 </script>

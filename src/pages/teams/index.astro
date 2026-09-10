@@ -1,24 +1,12 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
-import { getMatchTeam1Id, getMatchTeam2Id, getTeamMatchStats } from '../../utils/content';
+import { calculateStatistics, emptyStats } from '../../utils/statistics';
 
 const allMatches = await getCollection('matches');
 const completedMatches = allMatches.filter(m => m.data.status === 'completed');
 
-function getTeamRecord(teamId) {
-  let wins = 0, losses = 0;
-  completedMatches.forEach(m => {
-    if (getMatchTeam1Id(m) === teamId) {
-      if (m.data.score1 > m.data.score2) wins++;
-      else if (m.data.score1 < m.data.score2) losses++;
-    } else if (getMatchTeam2Id(m) === teamId) {
-      if (m.data.score2 > m.data.score1) wins++;
-      else if (m.data.score2 < m.data.score1) losses++;
-    }
-  });
-  return { wins, losses };
-}
+const calculated = calculateStatistics(allMatches);
 
 const allPlayers = await getCollection('players');
 const playersByUid = {};
@@ -27,7 +15,7 @@ allPlayers.forEach(p => {
 });
 
 const teams = (await getCollection('teams')).map(team => {
-  const record = getTeamRecord(team.id);
+  const record = calculated.teams.get(team.id) ?? emptyStats();
   let teamPlayers = team.data.players
     .map(uid => playersByUid[uid])
     .filter(Boolean);
@@ -37,7 +25,7 @@ const teams = (await getCollection('teams')).map(team => {
   }
   
   const { kills: totalKills, deaths: totalDeaths, assists: totalAssists } =
-    getTeamMatchStats(completedMatches, team.id);
+    record;
 
   return {
     id: team.id,

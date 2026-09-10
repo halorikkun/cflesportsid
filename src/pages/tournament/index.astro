@@ -1,6 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
+import { getMatchRound } from '../../utils/tournament';
 import { getMatchTournamentId, getMatchWinnerId } from '../../utils/content';
 
 const matches = await getCollection('matches');
@@ -12,7 +13,7 @@ const tournaments = allTournaments.map((tournament) => {
   const tMatches = matches.filter(m => getMatchTournamentId(m) === tournament.id);
   const completed = tMatches.filter(m => m.data.status === 'completed');
   const upcoming = tMatches.filter(m => m.data.status !== 'completed');
-  const rounds = [...new Set(tMatches.map(m => m.data.round).filter(Boolean))];
+  const rounds = [...new Set(tMatches.map(m => `${m.data.stageId}/${m.data.roundId}`).filter(Boolean))];
 
   let status = 'upcoming';
   let statusLabel = 'Upcoming';
@@ -25,7 +26,7 @@ const tournaments = allTournaments.map((tournament) => {
   }
 
   const dates = tMatches.map(m => m.data.date).filter(Boolean).sort();
-  const finalMatch = tMatches.find(m => m.data.round === 'Final' && m.data.status === 'completed');
+  const finalMatch = tMatches.find(m => getMatchRound(m, tournament)?.placement === 1 && m.data.status === 'completed');
   const winner = finalMatch ? teams.find(t => t.id === getMatchWinnerId(finalMatch)) : null;
 
   return {

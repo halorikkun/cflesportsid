@@ -1,6 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
+import { getRoundName, getParticipantLabel } from '../../utils/tournament';
 
 import {
   getMatchTeam1Id,
@@ -54,8 +55,8 @@ const tournament = tournamentId
   ? tournamentsMap.get(tournamentId)
   : undefined;
 
-const team1Name = t1?.data.name ?? team1Id ?? 'TBD';
-const team2Name = t2?.data.name ?? team2Id ?? 'TBD';
+const team1Name = t1?.data.name ?? team1Id ?? getParticipantLabel(m, 1);
+const team2Name = t2?.data.name ?? team2Id ?? getParticipantLabel(m, 2);
 
 const team1Tag = t1?.data.tag ?? team1Id ?? 'TBD';
 const team2Tag = t2?.data.tag ?? team2Id ?? 'TBD';
@@ -113,13 +114,13 @@ function getRoundMVP(roundIdx) {
   if (!uid) return null;
   const player = playersMap.get(uid);
   const ps = playerStats.find(p => p.uid === uid);
-  const r = ps && ps.rounds[roundIdx] ? ps.rounds[roundIdx] : null;
+  const r = ps?.rounds.find(r => r.round_number === roundDetails[roundIdx]?.round_number);
   return {
     uid,
     ign: player ? player.data.ign : (ps ? ps.ign : uid),
-    kills: r ? (r.kills || 0) : 0,
-    deaths: r ? (r.deaths || 0) : 0,
-    assists: r ? (r.assists || 0) : 0,
+    kills: r?.kills ?? null,
+    deaths: r?.deaths ?? null,
+    assists: r?.assists ?? null,
   };
 }
 
@@ -147,7 +148,7 @@ const overallMVP = calcOverallMVP();
   <div class="container">
     <div class="page-header">
       <h1>{team1Name} vs {team2Name}</h1>
-      <p>{tournament?.data.name ?? tournamentId ?? 'TBD'} · {m.data.round} · {m.data.date}</p>
+      <p>{tournament?.data.name ?? tournamentId ?? 'TBD'} · {getRoundName(m, tournamentsMap)} · {m.data.date}</p>
     </div>
     <a href="/matches" class="back-link">← Back to Matches</a>
 
@@ -159,7 +160,7 @@ const overallMVP = calcOverallMVP();
           class="team-logo-large"
           onerror="this.onerror=null; this.src='/logos/default.png'"
         />
-        <a href={`/teams/${team1Id}`} style={`color: ${t1Color};`}>{team1Name}</a>
+        <a href={team1Id ? `/teams/${team1Id}` : undefined} style={`color: ${t1Color};`}>{team1Name}</a>
         <span class="tag">[{team1Tag}]</span>
       </div>
       <div class="match-detail-score">
@@ -172,7 +173,7 @@ const overallMVP = calcOverallMVP();
           class="team-logo-large"
           onerror="this.onerror=null; this.src='/logos/default.png'"
         />
-        <a href={`/teams/${team2Id}`} style={`color: ${t2Color};`}>{team2Name}</a>
+        <a href={team2Id ? `/teams/${team2Id}` : undefined} style={`color: ${t2Color};`}>{team2Name}</a>
         <span class="tag">[{team2Tag}]</span>
       </div>
     </div>
@@ -196,12 +197,13 @@ const overallMVP = calcOverallMVP();
                   <div class="mvp-card">
                     <div class="mvp-round-label">Round {i + 1}</div>
                     <div class="mvp-map-name">{mapName}</div>
+                    {roundDetails[i]?.resultNote && <p>{roundDetails[i].resultNote}</p>}
                     {mvp ? (
                       <>
                         <div class="mvp-label">Round MVP</div>
                         <div class="mvp-player-name">{mvp.ign}</div>
                         <div class="mvp-kda">
-                          <span class="kill">{mvp.kills}</span>/<span class="death">{mvp.deaths}</span>/<span class="assist">{mvp.assists}</span>
+                          <span class="kill">{mvp.kills ?? '—'}</span>/<span class="death">{mvp.deaths ?? '—'}</span>/<span class="assist">{mvp.assists ?? '—'}</span>
                         </div>
                       </>
                     ) : (
@@ -214,7 +216,7 @@ const overallMVP = calcOverallMVP();
 
             {overallMVP && (
               <div class="overall-mvp">
-                <div class="overall-mvp-label">Match MVP</div>
+                <div class="overall-mvp-label">Top Match KDA</div>
                 <div class="overall-mvp-name">{overallMVP.ign}</div>
                 <div class="overall-mvp-kda">
                   <span class="kill">{overallMVP.kills}</span>/<span class="death">{overallMVP.deaths}</span>/<span class="assist">{overallMVP.assists}</span>
@@ -243,11 +245,14 @@ const overallMVP = calcOverallMVP();
         </div>
 
         <h2 class="section-title">Player Stats</h2>
+        {playerStats.some(p => p.rounds.some(r => r.round_number === undefined)) && (
+          <p class="text-muted">Some player map numbers are unknown. Their stats are included in totals, but left unassigned in map columns.</p>
+        )}
 
         {team1Players.length > 0 && (
           <div class="section-spacing" style={`--team-color: ${t1Color};`}>
             <h3 class="team-header">
-              <a href={`/teams/${team1Id}`}>{team1Name}</a>
+              <a href={team1Id ? `/teams/${team1Id}` : undefined}>{team1Name}</a>
               <span class="tag"> [{team1Tag}]</span>
             </h3>
             <div class="table-wrap">
@@ -265,12 +270,12 @@ const overallMVP = calcOverallMVP();
                   {team1Players.map(p => (
                     <tr>
                       <td><a href={`/players/${playersMap.get(p.uid)?.id || ''}`}><strong>{p.ign}</strong></a></td>
-                      {numRounds > 1 && p.rounds.map(r => (
-                        <td class="kda"><span class="kill">{r.kills || 0}</span>/<span class="death">{r.deaths || 0}</span>/<span class="assist">{r.assists || 0}</span></td>
-                      ))}
-                      {numRounds > 1 && Array.from({ length: numRounds - p.rounds.length }, () => (
-                        <td class="text-muted">—</td>
-                      ))}
+                      {numRounds > 1 && Array.from({ length: numRounds }, (_, i) => {
+                        const r = p.rounds.find(r => r.round_number === roundDetails[i]?.round_number);
+                        return r ? (
+                          <td class="kda"><span class="kill">{r.kills}</span>/<span class="death">{r.deaths}</span>/<span class="assist">{r.assists}</span></td>
+                        ) : <td class="text-muted">—</td>;
+                      })}
                       <td class="kda total-kda"><span class="kill">{p.totalKills}</span>/<span class="death">{p.totalDeaths}</span>/<span class="assist">{p.totalAssists}</span></td>
                     </tr>
                   ))}
@@ -283,7 +288,7 @@ const overallMVP = calcOverallMVP();
         {team2Players.length > 0 && (
           <div class="section-spacing" style={`--team-color: ${t2Color};`}>
             <h3 class="team-header">
-              <a href={`/teams/${team2Id}`}>{team2Name}</a>
+              <a href={team2Id ? `/teams/${team2Id}` : undefined}>{team2Name}</a>
               <span class="tag"> [{team2Tag}]</span>
             </h3>
             <div class="table-wrap">
@@ -301,12 +306,12 @@ const overallMVP = calcOverallMVP();
                   {team2Players.map(p => (
                     <tr>
                       <td><a href={`/players/${playersMap.get(p.uid)?.id || ''}`}><strong>{p.ign}</strong></a></td>
-                      {numRounds > 1 && p.rounds.map(r => (
-                        <td class="kda"><span class="kill">{r.kills || 0}</span>/<span class="death">{r.deaths || 0}</span>/<span class="assist">{r.assists || 0}</span></td>
-                      ))}
-                      {numRounds > 1 && Array.from({ length: numRounds - p.rounds.length }, () => (
-                        <td class="text-muted">—</td>
-                      ))}
+                      {numRounds > 1 && Array.from({ length: numRounds }, (_, i) => {
+                        const r = p.rounds.find(r => r.round_number === roundDetails[i]?.round_number);
+                        return r ? (
+                          <td class="kda"><span class="kill">{r.kills}</span>/<span class="death">{r.deaths}</span>/<span class="assist">{r.assists}</span></td>
+                        ) : <td class="text-muted">—</td>;
+                      })}
                       <td class="kda total-kda"><span class="kill">{p.totalKills}</span>/<span class="death">{p.totalDeaths}</span>/<span class="assist">{p.totalAssists}</span></td>
                     </tr>
                   ))}

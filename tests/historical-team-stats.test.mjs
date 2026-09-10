@@ -15,7 +15,7 @@ const matches = files.map(file => ({ id: file.slice(0, -5), data: JSON.parse(fs.
 const schemaSource = fs.readFileSync(new URL('../src/content.config.ts', import.meta.url), 'utf8')
   .replace(/^import .*;\n/gm, '').replace('export const collections =', 'globalThis.collections =');
 const schemaContext = { z, defineCollection: value => value, glob: value => value };
-vm.runInNewContext(schemaSource, schemaContext);
+vm.runInNewContext(ts.transpileModule(schemaSource, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText, schemaContext);
 const schema = schemaContext.collections.matches.schema;
 
 test('every migrated row has an explicit match-time team or null', () => {
@@ -42,4 +42,16 @@ test('schema rejects missing attribution and teams outside the match', () => {
   assert.equal(schema.safeParse(match).success, false);
   match.playerStats[0].teamId = null;
   assert.equal(schema.safeParse(match).success, true);
+});
+
+
+test('schema rejects duplicate players and invalid player map numbers', () => {
+  const match = structuredClone(matches[0].data);
+  match.playerStats.push(structuredClone(match.playerStats[0]));
+  assert.equal(schema.safeParse(match).success, false);
+  match.playerStats.pop();
+  match.playerStats[0].rounds[0].round_number = 99;
+  assert.equal(schema.safeParse(match).success, false);
+  match.playerStats[0].rounds[0].round_number = match.playerStats[0].rounds[1].round_number;
+  assert.equal(schema.safeParse(match).success, false);
 });

@@ -1,0 +1,23 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><link rel="icon" type="image/svg+xml" href="/favicon.ico"><title>Island Statistics - CFL Esports ID</title><link rel="stylesheet" href="/_astro/index.DlbGdVp0.css">
+<style>.section[data-astro-cid-zqq5xfdf]{margin-top:1.5rem;margin-bottom:2rem}h2[data-astro-cid-zqq5xfdf]{margin-bottom:1rem}.coverage[data-astro-cid-zqq5xfdf]{color:var(--text-secondary);line-height:1.6}
+</style><script type="module" src="/_astro/page.D1uwR3nK.js"></script></head> <body> <header class="site-header" data-astro-cid-3ef6ksr2> <div class="container" data-astro-cid-3ef6ksr2> <a href="/" class="logo" data-astro-cid-3ef6ksr2>CFL<span data-astro-cid-3ef6ksr2>Esports</span>ID</a> <!-- Mobile menu button --> <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Toggle menu" data-astro-cid-3ef6ksr2> <span data-astro-cid-3ef6ksr2></span> <span data-astro-cid-3ef6ksr2></span> <span data-astro-cid-3ef6ksr2></span> </button> <!-- Navigation --> <nav class="nav" id="main-nav" data-astro-cid-3ef6ksr2> <a href="/" data-astro-cid-3ef6ksr2>Home</a> <a href="/teams" data-astro-cid-3ef6ksr2>Teams</a> <a href="/players" data-astro-cid-3ef6ksr2>Players</a> <a href="/matches" data-astro-cid-3ef6ksr2>Matches</a> <a href="/tournament" data-astro-cid-3ef6ksr2>Tournaments</a> <a href="/maps" class="active" data-astro-cid-3ef6ksr2>Maps</a> <a href="/veto" data-astro-cid-3ef6ksr2>Veto</a> </nav> </div> </header> <script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const menuBtn = document.getElementById('mobile-menu-btn');
+    const nav = document.getElementById('main-nav');
+    
+    if (menuBtn && nav) {
+      menuBtn.addEventListener('click', () => {
+        nav.classList.toggle('active');
+        menuBtn.classList.toggle('active');
+      });
+      
+      // Close menu when clicking a link
+      nav.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', () => {
+          nav.classList.remove('active');
+          menuBtn.classList.remove('active');
+        });
+      });
+    }
+  });
+</script>  <main>  <div class="container" data-astro-cid-zqq5xfdf> <div class="page-header" data-astro-cid-zqq5xfdf><h1 data-astro-cid-zqq5xfdf>Island</h1><p data-astro-cid-zqq5xfdf>Map statistics from completed matches</p></div> <a href="/maps" data-astro-cid-zqq5xfdf>← All Maps</a> <div class="stat-grid section" data-astro-cid-zqq5xfdf> <div class="stat-box" data-astro-cid-zqq5xfdf><div class="stat-value" data-astro-cid-zqq5xfdf>0</div><div class="stat-label" data-astro-cid-zqq5xfdf>Games Played</div></div> <div class="stat-box" data-astro-cid-zqq5xfdf><div class="stat-value" data-astro-cid-zqq5xfdf>0</div><div class="stat-label" data-astro-cid-zqq5xfdf>Matches</div></div> <div class="stat-box" data-astro-cid-zqq5xfdf><div class="stat-value" data-astro-cid-zqq5xfdf>0</div><div class="stat-label" data-astro-cid-zqq5xfdf>Player Rounds Recorded</div></div> <div class="stat-box" data-astro-cid-zqq5xfdf><div class="stat-value" data-astro-cid-zqq5xfdf>0</div><div class="stat-label" data-astro-cid-zqq5xfdf>MVP Awards</div></div> </div> <p class="coverage" data-astro-cid-zqq5xfdf>K/D/A totals include only entries assigned to this map. A dash in match stats means the map number is unknown or the player did not play that map. 0 of 0 map winners are known. Win rates use known results only: explicit map winners or a 3–0 sweep. Split scores alone do not identify map winners.</p> <p class="section" data-astro-cid-zqq5xfdf>No completed matches recorded on this map yet.</p> </div>  </main> <footer class="site-footer"> <div class="container"> <p>&copy; 2026 Crossfire: Legends Esports Indonesia</p> </div> </footer> </body></html> 

@@ -1,9 +1,10 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
+import { calculateStatistics, emptyStats } from '../../utils/statistics';
+import { getRoundName, getRoundOrder } from '../../utils/tournament';
 import {
   getTournamentMap,
-  getTeamMatchStats,
   getMatchTournamentId,
   getMatchTeam1Id,
   getMatchTeam2Id,
@@ -29,32 +30,18 @@ const allMatches = await getCollection('matches');
 const teamMatches = allMatches.filter(m => getMatchTeam1Id(m) === team.id || getMatchTeam2Id(m) === team.id);
 const completedMatches = teamMatches.filter(m => m.data.status === 'completed');
 
-let wins = 0, losses = 0;
-completedMatches.forEach(m => {
-  if (getMatchTeam1Id(m) === team.id) {
-    if (m.data.score1 > m.data.score2) wins++;
-    else if (m.data.score1 < m.data.score2) losses++;
-  } else if (getMatchTeam2Id(m) === team.id) {
-    if (m.data.score2 > m.data.score1) wins++;
-    else if (m.data.score2 < m.data.score1) losses++;
-  }
-});
-const matchesPlayed = completedMatches.length;
-
-const { kills: totalKills, deaths: totalDeaths, assists: totalAssists } =
-  getTeamMatchStats(completedMatches, team.id);
+const teamStats = calculateStatistics(allMatches).teams.get(team.id) ?? emptyStats();
+const { wins, losses, matchesPlayed, kills: totalKills, deaths: totalDeaths, assists: totalAssists } = teamStats;
 
 const tournamentsMap = await getTournamentMap();
-
-const roundPriority = { 'Final': 1, 'Semifinal': 2, 'Quarter Final': 3, 'Top 16': 4, 'Round 3': 5, 'Round 2': 6, 'Round 1': 7 };
 
 const sortedMatches = [...teamMatches].sort((a, b) => {
   const dateA = new Date(a.data.date).getTime() || 0;
   const dateB = new Date(b.data.date).getTime() || 0;
   if (dateB !== dateA) return dateB - dateA;
-  const prioA = roundPriority[a.data.round] || 99;
-  const prioB = roundPriority[b.data.round] || 99;
-  return prioA - prioB;
+  const prioA = getRoundOrder(a, tournamentsMap);
+  const prioB = getRoundOrder(b, tournamentsMap);
+  return prioB - prioA;
 });
 
 const activePlayerCount = teamPlayers.filter(p => (p.data.status || 'active') === 'active').length;
@@ -170,7 +157,7 @@ const initial = team.data.name.charAt(0).toUpperCase();
                         <a href={`/tournament/${tournament.id}`}>{tournamentName}</a>
                       ) : tournamentName}
                     </td>
-                    <td>{m.data.round}</td>
+                    <td>{getRoundName(m, tournamentsMap)}</td>
                     <td>
                       {opponent ? (
                         <a href={`/teams/${opponent.id}`} class="opponent-link">{opponent.data.name}</a>

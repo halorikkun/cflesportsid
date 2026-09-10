@@ -1,0 +1,34 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+import { calculateStatistics, emptyMapStats } from '../../utils/statistics';
+const calculated = calculateStatistics(await getCollection('matches'));
+const maps = (await getCollection('maps')).map(map => ({ ...map, stats: calculated.maps.get(map.id) ?? emptyMapStats() }))
+  .sort((a, b) => b.stats.mapsPlayed - a.stats.mapsPlayed || a.data.name.localeCompare(b.data.name));
+---
+<Layout title="Map Statistics - CFL Esports ID" current="Maps">
+  <div class="container">
+    <div class="page-header"><h1>Map Statistics</h1><p>Calculated from completed matches</p></div>
+    <div class="stat-grid">
+      <div class="stat-box"><div class="stat-value">{maps.length}</div><div class="stat-label">Maps</div></div>
+      <div class="stat-box"><div class="stat-value">{calculated.totals.mapsPlayed}</div><div class="stat-label">Map Games Played</div></div>
+      <div class="stat-box"><div class="stat-value">{calculated.totals.mvpCount}</div><div class="stat-label">Round MVP Awards</div></div>
+    </div>
+    <p class="coverage">Kills, deaths, and assists below include only player entries with confirmed map numbers.
+      {calculated.totals.unassignedPlayerRounds > 0 && ` ${calculated.totals.unassignedPlayerRounds} player-round entries (${calculated.totals.unassignedMapKills} kills) still need map numbers. They remain included in player and team totals.`}
+    </p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Map</th><th>Games Played</th><th>Matches</th><th>Recorded Kills</th><th>Recorded Deaths</th><th>Recorded Assists</th><th>MVP Awards</th><th>Known Results</th></tr></thead>
+        <tbody>{maps.map(map => (
+          <tr>
+            <td><a href={`/maps/${map.id}`}>{map.data.name}</a></td>
+            <td>{map.stats.mapsPlayed}</td><td>{map.stats.matchesPlayed}</td>
+            <td>{map.stats.kills}</td><td>{map.stats.deaths}</td><td>{map.stats.assists}</td><td>{map.stats.mvpCount}</td><td>{map.stats.knownResults} / {map.stats.mapsPlayed}</td>
+          </tr>
+        ))}</tbody>
+      </table>
+    </div>
+  </div>
+</Layout>
+<style>.coverage { color: var(--text-secondary); margin: 1.5rem 0; line-height: 1.6; }</style>

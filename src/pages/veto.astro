@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
+import { getRoundName, getParticipantLabel } from '../utils/tournament';
 import { getTeamMap, getTournamentMap, getMapMap, getMatchTeam1Id, getMatchTeam2Id, getMatchTournamentId } from '../utils/content';
 
 const matches = await getCollection('matches');
@@ -31,9 +32,9 @@ const matchData = matches.map(m => {
     id: m.id,
     tournamentId,
     tournament: tournament?.data.name ?? tournamentId ?? 'TBD',
-    round: m.data.round,
-    team1: { id: team1Id, name: t1?.data.name ?? team1Id ?? 'TBD', tag: t1?.data.tag ?? team1Id ?? '?' },
-    team2: { id: team2Id, name: t2?.data.name ?? team2Id ?? 'TBD', tag: t2?.data.tag ?? team2Id ?? '?' },
+    round: getRoundName(m, tournamentsMap),
+    team1: { id: team1Id, name: t1?.data.name ?? team1Id ?? getParticipantLabel(m, 1), tag: t1?.data.tag ?? team1Id ?? '?' },
+    team2: { id: team2Id, name: t2?.data.name ?? team2Id ?? getParticipantLabel(m, 2), tag: t2?.data.tag ?? team2Id ?? '?' },
     status: m.data.status,
   };
 });

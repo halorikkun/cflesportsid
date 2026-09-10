@@ -1,0 +1,64 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+import { calculateStatistics, emptyMapStats, kdRatio } from '../../utils/statistics';
+import { getRoundName } from '../../utils/tournament';
+export async function getStaticPaths() {
+  return (await getCollection('maps')).map(map => ({ params: { id: map.id }, props: { map } }));
+}
+const { map } = Astro.props;
+const matches = await getCollection('matches');
+const calculated = calculateStatistics(matches);
+const stats = calculated.maps.get(map.id) ?? emptyMapStats();
+const players = new Map((await getCollection('players')).map(p => [p.data.uid || p.id, p]));
+const teams = new Map((await getCollection('teams')).map(t => [t.id, t]));
+const tournaments = new Map((await getCollection('tournaments')).map(t => [t.id, t]));
+const topPlayers = [...stats.players].sort((a, b) => b[1].kills - a[1].kills || a[0].localeCompare(b[0]));
+const teamStats = [...stats.teams].sort((a, b) => b[1].kills - a[1].kills || a[0].localeCompare(b[0]));
+const mapMatches = matches.filter(m => m.data.status === 'completed' && m.data.roundDetails.some(rd => rd.mapId === map.id))
+  .sort((a, b) => b.data.date.localeCompare(a.data.date) || b.id.localeCompare(a.id));
+---
+<Layout title={`${map.data.name} Statistics - CFL Esports ID`} current="Maps">
+  <div class="container">
+    <div class="page-header"><h1>{map.data.name}</h1><p>Map statistics from completed matches</p></div>
+    <a href="/maps">← All Maps</a>
+    <div class="stat-grid section">
+      <div class="stat-box"><div class="stat-value">{stats.mapsPlayed}</div><div class="stat-label">Games Played</div></div>
+      <div class="stat-box"><div class="stat-value">{stats.matchesPlayed}</div><div class="stat-label">Matches</div></div>
+      <div class="stat-box"><div class="stat-value">{stats.playerRounds}</div><div class="stat-label">Player Rounds Recorded</div></div>
+      <div class="stat-box"><div class="stat-value">{stats.mvpCount}</div><div class="stat-label">MVP Awards</div></div>
+    </div>
+    <p class="coverage">K/D/A totals include only entries assigned to this map. A dash in match stats means the map number is unknown or the player did not play that map. {stats.knownResults} of {stats.mapsPlayed} map winners are known. Win rates use known results only: explicit map winners or a 3–0 sweep. Split scores alone do not identify map winners.</p>
+    {stats.mapsPlayed === 0 ? <p class="section">No completed matches recorded on this map yet.</p> : (
+      <>
+        <section class="section"><h2>Player Statistics</h2>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Player</th><th>Recorded Maps</th><th>Kills</th><th>Deaths</th><th>Assists</th><th>K/D</th><th>MVP Awards</th></tr></thead>
+            <tbody>{topPlayers.map(([uid, s]) => {
+              const player = players.get(uid);
+              return <tr><td>{player ? <a href={`/players/${player.id}`}>{player.data.ign}</a> : uid}</td><td>{s.mapsPlayed}</td><td>{s.mapsPlayed ? s.kills : '—'}</td><td>{s.mapsPlayed ? s.deaths : '—'}</td><td>{s.mapsPlayed ? s.assists : '—'}</td><td>{s.mapsPlayed ? kdRatio(s).toFixed(2) : '—'}</td><td>{s.mvpCount}</td></tr>;
+            })}</tbody>
+          </table></div>
+        </section>
+        <section class="section"><h2>Historical Team Statistics</h2>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Team</th><th>Maps Played</th><th>Recorded Kills</th><th>Recorded Deaths</th><th>Recorded Assists</th><th>Known Wins</th><th>Known Losses</th><th>Win Rate (Known Results)</th></tr></thead>
+            <tbody>{teamStats.map(([id, s]) => <tr><td><a href={`/teams/${id}`}>{teams.get(id)?.data.name ?? id}</a></td><td>{s.mapsPlayed}</td><td>{s.kills}</td><td>{s.deaths}</td><td>{s.assists}</td><td>{s.wins}</td><td>{s.losses}</td><td>{s.wins + s.losses > 0 ? `${(100 * s.wins / (s.wins + s.losses)).toFixed(1)}%` : '—'}</td></tr>)}</tbody>
+          </table></div>
+        </section>
+        <section class="section"><h2>Matches on {map.data.name}</h2>
+          <div class="table-wrap"><table>
+            <thead><tr><th>Date</th><th>Tournament</th><th>Round</th><th>Match</th><th>Map Number</th></tr></thead>
+            <tbody>{mapMatches.map(m => <tr>
+              <td>{m.data.date}</td><td><a href={`/tournament/${m.data.tournamentId}`}>{tournaments.get(m.data.tournamentId)?.data.name ?? m.data.tournamentId}</a></td>
+              <td>{getRoundName(m, tournaments)}</td>
+              <td><a href={`/matches/${m.id}`}>{teams.get(m.data.team1Id ?? '')?.data.name ?? 'TBD'} vs {teams.get(m.data.team2Id ?? '')?.data.name ?? 'TBD'}</a></td>
+              <td>{m.data.roundDetails.filter(rd => rd.mapId === map.id).map(rd => rd.round_number).join(', ')}</td>
+            </tr>)}</tbody>
+          </table></div>
+        </section>
+      </>
+    )}
+  </div>
+</Layout>
+<style>.section { margin-top: 1.5rem; margin-bottom: 2rem; } h2 { margin-bottom: 1rem; } .coverage { color: var(--text-secondary); line-height: 1.6; }</style>

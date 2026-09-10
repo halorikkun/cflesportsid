@@ -21,5 +21,66 @@
     "tvj-ghoib",
     "unclex-sederhana"
   ],
-  "winner": "cha-tra-mue"
+  "winner": "cha-tra-mue",
+  "stages": [
+    {
+      "id": "playoffs",
+      "name": "Playoffs",
+      "format": "single-elimination",
+      "bracketSize": 16,
+      "series": {
+        "type": "fixed-maps",
+        "mapCount": 3
+      },
+      "rounds": [
+        {
+          "id": "top-16",
+          "name": "Top 16",
+          "order": 1
+        },
+        {
+          "id": "quarter-final",
+          "name": "Quarter Final",
+          "order": 2
+        },
+        {
+          "id": "semi-final",
+          "name": "Semi Final",
+          "order": 3
+        },
+        {
+          "id": "final",
+          "name": "Final",
+          "order": 5,
+          "placement": 1
+        },
+        {
+          "id": "bronze",
+          "name": "Bronze Match",
+          "order": 4,
+          "placement": 3
+        }
+      ],
+      "byes": [
+        {
+          "id": "bye-1",
+          "roundId": "top-16",
+          "slot": 2,
+          "teamId": "cha-tra-mue"
+        },
+        {
+          "id": "bye-2",
+          "roundId": "top-16",
+          "slot": 6,
+          "teamId": "glory-solidarity"
+        },
+        {
+          "id": "bye-3",
+          "roundId": "top-16",
+          "slot": 8,
+          "teamId": "solidarity"
+        }
+      ]
+    }
+  ]
 }
