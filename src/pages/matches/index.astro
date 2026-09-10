@@ -113,20 +113,20 @@ const rounds = [...new Set(matches.map(m => getRoundName(m, tournamentsMap)))];
             <div class="match-card-score">
               <div class="match-card-team team-a">
                 <img 
-                  src={t1?.data.logo || `/logos/${team1Tag}.png`} 
+                  src={t1?.data.logo || `/logos/${team1Tag}.webp`} 
                   alt={team1Name} 
                   class="team-logo"
-                  onerror="this.onerror=null; this.src='/logos/default.png'"
+                  onerror="this.onerror=null; this.src='/logos/default.webp'"
                 />
                 <span style={`color: ${t1Color};`}>{team1Name}</span>
               </div>
               <span class="vs">{scoreText}</span>
               <div class="match-card-team team-b">
                 <img 
-                  src={t2?.data.logo || `/logos/${team2Tag}.png`} 
+                  src={t2?.data.logo || `/logos/${team2Tag}.webp`} 
                   alt={team2Name} 
                   class="team-logo"
-                  onerror="this.onerror=null; this.src='/logos/default.png'"
+                  onerror="this.onerror=null; this.src='/logos/default.webp'"
                 />
                 <span style={`color: ${t2Color};`}>{team2Name}</span>
               </div>

@@ -13,7 +13,7 @@ const leaders = [{ title: 'Top kills', value: (p: Player) => p.totalKills }, { t
     {metrics.map(metric => { const a = left.reduce((n,p) => n+p[metric.key],0); const b = right.reduce((n,p) => n+p[metric.key],0); return <div class="comparison-row"><strong class:list={[a>b && 'larger']}>{a}</strong><span>{metric.label}</span><strong class:list={[b>a && 'larger']}>{b}</strong></div>; })}
   </section>
   <h2 class="section-title">Match Leaders</h2><div class="match-leaders">
-    {leaders.map(board => { const ranked = [...players].sort((a,b)=>board.value(b)-board.value(a)).slice(0,3); const top=ranked[0]; return <article class="match-leader"><h3>{board.title}</h3>{top && <div class="leader-photo"><img src={top.avatar} alt="" width="100" height="110" onerror="this.onerror=null; this.src='/players/default.png'" /><span>{top.teamTag}</span></div>}{ranked.map((p,i)=><a href={`/players/${p.uid}`} class="leader-entry"><span>{i+1}</span><strong>{p.ign}<small>{p.teamTag}</small></strong><b>{board.title==='Top KDA'?board.value(p).toFixed(2):board.value(p)}</b></a>)}</article>; })}
+    {leaders.map(board => { const ranked = [...players].sort((a,b)=>board.value(b)-board.value(a)).slice(0,3); const top=ranked[0]; return <article class="match-leader"><h3>{board.title}</h3>{top && <div class="leader-photo"><img src={top.avatar} alt="" width="100" height="110" onerror="this.onerror=null; this.src='/players/default.webp'" /><span>{top.teamTag}</span></div>}{ranked.map((p,i)=><a href={`/players/${p.uid}`} class="leader-entry"><span>{i+1}</span><strong>{p.ign}<small>{p.teamTag}</small></strong><b>{board.title==='Top KDA'?board.value(p).toFixed(2):board.value(p)}</b></a>)}</article>; })}
   </div>
 </> : <section class="player-comparison">
   <h2 class="section-title">Player comparison</h2><p class="comparison-help">Compare recorded stats from this match. KDA = (kills + assists) ÷ deaths, using 1 when deaths are zero.</p>
@@ -34,7 +34,7 @@ const leaders = [{ title: 'Top kills', value: (p: Player) => p.totalKills }, { t
         const profile = root.querySelector<HTMLElement>(`[data-compare-profile="${side}"]`)!;
         profile.hidden = !p;
         if(p) {
-          const img=profile.querySelector('img')!; img.onerror=()=>{img.onerror=null;img.src='/players/default.png';}; img.src=p.avatar; img.alt=p.ign;
+          const img=profile.querySelector('img')!; img.onerror=()=>{img.onerror=null;img.src='/players/default.webp';}; img.src=p.avatar; img.alt=p.ign;
           const link=profile.querySelector('a')!; link.textContent=p.ign;link.href=`/players/${encodeURIComponent(p.uid)}`;
           profile.querySelector('span')!.textContent=p.teamTag;
           values[side]=[p.totalKills,p.totalDeaths,p.totalAssists,(p.totalKills+p.totalAssists)/Math.max(p.totalDeaths,1)];

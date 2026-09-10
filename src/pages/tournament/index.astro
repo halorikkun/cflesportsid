@@ -66,7 +66,7 @@ function formatDate(d) {
       {tournaments.map(t => (
         <a href={`/tournament/${t.id}`} class="tourney-card">
           <div class="tourney-header">
-            <div class="tourney-icon"><img src="/icons/trophy.png" alt="" /></div>
+            <div class="tourney-icon"><img src="/icons/trophy.webp" alt="" /></div>
             <h3>{t.name}</h3>
           </div>
           
@@ -86,7 +86,7 @@ function formatDate(d) {
           
           {t.winner && (
             <div class="tourney-winner">
-              <span class="winner-icon"><img src="/icons/gold-medal.png" alt="" /></span> 
+              <span class="winner-icon"><img src="/icons/gold-medal.webp" alt="" /></span> 
               <span>Champion: <strong>{t.winner.data.name}</strong></span>
             </div>
           )}

@@ -54,7 +54,7 @@ const initial = team.data.name.charAt(0).toUpperCase();
   <div class="container">
     
     <section class="profile-banner" aria-label="Team overview">
-      <div class="profile-identity"><img class="profile-image team-image" src={team.data.logo || `/logos/${team.data.tag}.png`} alt={team.data.name} width="160" height="160" onerror="this.onerror=null; this.src='/logos/default.png'" />
+      <div class="profile-identity"><img class="profile-image team-image" src={team.data.logo || `/logos/${team.data.tag}.webp`} alt={team.data.name} width="160" height="160" onerror="this.onerror=null; this.src='/logos/default.webp'" />
         <div><p class="profile-kicker">{team.data.region === 'ID' ? 'Indonesia' : team.data.region}</p><h1>{team.data.name}</h1><p class="profile-subtitle">{team.data.tag}</p></div>
       </div>
       <dl class="profile-metrics"><div><dt>Current position</dt><dd>#{currentPosition}</dd></div><div><dt>Matches played</dt><dd>{matchesPlayed}</dd></div><div><dt>Wins</dt><dd>{wins}</dd></div><div><dt>Total kills</dt><dd>{totalKills}</dd></div></dl>
@@ -84,7 +84,7 @@ const initial = team.data.name.charAt(0).toUpperCase();
     <div class="roster-detail-grid section-spacing">
       {teamPlayers.map(player => (
         <a href={`/players/${player.id}`} class="roster-card">
-          <img class="avatar" src={player.data.avatar || '/players/default.png'} alt={`${player.data.ign} photo`} loading="lazy" onerror="this.onerror=null; this.src='/players/default.png'" style="object-fit:cover;" />
+          <img class="avatar" src={player.data.avatar || '/players/default.webp'} alt={`${player.data.ign} photo`} loading="lazy" onerror="this.onerror=null; this.src='/players/default.webp'" style="object-fit:cover;" />
           <div class="roster-card-info">
             <strong>{player.data.ign}</strong>
             <span>{player.data.role || 'Player'}</span>

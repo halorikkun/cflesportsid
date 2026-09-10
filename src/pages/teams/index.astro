@@ -80,7 +80,7 @@ const teams = (await getCollection('teams')).map(team => {
           data-kills={team.totalKills}
         >
           <div class="club-identity">
-            <img src={team.logo || `/logos/${team.tag}.png`} alt="" width="64" height="64" onerror="this.onerror=null; this.src='/logos/default.png'" />
+            <img src={team.logo || `/logos/${team.tag}.webp`} alt="" width="64" height="64" onerror="this.onerror=null; this.src='/logos/default.webp'" />
             <h2>{team.name}</h2>
           </div>
           <div class="club-meta"><strong>{team.tag}</strong><span>{team.region === 'ID' ? 'Indonesia' : team.region}</span></div>

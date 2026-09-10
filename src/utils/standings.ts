@@ -17,6 +17,6 @@ export function getOverallStandings(teams: CollectionEntry<'teams'>[], matches: 
       else if (bronze && [bronze.data.team1Id, bronze.data.team2Id].includes(team.id)) placementPoints += 2;
     }
     const killPoints = statistics.teams.get(team.id)?.kills ?? 0;
-    return { id: team.id, name: team.data.name, tag: team.data.tag, logo: team.data.logo || `/logos/${team.data.tag}.png`, killPoints, placementPoints, totalScore: killPoints + placementPoints, isTournamentWinner };
+    return { id: team.id, name: team.data.name, tag: team.data.tag, logo: team.data.logo || `/logos/${team.data.tag}.webp`, killPoints, placementPoints, totalScore: killPoints + placementPoints, isTournamentWinner };
   }).sort((a, b) => b.totalScore - a.totalScore);
 }

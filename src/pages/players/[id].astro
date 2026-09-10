@@ -61,7 +61,7 @@ playerMatches.forEach(m => {
   <div class="container">
 
     <section class="profile-banner" aria-label="Player overview">
-      <div class="profile-identity"><img class="profile-image" src={player.data.avatar || '/players/default.png'} alt={`${player.data.ign} photo`} width="160" height="160" onerror="this.onerror=null; this.src='/players/default.png'" />
+      <div class="profile-identity"><img class="profile-image" src={player.data.avatar || '/players/default.webp'} alt={`${player.data.ign} photo`} width="160" height="160" onerror="this.onerror=null; this.src='/players/default.webp'" />
         <div><p class="profile-kicker">{team ? <a href={`/teams/${team.id}`}>{team.data.name} ({team.data.tag})</a> : 'No current team'}</p><h1>{player.data.ign}</h1><p class="profile-subtitle"><span class="profile-active">Active</span></p></div>
       </div>
       <dl class="profile-metrics"><div><dt>Matches played</dt><dd>{matchesPlayed}</dd></div><div><dt>Total kills</dt><dd>{careerStats.kills}</dd></div><div><dt>K/D ratio</dt><dd>{kd}</dd></div><div><dt>MVP awards</dt><dd>{mvpCount}</dd></div></dl>
@@ -205,7 +205,7 @@ playerMatches.forEach(m => {
       </div>
     )}
 
-    {teammates.length > 0 && <section class="section-spacing"><h2 class="section-title">Teammates</h2><div class="teammate-grid">{teammates.map(p=><a class="teammate-card" href={`/players/${p.id}`}><img src={p.data.avatar || '/players/default.png'} alt="" width="48" height="48" loading="lazy" onerror="this.onerror=null;this.src='/players/default.png'" /><span><strong>{p.data.ign}</strong><small>{p.data.role || 'Player'}</small></span><span class="badge badge-completed">Active</span></a>)}</div></section>}
+    {teammates.length > 0 && <section class="section-spacing"><h2 class="section-title">Teammates</h2><div class="teammate-grid">{teammates.map(p=><a class="teammate-card" href={`/players/${p.id}`}><img src={p.data.avatar || '/players/default.webp'} alt="" width="48" height="48" loading="lazy" onerror="this.onerror=null;this.src='/players/default.webp'" /><span><strong>{p.data.ign}</strong><small>{p.data.role || 'Player'}</small></span><span class="badge badge-completed">Active</span></a>)}</div></section>}
   </div>
 </Layout>
 

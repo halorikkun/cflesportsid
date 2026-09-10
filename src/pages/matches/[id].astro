@@ -89,7 +89,7 @@ const playerStats = (m.data.playerStats || [])
     const rounds = ps.rounds || [];
     return {
       uid: ps.uid,
-      avatar: player?.data.avatar || '/players/default.png',
+      avatar: player?.data.avatar || '/players/default.webp',
       ign: player ? player.data.ign : (ps.ign || ps.uid),
       teamName: team ? team.data.name : '—',
       teamTag: team ? team.data.tag : '—',
@@ -145,10 +145,10 @@ const roundMVPs = numRounds > 0 ? Array.from({ length: numRounds }, (_, i) => ge
     <div class="match-detail-scoreboard">
       <div class="match-detail-team">
         <img 
-          src={t1?.data.logo || `/logos/${team1Tag}.png`} 
+          src={t1?.data.logo || `/logos/${team1Tag}.webp`} 
           alt={team1Name} 
           class="team-logo-large"
-          onerror="this.onerror=null; this.src='/logos/default.png'"
+          onerror="this.onerror=null; this.src='/logos/default.webp'"
         />
         <a href={team1Id ? `/teams/${team1Id}` : undefined} style={`color: ${t1Color};`}>{team1Name}</a>
         <span class="tag">[{team1Tag}]</span>
@@ -158,10 +158,10 @@ const roundMVPs = numRounds > 0 ? Array.from({ length: numRounds }, (_, i) => ge
       </div>
       <div class="match-detail-team">
         <img 
-          src={t2?.data.logo || `/logos/${team2Tag}.png`} 
+          src={t2?.data.logo || `/logos/${team2Tag}.webp`} 
           alt={team2Name} 
           class="team-logo-large"
-          onerror="this.onerror=null; this.src='/logos/default.png'"
+          onerror="this.onerror=null; this.src='/logos/default.webp'"
         />
         <a href={team2Id ? `/teams/${team2Id}` : undefined} style={`color: ${t2Color};`}>{team2Name}</a>
         <span class="tag">[{team2Tag}]</span>

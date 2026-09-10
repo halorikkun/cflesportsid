@@ -128,30 +128,30 @@ const teamName = id => teams.find(t => t.id === id)?.data.name ?? id ?? 'TBD';
         <div class="section-heading"><div><span class="eyebrow">OVERALL RANKINGS</span><h2 id="standings-title">Team standings</h2></div><span class="count-badge">{totalTeams} teams</span></div>
         <div class="standings-scroll" tabindex="0" role="region" aria-label="Team standings, scroll horizontally on small screens">
           <table class="standings-table"><thead><tr><th scope="col">Rank</th><th scope="col">Team</th><th scope="col">Kills</th><th scope="col">Placement</th><th scope="col">Total</th></tr></thead><tbody>
-            {standings.map((team, index) => <tr class:list={[index < 4 ? 'top-four' : index < 10 ? 'top-ten' : '']}><td class="position">{String(index + 1).padStart(2, '0')}</td><td><a class="team-identity" href={`/teams/${team.id}`}><img src={team.logo} width="34" height="34" alt="" onerror="this.onerror=null; this.src='/logos/default.png'" /><span>{team.name}<small class="mobile-points">{team.killPoints} kills · {team.placementPoints} placement</small>{team.isTournamentWinner && (
+            {standings.map((team, index) => <tr class:list={[index < 4 ? 'top-four' : index < 10 ? 'top-ten' : '']}><td class="position">{String(index + 1).padStart(2, '0')}</td><td><a class="team-identity" href={`/teams/${team.id}`}><img src={team.logo} width="34" height="34" alt="" onerror="this.onerror=null; this.src='/logos/default.webp'" /><span>{team.name}<small class="mobile-points">{team.killPoints} kills · {team.placementPoints} placement</small>{team.isTournamentWinner && (
               <small class="qualified-label">
-                <img src="/icons/crown.png" alt="" class="inline-icon" />
+                <img src="/icons/crown.webp" alt="" class="inline-icon" />
                 Qualified · Tournament winner
               </small>
             )}</span></a></td><td>{team.killPoints}</td><td>{team.placementPoints}</td><td class="total-points">{team.totalScore}</td></tr>)}
           </tbody></table>
         </div>
-        <p class="table-note"><img src="/icons/crown.png" alt="" class="inline-icon" /> Tournament winners qualify automatically. All-Star has 10 spots total; remaining spots are decided by standings placement. Repeat winners count once. Standings places remain provisional until all four monthly tournaments are complete.</p>
+        <p class="table-note"><img src="/icons/crown.webp" alt="" class="inline-icon" /> Tournament winners qualify automatically. All-Star has 10 spots total; remaining spots are decided by standings placement. Repeat winners count once. Standings places remain provisional until all four monthly tournaments are complete.</p>
       </section>
     </div>
     <div class="section-heading below-heading"><div><span class="eyebrow">INDIVIDUAL PERFORMANCE</span><h2>Players making the difference</h2></div><a href="/players">All players ↗</a></div>
     <section class="leaderboards" aria-label="Player leaders">
-      {leaderboards.map(board => <article class="leaderboard"><div class="board-heading"><h3>{board.title}</h3><span>{board.label}</span></div>{board.entries.map(({player, value}, index) => <a class:list={['player-row', index < 3 && `medal-${index + 1}`]} href={`/players/${player.id}`}><span class="player-rank">{index + 1}</span><img src={player.data.avatar || '/players/default.png'} alt="" width="42" height="42" loading="lazy" onerror="this.onerror=null; this.src='/players/default.png'" /><span class="player-name">{player.data.ign}<small>{teamName(player.data.team)}</small></span><strong>{value}</strong></a>)}{board.entries.length === 0 && <p class="empty-copy">No recorded awards yet.</p>}</article>)}
+      {leaderboards.map(board => <article class="leaderboard"><div class="board-heading"><h3>{board.title}</h3><span>{board.label}</span></div>{board.entries.map(({player, value}, index) => <a class:list={['player-row', index < 3 && `medal-${index + 1}`]} href={`/players/${player.id}`}><span class="player-rank">{index + 1}</span><img src={player.data.avatar || '/players/default.webp'} alt="" width="42" height="42" loading="lazy" onerror="this.onerror=null; this.src='/players/default.webp'" /><span class="player-name">{player.data.ign}<small>{teamName(player.data.team)}</small></span><strong>{value}</strong></a>)}{board.entries.length === 0 && <p class="empty-copy">No recorded awards yet.</p>}</article>)}
     </section>
     <div class="bottom-grid">
       <section class="bottom-panel"><div class="section-heading"><h2>Tournament winners</h2><a href="/tournament">View all ↗</a></div>
         {tournaments.filter(t => t.winnerTeams.length).map(t => <article class="winner-event"><a class="event-name" href={`/tournament/${t.id}`}>{t.name} ↗</a>{t.winnerTeams.map(w => <a class:list={['podium-row', `medal-${w.place}`]} href={`/teams/${w.team.id}`}><span class="podium-place"><img
           src={
             w.place === 1
-              ? '/icons/gold-medal.png'
+              ? '/icons/gold-medal.webp'
               : w.place === 2
-              ? '/icons/silver-medal.png'
-              : '/icons/bronze-medal.png'
+              ? '/icons/silver-medal.webp'
+              : '/icons/bronze-medal.webp'
           }
           alt=""
           class="podium-icon"
