@@ -1,4 +1,6 @@
 ---
+import scrimSettings from '../data/veto/scrim.json';
+import { resolveVeto } from '../utils/veto';
 import Layout from '../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
 import { getRoundName, getParticipantLabel } from '../utils/tournament';
@@ -9,19 +11,15 @@ const teamsMap = await getTeamMap();
 const tournamentsMap = await getTournamentMap();
 const mapsMap = await getMapMap();
 
-// Preserve the competitive pool and its display order using canonical IDs.
-const poolIds = [
-  'desert', 'sub-base', 'satellite', 'island',
-  'ankara', 'eagle-eye', 'power-supply', 'greece',
-  'black-widow', 'port'
-];
-const MAPS = poolIds.map(id => {
-  const map = mapsMap.get(id);
-  if (!map) throw new Error(`Missing veto map: ${id}`);
-  return { id: map.id, name: map.data.name };
-});
+const vetoConfigs = new Map();
+for (const tournament of tournamentsMap.values()) {
+  for (const stage of tournament.data.stages) {
+    vetoConfigs.set(`${tournament.id}:${stage.id}`, resolveVeto(stage, mapsMap));
+  }
+}
 
-const matchData = matches.map(m => {
+const scrimVeto = resolveVeto(scrimSettings as Parameters<typeof resolveVeto>[0], mapsMap);
+const matchData = matches.filter(m => m.data.status === 'upcoming').map(m => {
   const team1Id = getMatchTeam1Id(m);
   const team2Id = getMatchTeam2Id(m);
   const tournamentId = getMatchTournamentId(m);
@@ -30,6 +28,8 @@ const matchData = matches.map(m => {
   const tournament = tournamentId ? tournamentsMap.get(tournamentId) : undefined;
   return {
     id: m.id,
+    stageId: m.data.stageId,
+    veto: vetoConfigs.get(`${tournamentId}:${m.data.stageId}`),
     tournamentId,
     tournament: tournament?.data.name ?? tournamentId ?? 'TBD',
     round: getRoundName(m, tournamentsMap),
@@ -44,17 +44,34 @@ const matchData = matches.map(m => {
   <div class="container">
     <div class="page-header">
       <h1>Map Veto Tool</h1>
-      <p>Select a match and run the map veto process</p>
+      <p>Choose an upcoming match or enter teams for a scrim</p>
     </div>
 
     <div class="veto-select-wrap">
+      <label for="veto-mode">Veto mode</label>
+      <select id="veto-mode" class="veto-select">
+        <option value="match">Upcoming match</option>
+        <option value="scrim">Scrim</option>
+      </select>
+      <div id="match-controls">
+      <label for="match-select">Upcoming match</label>
       <select id="match-select" class="veto-select">
-        <option value="">— Select a match —</option>
+        <option value="">— Select an upcoming match —</option>
         {matchData.map(m => (
-          <option value={m.id}>{m.tournament} · {m.round} · {m.team1.name} vs {m.team2.name}</option>
+          <option value={m.id} disabled={!m.veto || !m.team1.id || !m.team2.id}>{m.tournament} · {m.round} · {m.team1.name} vs {m.team2.name}</option>
         ))}
       </select>
+      {matchData.length === 0 && <p>No upcoming matches. Choose Scrim to start a veto.</p>}
+      </div>
     </div>
+
+    <form id="scrim-form" style="display:none;" class="veto-select-wrap">
+      <label for="scrim-a">Team A name</label>
+      <input id="scrim-a" class="veto-select" required maxlength="60" placeholder="Team A" />
+      <label for="scrim-b">Team B name</label>
+      <input id="scrim-b" class="veto-select" required maxlength="60" placeholder="Team B" />
+      <button class="veto-btn" type="submit">Start scrim veto</button>
+    </form>
 
     <div class="veto-toast" id="veto-toast" role="alert" aria-live="polite"></div>
 
@@ -105,11 +122,11 @@ const matchData = matches.map(m => {
             <span class="timer-value" id="pick-timer-value">20s</span>
           </div>
           <div class="timer-block">
-            <span class="timer-label">Reserve</span>
+            <span class="timer-label" id="reserve-label">Reserve</span>
             <div class="timer-bar-wrap">
               <div class="timer-bar reserve" id="reserve-timer-bar"></div>
             </div>
-            <span class="timer-value" id="reserve-timer-value">120s</span>
+            <span class="timer-value" id="reserve-timer-value">90s</span>
           </div>
         </div>
         <div class="timer-status" id="timer-status"></div>
@@ -120,11 +137,11 @@ const matchData = matches.map(m => {
     </div>
 
     <div id="veto-wheel-section" style="display:none;">
-      <h2 class="wheel-title">Decider Map — Spin the Wheel!</h2>
-      <p class="wheel-subtitle">Remaining maps go into the wheel. The one it lands on will be the decider.</p>
+      <h2 class="wheel-title">Map 3 — Spin the Wheel!</h2>
+      <p class="wheel-subtitle">Remaining maps go into the wheel. The one it lands on will be map 3. All three maps are played.</p>
       <div class="wheel-container">
         <div class="wheel-pointer" aria-hidden="true"></div>
-        <canvas id="wheel-canvas" width="320" height="320" aria-label="Spinning wheel for decider map"></canvas>
+        <canvas id="wheel-canvas" width="320" height="320" aria-label="Spinning wheel for map 3"></canvas>
       </div>
       <button id="spin-btn" class="veto-btn wheel-btn">🎡 Spin the Wheel</button>
     </div>
@@ -145,22 +162,26 @@ const matchData = matches.map(m => {
 </Layout>
 
 <!-- Data passed to inline script -->
-<script type="application/json" id="match-data" set:html={JSON.stringify(matchData)} />
-<script type="application/json" id="maps-data" set:html={JSON.stringify(MAPS)} />
+<script type="application/json" id="match-data" set:html={JSON.stringify(matchData).replace(/</g, '\\u003c')} />
+
+
+<script type="application/json" id="scrim-data" set:html={JSON.stringify(scrimVeto).replace(/</g, '\\u003c')} />
 
 <style is:global>
+  .veto-select-wrap label { display:block; margin:0.75rem 0 0.4rem; }
+  #scrim-form button { display:block; margin-top:1rem; }
   /* ===== Core Layout & Select ===== */
   .veto-select-wrap { margin-bottom: 2rem; }
   .veto-select {
     width: 100%; max-width: 500px;
-    background: var(--bg-card, #1a1f2e); 
-    border: 1px solid var(--border, #2a3142);
+    background: var(--bg-card, #252528); 
+    border: 1px solid var(--border, #36363a);
     color: var(--text-primary, #e4e7eb);
     padding: 0.75rem 1rem; border-radius: var(--radius, 8px);
     font-size: 0.95rem; font-weight: 600; cursor: pointer;
     transition: border-color 0.2s;
   }
-  .veto-select:focus { outline: none; border-color: var(--accent, #ff4d2e); }
+  .veto-select:focus { outline: none; border-color: var(--accent, #ff742e); }
 
   /* ===== Team Banners ===== */
   .veto-teams {
@@ -213,7 +234,7 @@ const matchData = matches.map(m => {
   }
   .pick-card.team-a .pick-team-tag { color: #60a5fa; }
   .pick-card.team-b .pick-team-tag { color: #fb923c; }
-  .pick-card-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted, #6b7280); }
+  .pick-card-label { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted, #6b7280); }
   .pick-map-name { font-size: 1.4rem; font-weight: 800; margin-bottom: 0.4rem; color: var(--text-primary, #e4e7eb); }
   .pick-card.team-a.filled .pick-map-name { color: #60a5fa; }
   .pick-card.team-b.filled .pick-map-name { color: #fb923c; }
@@ -231,7 +252,7 @@ const matchData = matches.map(m => {
     display: flex; align-items: center; gap: 0.4rem;
     padding: 0.5rem 0.8rem; border-radius: 8px;
     font-size: 0.8rem; font-weight: 600;
-    border: 1px solid var(--border, #2a3142); background: var(--bg-card, #1a1f2e);
+    border: 1px solid var(--border, #36363a); background: var(--bg-card, #252528);
     color: var(--text-primary, #e4e7eb);
     transition: all 0.2s;
   }
@@ -239,8 +260,8 @@ const matchData = matches.map(m => {
   .veto-step.team-b { border-color: rgba(249,115,22,0.3); background: rgba(249,115,22,0.06); }
   .veto-step.active {
     transform: scale(1.05);
-    box-shadow: 0 0 0 2px var(--accent, #ff4d2e);
-    border-color: var(--accent, #ff4d2e);
+    box-shadow: 0 0 0 2px var(--accent, #ff742e);
+    border-color: var(--accent, #ff742e);
     z-index: 2;
   }
   .veto-step.done { opacity: 0.5; filter: grayscale(0.5); }
@@ -250,8 +271,8 @@ const matchData = matches.map(m => {
   .veto-step .step-action { color: #9ca3af; font-size: 0.75rem; padding: 0.1rem 0.35rem; border-radius: 4px; background: rgba(255,255,255,0.04); }
   .veto-step .step-action.ban { color: #ef4444; }
   .veto-step .step-action.pick { color: #22c55e; }
-  .veto-step .step-map { color: var(--accent, #ff4d2e); font-weight: 700; }
-  .veto-step .step-void { color: #ef4444; font-weight: 700; font-size: 0.7rem; }
+  .veto-step .step-map { color: var(--accent, #ff742e); font-weight: 700; }
+  .veto-step .step-void { color: #ef4444; font-weight: 700; font-size: 0.8rem; }
 
   .veto-action-prompt {
     text-align: center; margin-bottom: 1.5rem;
@@ -262,10 +283,10 @@ const matchData = matches.map(m => {
   .veto-action-prompt .prompt-team { font-size: 1.25rem; }
   .veto-action-prompt .prompt-team.a { color: #60a5fa; }
   .veto-action-prompt .prompt-team.b { color: #fb923c; }
-  .veto-action-prompt .prompt-action { color: var(--accent, #ff4d2e); }
+  .veto-action-prompt .prompt-action { color: var(--accent, #ff742e); }
 
   /* ===== Timer ===== */
-  .veto-timer { margin-bottom: 2rem; padding: 1rem; background: var(--bg-card, #1a1f2e); border-radius: var(--radius, 8px); border: 1px solid var(--border, #2a3142); }
+  .veto-timer { margin-bottom: 2rem; padding: 1rem; background: var(--bg-card, #252528); border-radius: var(--radius, 8px); border: 1px solid var(--border, #36363a); }
   .timer-row { display: flex; gap: 1.5rem; justify-content: center; flex-wrap: wrap; }
   .timer-block { display: flex; align-items: center; gap: 0.75rem; flex: 1; max-width: 280px; min-width: 180px; }
   .timer-label { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-muted, #6b7280); white-space: nowrap; width: 60px; }
@@ -294,8 +315,8 @@ const matchData = matches.map(m => {
     margin-bottom: 2rem;
   }
   .veto-map-card {
-    background: var(--bg-card, #1a1f2e);
-    border: 2px solid var(--border, #2a3142);
+    background: var(--bg-card, #252528);
+    border: 2px solid var(--border, #36363a);
     border-radius: var(--radius, 8px);
     padding: 1.25rem 1rem;
     cursor: pointer;
@@ -309,7 +330,7 @@ const matchData = matches.map(m => {
     font-family: inherit;
   }
   .veto-map-card:focus-visible {
-    outline: 2px solid var(--accent, #ff4d2e);
+    outline: 2px solid var(--accent, #ff742e);
     outline-offset: 2px;
   }
   .veto-maps.turn-a .veto-map-card:hover:not(.banned):not(.picked):not(.disabled) {
@@ -331,7 +352,7 @@ const matchData = matches.map(m => {
   
   .veto-map-name { font-weight: 700; font-size: 1.05rem; color: var(--text-primary, #e4e7eb); }
   .veto-map-card.banned .veto-map-name { text-decoration: line-through; opacity: 0.6; }
-  .veto-map-status { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
+  .veto-map-status { font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
   .veto-map-card.banned .veto-map-status { color: #ef4444; }
   .veto-map-card.picked .veto-map-status { color: #22c55e; }
   .veto-map-card.decider .veto-map-status { color: #facc15; }
@@ -341,18 +362,18 @@ const matchData = matches.map(m => {
 
   /* ===== Buttons ===== */
   .veto-btn {
-    background: var(--accent, #ff4d2e); color: #fff; border: none;
+    background: var(--accent, #ff742e); color: #fff; border: none;
     padding: 0.75rem 1.75rem; border-radius: var(--radius, 8px);
     font-size: 1rem; font-weight: 700; cursor: pointer;
     transition: background 0.2s, transform 0.1s;
   }
-  .veto-btn:hover { background: var(--accent-hover, #ff6b50); }
+  .veto-btn:hover { background: var(--accent-hover, #ff955f); }
   .veto-btn:active { transform: scale(0.98); }
   .veto-btn:disabled { opacity: 0.5; cursor: not-allowed; }
   .veto-btn-secondary {
-    background: var(--bg-card, #1a1f2e); color: var(--text-primary, #e4e7eb); border: 1px solid var(--border, #2a3142);
+    background: var(--bg-card, #252528); color: var(--text-primary, #e4e7eb); border: 1px solid var(--border, #36363a);
   }
-  .veto-btn-secondary:hover { border-color: var(--accent, #ff4d2e); background: var(--bg-card-hover, #222938); }
+  .veto-btn-secondary:hover { border-color: var(--accent, #ff742e); background: var(--bg-card-hover, #2d2d31); }
 
   /* ===== Toast ===== */
   .veto-toast {
@@ -377,7 +398,7 @@ const matchData = matches.map(m => {
     position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
     width: 0; height: 0;
     border-left: 14px solid transparent; border-right: 14px solid transparent;
-    border-top: 24px solid var(--accent, #ff4d2e);
+    border-top: 24px solid var(--accent, #ff742e);
     z-index: 10; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
   }
   #wheel-canvas {
@@ -393,17 +414,17 @@ const matchData = matches.map(m => {
   .result-map-card {
     display: flex; align-items: center; gap: 1rem;
     padding: 1.25rem 1.5rem; border-radius: var(--radius, 8px);
-    background: var(--bg-card, #1a1f2e);
-    border: 1px solid var(--border, #2a3142);
-    border-left: 4px solid var(--border, #2a3142);
+    background: var(--bg-card, #252528);
+    border: 1px solid var(--border, #36363a);
+    border-left: 4px solid var(--border, #36363a);
     transition: all 0.2s;
     color: var(--text-primary, #e4e7eb);
   }
   .result-map-card:hover { transform: translateX(4px); box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
-  .result-map-card.team-a-pick { border-left-color: #3b82f6; background: linear-gradient(90deg, rgba(59,130,246,0.08), var(--bg-card, #1a1f2e) 60%); }
-  .result-map-card.team-b-pick { border-left-color: #f97316; background: linear-gradient(90deg, rgba(249,115,22,0.08), var(--bg-card, #1a1f2e) 60%); }
-  .result-map-card.decider { border-color: rgba(250,204,21,0.3); border-left: 4px solid #facc15; background: linear-gradient(90deg, rgba(250,204,21,0.08), var(--bg-card, #1a1f2e) 60%); }
-  .result-map-card.voided-pick { border-left-color: #ef4444; opacity: 0.75; background: linear-gradient(90deg, rgba(239,68,68,0.08), var(--bg-card, #1a1f2e) 60%); }
+  .result-map-card.team-a-pick { border-left-color: #3b82f6; background: linear-gradient(90deg, rgba(59,130,246,0.08), var(--bg-card, #252528) 60%); }
+  .result-map-card.team-b-pick { border-left-color: #f97316; background: linear-gradient(90deg, rgba(249,115,22,0.08), var(--bg-card, #252528) 60%); }
+  .result-map-card.decider { border-color: rgba(250,204,21,0.3); border-left: 4px solid #facc15; background: linear-gradient(90deg, rgba(250,204,21,0.08), var(--bg-card, #252528) 60%); }
+  .result-map-card.voided-pick { border-left-color: #ef4444; opacity: 0.75; background: linear-gradient(90deg, rgba(239,68,68,0.08), var(--bg-card, #252528) 60%); }
   .result-map-card.voided-pick .result-map-name { color: #ef4444; }
   .result-map-card.voided-pick .result-map-num { background: rgba(239,68,68,0.15); color: #ef4444; }
   
@@ -411,7 +432,7 @@ const matchData = matches.map(m => {
     width: 44px; height: 44px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
     font-weight: 800; font-size: 1.15rem; flex-shrink: 0;
-    background: rgba(255,77,46,0.15); color: var(--accent, #ff4d2e);
+    background: rgba(255,77,46,0.15); color: var(--accent, #ff742e);
   }
   .result-map-card.team-a-pick .result-map-num { background: rgba(59,130,246,0.15); color: #60a5fa; }
   .result-map-card.team-b-pick .result-map-num { background: rgba(249,115,22,0.15); color: #fb923c; }
@@ -465,26 +486,15 @@ const matchData = matches.map(m => {
 <script is:inline>
   (function() {
     const matchData = JSON.parse(document.getElementById('match-data').textContent);
-    const mapData = JSON.parse(document.getElementById('maps-data').textContent);
-    const MAPS = mapData.map(map => map.id);
-    const mapNames = new Map(mapData.map(map => [map.id, map.name]));
+    let MAPS = [];
+    let mapNames = new Map();
     const mapName = id => mapNames.get(id) ?? id ?? '—';
+    let PICK_TIME = 20;
+    let RESERVE_TIME = 90;
+    let VETO_STEPS = [];
+    let spinTimeout = null;
 
-    const PICK_TIME = 20;
-    const RESERVE_TIME = 120;
-
-    const VETO_STEPS = [
-      { team: 'A', action: 'ban' },
-      { team: 'B', action: 'ban' },
-      { team: 'A', action: 'ban' },
-      { team: 'B', action: 'ban' },
-      { team: 'A', action: 'pick' },
-      { team: 'B', action: 'pick' },
-      { team: 'A', action: 'ban' },
-      { team: 'B', action: 'ban' },
-    ];
-
-    const WHEEL_COLORS = ['#ff4d2e','#3b82f6','#22c55e','#eab308','#a855f7','#ec4899','#06b6d4','#f97316'];
+    const WHEEL_COLORS = ['#ff742e','#3b82f6','#22c55e','#eab308','#a855f7','#ec4899','#06b6d4','#f97316'];
 
     let state = {
       matchId: null, match: null, currentStep: 0,
@@ -492,17 +502,34 @@ const matchData = matches.map(m => {
       picks: { A: null, B: null, decider: null },
       voidedPicks: { A: false, B: false },
       phase: 'select',
-      pickTimer: PICK_TIME, reserveTimer: RESERVE_TIME,
+      pickTimer: PICK_TIME, reserveTimer: { A: RESERVE_TIME, B: RESERVE_TIME },
       timerPhase: null, timerInterval: null,
     };
 
+    const escapeHTML = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
     const $ = id => document.getElementById(id);
 
     function init() {
       $('match-select').addEventListener('change', onMatchSelect);
+      $('veto-mode').addEventListener('change', () => {
+        resetVeto();
+        const scrim = $('veto-mode').value === 'scrim';
+        $('match-controls').style.display = scrim ? 'none' : '';
+        $('scrim-form').style.display = scrim ? '' : 'none';
+      });
+      $('scrim-form').addEventListener('submit', event => {
+        event.preventDefault();
+        const a = $('scrim-a').value.trim(), b = $('scrim-b').value.trim();
+        if (!a || !b) { showToast('Enter both team names.'); return; }
+        startSession({ id: 'scrim', tournament: 'Scrim', round: 'Fixed 3 maps',
+          veto: JSON.parse($('scrim-data').textContent),
+          team1: { id: 'A', name: a, tag: 'A' }, team2: { id: 'B', name: b, tag: 'B' } });
+      });
       $('spin-btn').addEventListener('click', spinWheel);
       $('copy-btn').addEventListener('click', copyResult);
       $('reset-btn').addEventListener('click', resetVeto);
+      const matchId = new URLSearchParams(location.search).get('match');
+      if (matchId) onMatchSelect({ target: { value: matchId } });
     }
 
     function startTimer() {
@@ -522,11 +549,13 @@ const matchData = matches.map(m => {
     }
 
     function tick() {
+      const team = VETO_STEPS[state.currentStep]?.team;
+      if (!team) return;
       if (state.timerPhase === 'pick') {
         state.pickTimer--;
         if (state.pickTimer <= 0) {
           state.pickTimer = 0;
-          if (state.reserveTimer > 0) {
+          if (state.reserveTimer[team] > 0) {
             state.timerPhase = 'reserve';
           } else {
             voidCurrentStep();
@@ -534,9 +563,9 @@ const matchData = matches.map(m => {
           }
         }
       } else if (state.timerPhase === 'reserve') {
-        state.reserveTimer--;
-        if (state.reserveTimer <= 0) {
-          state.reserveTimer = 0;
+        state.reserveTimer[team]--;
+        if (state.reserveTimer[team] <= 0) {
+          state.reserveTimer[team] = 0;
           voidCurrentStep();
           return;
         }
@@ -549,6 +578,14 @@ const matchData = matches.map(m => {
       const step = VETO_STEPS[state.currentStep];
       if (!step) return;
       const teamName = step.team === 'A' ? state.match.team1.name : state.match.team2.name;
+
+      if (step.action === 'pick') {
+        const available = getRemainingMaps();
+        const map = available[Math.floor(Math.random() * available.length)];
+        onMapClick(map, true);
+        showToast(`⏱️ Time up — ${teamName} randomly picks ${mapName(map)}`);
+        return;
+      }
 
       state.vetoHistory.push({ map: null, team: step.team, action: step.action, voided: true });
       if (step.action === 'pick') state.voidedPicks[step.team] = true;
@@ -579,11 +616,13 @@ const matchData = matches.map(m => {
       pickBar.className = 'timer-bar ' + getTimerColorClass(pickPct, state.timerPhase === 'pick');
       $('pick-timer-value').textContent = state.pickTimer + 's';
 
-      const reservePct = (state.reserveTimer / RESERVE_TIME) * 100;
+      const team = VETO_STEPS[state.currentStep].team;
+      $('reserve-label').textContent = `Reserve ${team}`;
+      const reservePct = (state.reserveTimer[team] / RESERVE_TIME) * 100;
       const reserveBar = $('reserve-timer-bar');
       reserveBar.style.width = reservePct + '%';
       reserveBar.className = 'timer-bar reserve ' + getTimerColorClass(reservePct, state.timerPhase === 'reserve');
-      $('reserve-timer-value').textContent = state.reserveTimer + 's';
+      $('reserve-timer-value').textContent = state.reserveTimer[team] + 's';
 
       const status = $('timer-status');
       if (state.timerPhase === 'pick') {
@@ -619,15 +658,26 @@ const matchData = matches.map(m => {
 
     function onMatchSelect(e) {
       const id = e.target.value;
-      if (!id) return;
-      stopTimer();
+      startSession(matchData.find(m => m.id === id));
+    }
+
+    function startSession(selected) {
+      resetVeto();
+      const id = selected?.id;
+      if (!selected?.veto || !selected.team1.id || !selected.team2.id) return;
+      $('match-select').value = id;
+      MAPS = selected.veto.maps.map(map => map.id);
+      mapNames = new Map(selected.veto.maps.map(map => [map.id, map.name]));
+      VETO_STEPS = selected.veto.steps;
+      PICK_TIME = selected.veto.actionSeconds;
+      RESERVE_TIME = selected.veto.reserveSeconds;
       state = {
         matchId: id,
-        match: matchData.find(m => m.id === id),
+        match: selected,
         currentStep: 0, mapStates: {}, vetoHistory: [],
         picks: { A: null, B: null, decider: null },
         voidedPicks: { A: false, B: false },
-        phase: 'veto', pickTimer: PICK_TIME, reserveTimer: RESERVE_TIME,
+        phase: 'veto', pickTimer: PICK_TIME, reserveTimer: { A: RESERVE_TIME, B: RESERVE_TIME },
         timerPhase: null, timerInterval: null,
       };
       MAPS.forEach(m => state.mapStates[m] = 'available');
@@ -693,7 +743,7 @@ const matchData = matches.map(m => {
       const step = VETO_STEPS[state.currentStep];
       if (!step) { $('veto-prompt').innerHTML = ''; return; }
       const teamName = step.team === 'A' ? state.match.team1.name : state.match.team2.name;
-      $('veto-prompt').innerHTML = `<span class="prompt-team ${step.team.toLowerCase()}">${teamName}</span> — <span class="prompt-action">${step.action === 'ban' ? 'Ban a map' : 'Pick a map'}</span>`;
+      $('veto-prompt').innerHTML = `<span class="prompt-team ${step.team.toLowerCase()}">${escapeHTML(teamName)}</span> — <span class="prompt-action">${step.action === 'ban' ? 'Ban a map' : 'Pick a map'}</span>`;
     }
 
     function renderMaps() {
@@ -713,7 +763,7 @@ const matchData = matches.map(m => {
         let statusLabel = '', statusClass = '';
         if (st === 'banned') { statusLabel = 'BANNED'; statusClass = 'banned'; }
         else if (st === 'picked') { statusLabel = 'PICKED'; statusClass = 'picked'; }
-        else if (st === 'decider') { statusLabel = 'DECIDER'; statusClass = 'decider'; }
+        else if (st === 'decider') { statusLabel = 'MAP 3'; statusClass = 'decider'; }
         
         const cls = `veto-map-card ${statusClass} ${clickable ? '' : (isAvail ? 'disabled' : '')}`;
         // NEW: Render as button for accessibility
@@ -731,14 +781,14 @@ const matchData = matches.map(m => {
       }
     }
 
-    function onMapClick(map) {
+    function onMapClick(map, automatic = false) {
       if (state.phase !== 'veto' || state.mapStates[map] !== 'available') return;
       const step = VETO_STEPS[state.currentStep];
       if (!step) return;
 
       stopTimer();
       state.mapStates[map] = step.action === 'ban' ? 'banned' : 'picked';
-      state.vetoHistory.push({ map, team: step.team, action: step.action, voided: false });
+      state.vetoHistory.push({ map, team: step.team, action: step.action, voided: false, automatic });
       if (step.action === 'pick') state.picks[step.team] = map;
       state.currentStep++;
 
@@ -785,11 +835,12 @@ const matchData = matches.map(m => {
       });
 
       ctx.beginPath(); ctx.arc(cx, cy, 20, 0, 2 * Math.PI);
-      ctx.fillStyle = '#111827'; ctx.fill();
-      ctx.strokeStyle = '#2a3142'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = '#1d1d20'; ctx.fill();
+      ctx.strokeStyle = '#36363a'; ctx.lineWidth = 2; ctx.stroke();
     }
 
     function spinWheel() {
+      if (state.phase !== 'wheel' || spinTimeout !== null) return;
       const remaining = getRemainingMaps();
       if (remaining.length === 0) return;
       const canvas = $('wheel-canvas');
@@ -804,7 +855,7 @@ const matchData = matches.map(m => {
 
       canvas.style.transform = `rotate(${targetRotation}deg)`;
 
-      setTimeout(() => {
+      spinTimeout = setTimeout(() => {
         const winner = remaining[winnerIdx];
         state.mapStates[winner] = 'decider';
         state.picks.decider = winner;
@@ -819,9 +870,9 @@ const matchData = matches.map(m => {
       $('veto-results').style.display = '';
 
       const pickResults = [
-        { num: 1, map: state.picks.A, voided: state.voidedPicks.A, labelHtml: `<span class="pick-team a">${state.match.team1.name}</span>'s Pick`, cls: 'team-a-pick' },
-        { num: 2, map: state.picks.B, voided: state.voidedPicks.B, labelHtml: `<span class="pick-team b">${state.match.team2.name}</span>'s Pick`, cls: 'team-b-pick' },
-        { num: 3, map: state.picks.decider, voided: false, labelHtml: 'Decider (Wheel)', cls: 'decider' },
+        { num: 1, map: state.picks.A, voided: state.voidedPicks.A, labelHtml: `<span class="pick-team a">${escapeHTML(state.match.team1.name)}</span>'s Pick`, cls: 'team-a-pick' },
+        { num: 2, map: state.picks.B, voided: state.voidedPicks.B, labelHtml: `<span class="pick-team b">${escapeHTML(state.match.team2.name)}</span>'s Pick`, cls: 'team-b-pick' },
+        { num: 3, map: state.picks.decider, voided: false, labelHtml: 'Map 3 (Wheel)', cls: 'decider' },
       ];
 
       const mapsHtml = pickResults.map(r => {
@@ -856,7 +907,7 @@ const matchData = matches.map(m => {
         'Maps to Play:',
         `1. ${state.voidedPicks.A ? 'VOID (no pick)' : mapName(state.picks.A)} — ${state.match.team1.name}'s Pick${state.voidedPicks.A ? ' (time expired)' : ''}`,
         `2. ${state.voidedPicks.B ? 'VOID (no pick)' : mapName(state.picks.B)} — ${state.match.team2.name}'s Pick${state.voidedPicks.B ? ' (time expired)' : ''}`,
-        `3. ${mapName(state.picks.decider)} — Decider`, '',
+        `3. ${mapName(state.picks.decider)} — Map 3 (Wheel)`, '',
         'Banned Maps:',
         ...state.vetoHistory.filter(h => h.action === 'ban' && !h.voided).map(h =>
           `- ${mapName(h.map)} (${h.team === 'A' ? state.match.team1.name : state.match.team2.name})`
@@ -866,6 +917,8 @@ const matchData = matches.map(m => {
         lines.push('', 'Voided Steps:');
         lines.push(...voidedSteps.map(h => `- ${h.team === 'A' ? state.match.team1.name : state.match.team2.name} ${h.action} (time expired)`));
       }
+      const automaticPicks = state.vetoHistory.filter(h => h.automatic);
+      if (automaticPicks.length) lines.push('', 'Automatic picks after timeout:', ...automaticPicks.map(h => `- ${mapName(h.map)} (${h.team === 'A' ? state.match.team1.name : state.match.team2.name})`));
       navigator.clipboard.writeText(lines.join('\n')).then(() => {
         const btn = $('copy-btn');
         btn.textContent = '✓ Copied!';
@@ -875,10 +928,12 @@ const matchData = matches.map(m => {
 
     function resetVeto() {
       stopTimer();
+      clearTimeout(spinTimeout);
+      spinTimeout = null;
       state = {
         matchId: null, match: null, currentStep: 0, mapStates: {}, vetoHistory: [],
         picks: { A: null, B: null, decider: null }, voidedPicks: { A: false, B: false },
-        phase: 'select', pickTimer: PICK_TIME, reserveTimer: RESERVE_TIME,
+        phase: 'select', pickTimer: PICK_TIME, reserveTimer: { A: RESERVE_TIME, B: RESERVE_TIME },
         timerPhase: null, timerInterval: null,
       };
       $('match-select').value = '';

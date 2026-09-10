@@ -73,6 +73,67 @@
                 ],
                 "additionalProperties": false
               },
+              "veto": {
+                "type": "object",
+                "properties": {
+                  "mapPoolIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "minItems": 3
+                  },
+                  "steps": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "team": {
+                          "type": "string",
+                          "enum": [
+                            "A",
+                            "B"
+                          ]
+                        },
+                        "action": {
+                          "type": "string",
+                          "enum": [
+                            "ban",
+                            "pick"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "team",
+                        "action"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "minItems": 2
+                  },
+                  "finalMap": {
+                    "type": "string",
+                    "const": "random"
+                  },
+                  "actionSeconds": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "reserveSeconds": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  }
+                },
+                "required": [
+                  "mapPoolIds",
+                  "steps",
+                  "finalMap",
+                  "actionSeconds",
+                  "reserveSeconds"
+                ],
+                "additionalProperties": false
+              },
               "rounds": {
                 "type": "array",
                 "items": {

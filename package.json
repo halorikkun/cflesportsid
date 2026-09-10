@@ -7,7 +7,9 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "test": "node --test tests/*.test.mjs"
+    "test": "node --test tests/*.test.mjs",
+    "data:check": "node scripts/check-data.mjs",
+    "data:new-match": "node scripts/new-match.mjs"
   },
   "dependencies": {
     "astro": "^5.0.0"

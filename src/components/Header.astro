@@ -9,10 +9,10 @@ const { current } = Astro.props;
 
 <header class="site-header">
   <div class="container">
-    <a href="/" class="logo">CFL<span>Esports</span>ID</a>
+    <a href="/" class="logo" aria-label="CFL Esports Indonesia home"><img src="/brand/cflesports-id.png" width="192" height="70" alt="CFL Esports Indonesia" /></a>
     
     <!-- Mobile menu button -->
-    <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Toggle menu">
+    <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Toggle menu" aria-controls="main-nav" aria-expanded="false">
       <span></span>
       <span></span>
       <span></span>
@@ -39,6 +39,7 @@ const { current } = Astro.props;
     if (menuBtn && nav) {
       menuBtn.addEventListener('click', () => {
         nav.classList.toggle('active');
+        menuBtn.setAttribute('aria-expanded', String(nav.classList.contains('active')));
         menuBtn.classList.toggle('active');
       });
       
@@ -46,6 +47,7 @@ const { current } = Astro.props;
       nav.querySelectorAll('a').forEach(link => {
         link.addEventListener('click', () => {
           nav.classList.remove('active');
+          menuBtn.setAttribute('aria-expanded', 'false');
           menuBtn.classList.remove('active');
         });
       });
@@ -54,6 +56,8 @@ const { current } = Astro.props;
 </script>
 
 <style>
+  .logo img { display:block; width:154px; height:56px; object-fit:contain; background:white; border-radius:4px; }
+  @media (max-width:768px) { .logo img { width:132px; height:48px; } }
   /* Mobile menu button - hidden on desktop */
   .mobile-menu-btn {
     display: none;

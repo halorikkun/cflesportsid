@@ -22,8 +22,10 @@ export async function getStaticPaths() {
 
 const { player } = Astro.props;
 const allTeams = await getCollection('teams');
+const allPlayers = await getCollection('players');
 const teamsMap = new Map(allTeams.map(t => [t.id, t]));
 const team = player.data.team ? teamsMap.get(player.data.team) : undefined;
+const teammates = team ? allPlayers.filter(p => p.id !== player.id && team.data.players.includes(p.id)) : [];
 const allMatches = await getCollection('matches');
 
 const tournamentsMap = await getTournamentMap();
@@ -53,58 +55,21 @@ playerMatches.forEach(m => {
   }
 });
 
-const initial = player.data.ign.charAt(0).toUpperCase();
 ---
 
 <Layout title={`${player.data.ign} - CFL Tournament Hub`} current="Players">
   <div class="container">
-    
-    <a href="/players" class="back-link">← Back to Players</a>
 
-    <div class="detail-hero">
-      <div class="avatar avatar-large">{initial}</div>
-      <div class="detail-hero-info">
-        <h1>{player.data.ign}</h1>
-        <p class="hero-subtitle">
-          {player.data.name}
-          {team && <span> · <a href={`/teams/${team.id}`}>{team.data.name}</a></span>}
-          {player.data.country && <span> · {player.data.country}</span>}
-          {mvpCount > 0 && <span> · 🏆 {mvpCount} MVP{mvpCount > 1 ? 's' : ''}</span>}
-        </p>
+    <section class="profile-banner" aria-label="Player overview">
+      <div class="profile-identity"><img class="profile-image" src={player.data.avatar || '/players/default.png'} alt={`${player.data.ign} photo`} width="160" height="160" onerror="this.onerror=null; this.src='/players/default.png'" />
+        <div><p class="profile-kicker">{team ? <a href={`/teams/${team.id}`}>{team.data.name} ({team.data.tag})</a> : 'No current team'}</p><h1>{player.data.ign}</h1><p class="profile-subtitle"><span class="profile-active">Active</span></p></div>
       </div>
-    </div>
+      <dl class="profile-metrics"><div><dt>Matches played</dt><dd>{matchesPlayed}</dd></div><div><dt>Total kills</dt><dd>{careerStats.kills}</dd></div><div><dt>K/D ratio</dt><dd>{kd}</dd></div><div><dt>MVP awards</dt><dd>{mvpCount}</dd></div></dl>
+    </section>
 
     {player.data.bio && (
       <p class="player-description">{player.data.bio}</p>
     )}
-
-    <h2 class="section-title">Career Statistics</h2>
-    <div class="stat-grid section-spacing">
-      <div class="stat-box stat-kills">
-        <div class="stat-value">{careerStats.kills}</div>
-        <div class="stat-label">Kills</div>
-      </div>
-      <div class="stat-box stat-deaths">
-        <div class="stat-value">{careerStats.deaths}</div>
-        <div class="stat-label">Deaths</div>
-      </div>
-      <div class="stat-box stat-assists">
-        <div class="stat-value">{careerStats.assists}</div>
-        <div class="stat-label">Assists</div>
-      </div>
-      <div class="stat-box stat-kd">
-        <div class={`stat-value ${kdClass}`}>{kd}</div>
-        <div class="stat-label">K/D Ratio</div>
-      </div>
-      <div class="stat-box stat-matches">
-        <div class="stat-value">{matchesPlayed}</div>
-        <div class="stat-label">Matches</div>
-      </div>
-      <div class="stat-box stat-mvp">
-        <div class="stat-value">{mvpCount}</div>
-        <div class="stat-label">MVP Awards</div>
-      </div>
-    </div>
 
     {hasSocials && (
       <div class="section-spacing">
@@ -126,7 +91,7 @@ const initial = player.data.ign.charAt(0).toUpperCase();
     {mvpMatches.length > 0 && (
       <div class="section-spacing">
         <h2 class="section-title">MVP Awards</h2>
-        <div class="table-wrap">
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Statistics table">
           <table class="match-history-table">
             <thead>
               <tr>
@@ -179,7 +144,7 @@ const initial = player.data.ign.charAt(0).toUpperCase();
     {playerMatches.length > 0 && (
       <div>
         <h2 class="section-title">Recent Matches</h2>
-        <div class="table-wrap">
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Statistics table">
           <table class="match-history-table">
             <thead>
               <tr>
@@ -239,6 +204,8 @@ const initial = player.data.ign.charAt(0).toUpperCase();
         </div>
       </div>
     )}
+
+    {teammates.length > 0 && <section class="section-spacing"><h2 class="section-title">Teammates</h2><div class="teammate-grid">{teammates.map(p=><a class="teammate-card" href={`/players/${p.id}`}><img src={p.data.avatar || '/players/default.png'} alt="" width="48" height="48" loading="lazy" onerror="this.onerror=null;this.src='/players/default.png'" /><span><strong>{p.data.ign}</strong><small>{p.data.role || 'Player'}</small></span><span class="badge badge-completed">Active</span></a>)}</div></section>}
   </div>
 </Layout>
 
@@ -369,4 +336,6 @@ const initial = player.data.ign.charAt(0).toUpperCase();
     }
     .detail-hero-info h1 { font-size: 1.5rem; }
   }
+</style>
+<style>.teammate-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}.teammate-card{display:flex;align-items:center;gap:12px;padding:16px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:10px;color:var(--text-primary)}.teammate-card img{object-fit:cover;border-radius:6px}.teammate-card>span:nth-child(2){flex:1;min-width:0;overflow-wrap:anywhere}.teammate-card small{display:block;color:var(--text-muted)}@media(max-width:640px){.teammate-grid{grid-template-columns:minmax(0,1fr)}}
 </style>

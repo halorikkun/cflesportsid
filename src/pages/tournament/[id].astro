@@ -47,7 +47,6 @@ function formatDate(value: string) {
       <p>{completedCount} / {tMatches.length} matches played</p>
     </div>
     <div class="bracket-nav">
-      <a href="/tournament" class="back-link">← All Tournaments</a>
       <select id="tourney-select" onchange="if(this.value) window.location.href='/tournament/'+this.value">
         {tournaments.map(t => <option value={t.id} selected={t.id === tournament.id}>{t.data.name}</option>)}
       </select>
@@ -255,7 +254,7 @@ function formatDate(value: string) {
   
   .bracket-team-info { display: flex; align-items: center; gap: 0.5rem; min-width: 0; flex: 1; }
   .bracket-team-tag {
-    font-size: 0.7rem;
+    font-size: 0.8rem;
     font-weight: 700;
     color: var(--accent);
     background: var(--bg-card-hover);
@@ -276,7 +275,7 @@ function formatDate(value: string) {
   .bracket-team-row.loser .bracket-team-score { color: var(--text-muted); }
   
   .bracket-bye-label {
-    font-size: 0.7rem;
+    font-size: 0.8rem;
     font-weight: 700;
     color: var(--text-muted);
     background: var(--bg-card-hover);

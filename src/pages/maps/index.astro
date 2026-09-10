@@ -17,7 +17,7 @@ const maps = (await getCollection('maps')).map(map => ({ ...map, stats: calculat
     <p class="coverage">Kills, deaths, and assists below include only player entries with confirmed map numbers.
       {calculated.totals.unassignedPlayerRounds > 0 && ` ${calculated.totals.unassignedPlayerRounds} player-round entries (${calculated.totals.unassignedMapKills} kills) still need map numbers. They remain included in player and team totals.`}
     </p>
-    <div class="table-wrap">
+    <div class="table-wrap" tabindex="0" role="region" aria-label="Statistics table">
       <table>
         <thead><tr><th>Map</th><th>Games Played</th><th>Matches</th><th>Recorded Kills</th><th>Recorded Deaths</th><th>Recorded Assists</th><th>MVP Awards</th><th>Known Results</th></tr></thead>
         <tbody>{maps.map(map => (

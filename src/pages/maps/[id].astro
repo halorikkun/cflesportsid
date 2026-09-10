@@ -21,7 +21,6 @@ const mapMatches = matches.filter(m => m.data.status === 'completed' && m.data.r
 <Layout title={`${map.data.name} Statistics - CFL Esports ID`} current="Maps">
   <div class="container">
     <div class="page-header"><h1>{map.data.name}</h1><p>Map statistics from completed matches</p></div>
-    <a href="/maps">← All Maps</a>
     <div class="stat-grid section">
       <div class="stat-box"><div class="stat-value">{stats.mapsPlayed}</div><div class="stat-label">Games Played</div></div>
       <div class="stat-box"><div class="stat-value">{stats.matchesPlayed}</div><div class="stat-label">Matches</div></div>
@@ -32,7 +31,7 @@ const mapMatches = matches.filter(m => m.data.status === 'completed' && m.data.r
     {stats.mapsPlayed === 0 ? <p class="section">No completed matches recorded on this map yet.</p> : (
       <>
         <section class="section"><h2>Player Statistics</h2>
-          <div class="table-wrap"><table>
+          <div class="table-wrap" tabindex="0" role="region" aria-label="Statistics table"><table>
             <thead><tr><th>Player</th><th>Recorded Maps</th><th>Kills</th><th>Deaths</th><th>Assists</th><th>K/D</th><th>MVP Awards</th></tr></thead>
             <tbody>{topPlayers.map(([uid, s]) => {
               const player = players.get(uid);
@@ -41,13 +40,13 @@ const mapMatches = matches.filter(m => m.data.status === 'completed' && m.data.r
           </table></div>
         </section>
         <section class="section"><h2>Historical Team Statistics</h2>
-          <div class="table-wrap"><table>
+          <div class="table-wrap" tabindex="0" role="region" aria-label="Statistics table"><table>
             <thead><tr><th>Team</th><th>Maps Played</th><th>Recorded Kills</th><th>Recorded Deaths</th><th>Recorded Assists</th><th>Known Wins</th><th>Known Losses</th><th>Win Rate (Known Results)</th></tr></thead>
             <tbody>{teamStats.map(([id, s]) => <tr><td><a href={`/teams/${id}`}>{teams.get(id)?.data.name ?? id}</a></td><td>{s.mapsPlayed}</td><td>{s.kills}</td><td>{s.deaths}</td><td>{s.assists}</td><td>{s.wins}</td><td>{s.losses}</td><td>{s.wins + s.losses > 0 ? `${(100 * s.wins / (s.wins + s.losses)).toFixed(1)}%` : '—'}</td></tr>)}</tbody>
           </table></div>
         </section>
         <section class="section"><h2>Matches on {map.data.name}</h2>
-          <div class="table-wrap"><table>
+          <div class="table-wrap" tabindex="0" role="region" aria-label="Statistics table"><table>
             <thead><tr><th>Date</th><th>Tournament</th><th>Round</th><th>Match</th><th>Map Number</th></tr></thead>
             <tbody>{mapMatches.map(m => <tr>
               <td>{m.data.date}</td><td><a href={`/tournament/${m.data.tournamentId}`}>{tournaments.get(m.data.tournamentId)?.data.name ?? m.data.tournamentId}</a></td>

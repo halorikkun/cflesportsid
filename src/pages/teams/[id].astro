@@ -1,4 +1,5 @@
 ---
+import { getOverallStandings } from '../../utils/standings';
 import Layout from '../../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
 import { calculateStatistics, emptyStats } from '../../utils/statistics';
@@ -34,6 +35,7 @@ const teamStats = calculateStatistics(allMatches).teams.get(team.id) ?? emptySta
 const { wins, losses, matchesPlayed, kills: totalKills, deaths: totalDeaths, assists: totalAssists } = teamStats;
 
 const tournamentsMap = await getTournamentMap();
+const currentPosition = getOverallStandings(allTeams, allMatches, [...tournamentsMap.values()]).findIndex(t => t.id === team.id) + 1;
 
 const sortedMatches = [...teamMatches].sort((a, b) => {
   const dateA = new Date(a.data.date).getTime() || 0;
@@ -51,41 +53,16 @@ const initial = team.data.name.charAt(0).toUpperCase();
 <Layout title={`${team.data.name} - CFL Esports ID Tournament Hub`} current="Teams">
   <div class="container">
     
-    <!-- NEW: Premium Detail Hero Section -->
-    <div class="detail-hero">
-      <img 
-        src={team.data.logo || `/logos/${team.data.tag}.png`} 
-        alt={team.data.name} 
-        class="team-logo-hero"
-        onerror="this.onerror=null; this.src='/logos/default.png'"
-      />
-      <div class="detail-hero-info">
-        <h1>{team.data.name} <span class="hero-tag">[{team.data.tag}]</span></h1>
-        <p class="hero-subtitle">{team.data.region} · {activePlayerCount} active players</p>
+    <section class="profile-banner" aria-label="Team overview">
+      <div class="profile-identity"><img class="profile-image team-image" src={team.data.logo || `/logos/${team.data.tag}.png`} alt={team.data.name} width="160" height="160" onerror="this.onerror=null; this.src='/logos/default.png'" />
+        <div><p class="profile-kicker">{team.data.region === 'ID' ? 'Indonesia' : team.data.region}</p><h1>{team.data.name}</h1><p class="profile-subtitle">{team.data.tag}</p></div>
       </div>
-    </div>
-
-    <a href="/teams" class="back-link">← Back to Teams</a>
+      <dl class="profile-metrics"><div><dt>Current position</dt><dd>#{currentPosition}</dd></div><div><dt>Matches played</dt><dd>{matchesPlayed}</dd></div><div><dt>Wins</dt><dd>{wins}</dd></div><div><dt>Total kills</dt><dd>{totalKills}</dd></div></dl>
+    </section>
 
     {team.data.description && (
       <p class="team-description">{team.data.description}</p>
     )}
-
-    <h2 class="section-title">Team Record</h2>
-    <div class="stat-grid section-spacing">
-      <div class="stat-box">
-        <div class="stat-value">{matchesPlayed}</div>
-        <div class="stat-label">Matches</div>
-      </div>
-      <div class="stat-box stat-box-win">
-        <div class="stat-value">{wins}</div>
-        <div class="stat-label">Wins</div>
-      </div>
-      <div class="stat-box stat-box-loss">
-        <div class="stat-value">{losses}</div>
-        <div class="stat-label">Losses</div>
-      </div>
-    </div>
 
     <h2 class="section-title">Match Stats</h2>
     <div class="stat-grid section-spacing">
@@ -107,7 +84,7 @@ const initial = team.data.name.charAt(0).toUpperCase();
     <div class="roster-detail-grid section-spacing">
       {teamPlayers.map(player => (
         <a href={`/players/${player.id}`} class="roster-card">
-          <div class="avatar">{player.data.ign.charAt(0).toUpperCase()}</div>
+          <img class="avatar" src={player.data.avatar || '/players/default.png'} alt={`${player.data.ign} photo`} loading="lazy" onerror="this.onerror=null; this.src='/players/default.png'" style="object-fit:cover;" />
           <div class="roster-card-info">
             <strong>{player.data.ign}</strong>
             <span>{player.data.role || 'Player'}</span>
@@ -122,7 +99,7 @@ const initial = team.data.name.charAt(0).toUpperCase();
     {sortedMatches.length > 0 && (
       <div>
         <h2 class="section-title">Match History</h2>
-        <div class="table-wrap">
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Statistics table">
           <!-- NEW: Added class for targeted mobile sticky columns -->
           <table class="match-history-table">
             <thead>

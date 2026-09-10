@@ -80,7 +80,58 @@
           "slot": 8,
           "teamId": "solidarity"
         }
-      ]
+      ],
+      "veto": {
+        "mapPoolIds": [
+          "desert",
+          "sub-base",
+          "satellite",
+          "island",
+          "ankara",
+          "eagle-eye",
+          "power-supply",
+          "greece",
+          "black-widow",
+          "port"
+        ],
+        "steps": [
+          {
+            "team": "A",
+            "action": "ban"
+          },
+          {
+            "team": "B",
+            "action": "ban"
+          },
+          {
+            "team": "A",
+            "action": "ban"
+          },
+          {
+            "team": "B",
+            "action": "ban"
+          },
+          {
+            "team": "A",
+            "action": "pick"
+          },
+          {
+            "team": "B",
+            "action": "pick"
+          },
+          {
+            "team": "A",
+            "action": "ban"
+          },
+          {
+            "team": "B",
+            "action": "ban"
+          }
+        ],
+        "finalMap": "random",
+        "actionSeconds": 20,
+        "reserveSeconds": 90
+      }
     }
   ]
 }

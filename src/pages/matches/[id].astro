@@ -1,4 +1,5 @@
 ---
+import MatchInsights from '../../components/MatchInsights.astro';
 import Layout from '../../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
 import { getRoundName, getParticipantLabel } from '../../utils/tournament';
@@ -88,6 +89,7 @@ const playerStats = (m.data.playerStats || [])
     const rounds = ps.rounds || [];
     return {
       uid: ps.uid,
+      avatar: player?.data.avatar || '/players/default.png',
       ign: player ? player.data.ign : (ps.ign || ps.uid),
       teamName: team ? team.data.name : '—',
       teamTag: team ? team.data.tag : '—',
@@ -126,32 +128,20 @@ function getRoundMVP(roundIdx) {
 
 function kda(k, d, a) { return (k + a) / Math.max(d, 1); }
 
-function calcOverallMVP() {
-  let best = null;
-  let bestKDA = -1;
-  for (const p of playerStats) {
-    if (p.totalKills + p.totalAssists === 0) continue;
-    const val = kda(p.totalKills, p.totalDeaths, p.totalAssists);
-    if (val > bestKDA) {
-      bestKDA = val;
-      best = { uid: p.uid, ign: p.ign, kills: p.totalKills, deaths: p.totalDeaths, assists: p.totalAssists, kda: val };
-    }
-  }
-  return best;
-}
-
 const roundMVPs = numRounds > 0 ? Array.from({ length: numRounds }, (_, i) => getRoundMVP(i)) : [];
-const overallMVP = calcOverallMVP();
 ---
 
 <Layout title={`${team1Name} vs ${team2Name} - CFL Esports ID Tournament Hub`} current="Matches">
   <div class="container">
-    <div class="page-header">
-      <h1>{team1Name} vs {team2Name}</h1>
-      <p>{tournament?.data.name ?? tournamentId ?? 'TBD'} · {getRoundName(m, tournamentsMap)} · {m.data.date}</p>
-    </div>
-    <a href="/matches" class="back-link">← Back to Matches</a>
+    {m.data.status === 'upcoming' && tournament?.data.stages.find(stage => stage.id === m.data.stageId)?.veto && team1Id && team2Id && (
+      <p><a href={`/veto?match=${m.id}`}>{m.data.status === 'completed' ? 'Practice map veto' : 'Start map veto'}</a></p>
+    )}
 
+    <section class="match-score-card" aria-label="Match score and details">
+      <header class="score-metadata">
+        <h1>{tournament?.data.name ?? tournamentId ?? 'TBD'} — {tournament?.data.region === 'ID' ? 'Indonesia' : tournament?.data.region ?? 'Indonesia'}</h1>
+        <p><time datetime={m.data.date}>{m.data.date}</time> · {getRoundName(m, tournamentsMap)}</p>
+      </header>
     <div class="match-detail-scoreboard">
       <div class="match-detail-team">
         <img 
@@ -184,8 +174,11 @@ const overallMVP = calcOverallMVP();
       </span>
     </div>
 
+    </section>
+
     {m.data.status === 'completed' && playerStats.length > 0 && (
       <>
+        <MatchInsights players={playerStats} team1Id={team1Id} team2Id={team2Id} team1Name={team1Name} team2Name={team2Name} />
         {roundDetails.length > 0 && (
           <section class="section-spacing">
             <h2 class="section-title">Maps & MVP</h2>
@@ -214,35 +207,9 @@ const overallMVP = calcOverallMVP();
               })}
             </div>
 
-            {overallMVP && (
-              <div class="overall-mvp">
-                <div class="overall-mvp-label">Top Match KDA</div>
-                <div class="overall-mvp-name">{overallMVP.ign}</div>
-                <div class="overall-mvp-kda">
-                  <span class="kill">{overallMVP.kills}</span>/<span class="death">{overallMVP.deaths}</span>/<span class="assist">{overallMVP.assists}</span>
-                  <span class="overall-mvp-ratio">KDA {overallMVP.kda.toFixed(2)}</span>
-                </div>
-              </div>
-            )}
           </section>
         )}
 
-        <h2 class="section-title">Team Stats</h2>
-        <!-- NEW: Added 'team-stats-grid' class to center the 2 boxes -->
-        <div class="stat-grid section-spacing team-stats-grid">
-          <div class="stat-box">
-            <div class="stat-value stat-value-small">
-              <span class="kda"><span class="kill">{team1Kills}</span>/<span class="death">{team1Deaths}</span>/<span class="assist">{team1Assists}</span></span>
-            </div>
-            <div class="stat-label">{team1Tag} K/D/A</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-value stat-value-small">
-              <span class="kda"><span class="kill">{team2Kills}</span>/<span class="death">{team2Deaths}</span>/<span class="assist">{team2Assists}</span></span>
-            </div>
-            <div class="stat-label">{team2Tag} K/D/A</div>
-          </div>
-        </div>
 
         <h2 class="section-title">Player Stats</h2>
         {playerStats.some(p => p.rounds.some(r => r.round_number === undefined)) && (
@@ -255,7 +222,7 @@ const overallMVP = calcOverallMVP();
               <a href={team1Id ? `/teams/${team1Id}` : undefined}>{team1Name}</a>
               <span class="tag"> [{team1Tag}]</span>
             </h3>
-            <div class="table-wrap">
+            <div class="table-wrap" tabindex="0" role="region" aria-label="Statistics table">
               <table class="match-stats-table">
                 <thead>
                   <tr>
@@ -291,7 +258,7 @@ const overallMVP = calcOverallMVP();
               <a href={team2Id ? `/teams/${team2Id}` : undefined}>{team2Name}</a>
               <span class="tag"> [{team2Tag}]</span>
             </h3>
-            <div class="table-wrap">
+            <div class="table-wrap" tabindex="0" role="region" aria-label="Statistics table">
               <table class="match-stats-table">
                 <thead>
                   <tr>
@@ -347,6 +314,7 @@ const overallMVP = calcOverallMVP();
             </table>
           </div>
         )}
+        <MatchInsights players={playerStats} team1Id={team1Id} team2Id={team2Id} team1Name={team1Name} team2Name={team2Name} comparison />
       </>
     )}
 
@@ -452,7 +420,7 @@ const overallMVP = calcOverallMVP();
   }
   .mvp-round-label { color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; font-weight: 600; }
   .mvp-map-name { font-size: 1.05rem; font-weight: 800; color: var(--accent); margin-bottom: 0.75rem; }
-  .mvp-label { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.25rem; font-weight: 600; }
+  .mvp-label { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.25rem; font-weight: 600; }
   .mvp-player-name { font-size: 1rem; font-weight: 700; color: #facc15; margin-bottom: 0.25rem; }
   .mvp-kda { font-size: 0.85rem; color: var(--text-primary); font-family: monospace; }
   .mvp-none { font-size: 0.85rem; color: var(--text-muted); font-style: italic; margin-top: 1rem; }
@@ -524,4 +492,11 @@ const overallMVP = calcOverallMVP();
       max-width: 100%;
     }
   }
+</style>
+<style>
+.match-score-card{margin:32px 0;background:var(--bg-secondary);border:1px solid var(--border);border-radius:12px;padding:26px}
+.score-metadata{text-align:center;margin-bottom:18px}.score-metadata h1{font-size:20px;line-height:1.5}.score-metadata p{font-size:14px;color:var(--text-muted);margin-top:8px}
+.match-score-card .match-detail-scoreboard{border:0;background:transparent;margin-bottom:18px;padding:12px;box-shadow:none}
+.match-score-card .match-status-center{margin:0;text-align:center}
+@media(max-width:640px){.match-score-card{padding:18px 10px;margin-top:24px}.score-metadata h1{font-size:17px}.score-metadata p{font-size:13px}}
 </style>

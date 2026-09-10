@@ -31,6 +31,7 @@ const teams = (await getCollection('teams')).map(team => {
     id: team.id,
     name: team.data.name,
     tag: team.data.tag,
+    logo: team.data.logo,
     region: team.data.region,
     wins: record.wins,
     losses: record.losses,
@@ -71,67 +72,19 @@ const teams = (await getCollection('teams')).map(team => {
 
     <div class="teams-grid" id="teamsGrid">
       {teams.map(team => (
-        <div class="team-card"
+        <div class="team-card club-card"
           data-name={team.name.toLowerCase()}
           data-tag={team.tag.toLowerCase()}
           data-wins={team.wins}
           data-losses={team.losses}
           data-kills={team.totalKills}
         >
-          <div class="team-card-header">
-            <img 
-              src={team.logo || `/logos/${team.tag}.png`} 
-              alt={team.name} 
-              class="team-logo-small"
-              onerror="this.onerror=null; this.src='/logos/default.png'"
-            />
-            <a href={`/teams/${team.id}`} class="team-name-link"><strong>{team.name}</strong></a>
-            <span class="team-tag">[{team.tag}]</span>
-            <span class="team-region">{team.region}</span>
+          <div class="club-identity">
+            <img src={team.logo || `/logos/${team.tag}.png`} alt="" width="64" height="64" onerror="this.onerror=null; this.src='/logos/default.png'" />
+            <h2>{team.name}</h2>
           </div>
-
-          <div class="team-card-stats">
-            <div class="team-stat-group">
-              <div class="team-stat-item">
-                <span class="team-stat-label">Kills</span>
-                <span class="text-win">{team.totalKills}</span>
-              </div>
-              <div class="team-stat-item">
-                <span class="team-stat-label">Deaths</span>
-                <span class="text-loss">{team.totalDeaths}</span>
-              </div>
-              <div class="team-stat-item">
-                <span class="team-stat-label">Assists</span>
-                <span class="text-assist">{team.totalAssists}</span>
-              </div>
-            </div>
-            <div class="team-stat-group team-stat-wl">
-              <div class="team-stat-item">
-                <span class="team-stat-label">Wins</span>
-                <span class="text-win">{team.wins}</span>
-              </div>
-              <div class="team-stat-item">
-                <span class="team-stat-label">Losses</span>
-                <span class="text-loss">{team.losses}</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="team-players">
-            <div class="team-players-label">Roster ({team.playerCount})</div>
-            <!-- NEW: Wrapped in roster-list for scrollable containment -->
-            <div class="roster-list">
-              {team.players.map(p => (
-                <div class="player-row">
-                  <a href={`/players/${p.id}`} class="player-ign">{p.ign}</a>
-                  <span class="player-uid">{p.uid}</span>
-                  <span class={`player-status ${p.status === 'active' ? 'status-active' : 'status-inactive'}`}>
-                    {p.status === 'active' ? 'Active' : 'Inactive'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
+          <div class="club-meta"><strong>{team.tag}</strong><span>{team.region === 'ID' ? 'Indonesia' : team.region}</span></div>
+          <a class="club-info" href={`/teams/${team.id}`}>Team info <span aria-hidden="true">↗</span></a>
         </div>
       ))}
     </div>
@@ -283,7 +236,7 @@ const teams = (await getCollection('teams')).map(team => {
   .team-tag { color: var(--text-muted); font-size: 0.85rem; font-weight: 600; }
   .team-region {
     margin-left: auto;
-    font-size: 0.7rem;
+    font-size: 0.8rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -303,7 +256,7 @@ const teams = (await getCollection('teams')).map(team => {
   .team-stat-wl { flex-direction: row; }
   .team-stat-item { display: flex; flex-direction: column; gap: 0.15rem; text-align: center; }
   .team-stat-label {
-    font-size: 0.7rem;
+    font-size: 0.8rem;
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -368,7 +321,7 @@ const teams = (await getCollection('teams')).map(team => {
   }
   .player-status {
     margin-left: auto;
-    font-size: 0.7rem;
+    font-size: 0.8rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.03em;

@@ -20,6 +20,13 @@ const tournaments = defineCollection({
         type: z.literal('fixed-maps'),
         mapCount: z.number().int().positive().refine(n => n % 2 === 1, 'Use an odd map count to avoid ties'),
       }),
+      veto: z.object({
+        mapPoolIds: z.array(z.string().min(1)).min(3),
+        steps: z.array(z.object({ team: z.enum(['A', 'B']), action: z.enum(['ban', 'pick']) })).min(2),
+        finalMap: z.literal('random'),
+        actionSeconds: z.number().int().positive(),
+        reserveSeconds: z.number().int().positive(),
+      }).optional(),
       rounds: z.array(z.object({
         round_number: z.number().int().positive().optional(),
         id: z.string().min(1),

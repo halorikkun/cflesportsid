@@ -1,16 +1,16 @@
 :root {
-  --bg-primary: #0a0e14;
-  --bg-secondary: #111827;
-  --bg-card: #1a1f2e;
-  --bg-card-hover: #222938;
-  --accent: #ff4d2e;
-  --accent-hover: #ff6b50;
+  --bg-primary: #171719;
+  --bg-secondary: #1d1d20;
+  --bg-card: #252528;
+  --bg-card-hover: #2d2d31;
+  --accent: #ff742e;
+  --accent-hover: #ff955f;
   --accent-dim: rgba(255, 77, 46, 0.15);
-  --text-primary: #e4e7eb;
-  --text-secondary: #cbd5e1; /* --- MODIFIED: Lightened for better contrast --- */
-  --text-muted: #94a3b8;     /* --- MODIFIED: Lightened to pass WCAG accessibility contrast on dark bg --- */
-  --border: #2a3142;
-  --border-hover: #3a4258;
+  --text-primary: #f3f3f4;
+  --text-secondary: #c8c8cd; /* --- MODIFIED: Lightened for better contrast --- */
+  --text-muted: #aaaab2;     /* --- MODIFIED: Lightened to pass WCAG accessibility contrast on dark bg --- */
+  --border: #36363a;
+  --border-hover: #505055;
   --win: #22c55e;
   --loss: #ef4444;
   --assist: #eab308;
@@ -27,7 +27,7 @@ html {
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
 body {
-  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-family: 'Poppins', system-ui, -apple-system, sans-serif;
   background: var(--bg-primary);
   color: var(--text-primary);
   line-height: 1.6;
@@ -273,7 +273,7 @@ tr:hover td {
   flex-shrink: 0;
 }
 .rank-1 { background: #facc15; color: #000; }
-.rank-2 { background: #cbd5e1; color: #000; }
+.rank-2 { background: #c8c8cd; color: #000; }
 .rank-3 { background: #d97706; color: #fff; }
 .rank-n { background: #2a2d38; color: #9ca3af; }
 
@@ -553,3 +553,8 @@ tr:hover td {
     height: 100px;
   }
 }
+:root { --accent-orange: #ff955f; }
+a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior:auto; } *, *::before, *::after { transition-duration:0.01ms !important; animation-duration:0.01ms !important; } }
+
+button, input, select, textarea { font-family: inherit; }
