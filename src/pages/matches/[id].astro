@@ -120,6 +120,7 @@ function getRoundMVP(roundIdx) {
   return {
     uid,
     ign: player ? player.data.ign : (ps ? ps.ign : uid),
+    teamTag: ps?.teamTag,
     kills: r?.kills ?? null,
     deaths: r?.deaths ?? null,
     assists: r?.assists ?? null,
@@ -178,7 +179,13 @@ const roundMVPs = numRounds > 0 ? Array.from({ length: numRounds }, (_, i) => ge
 
     {m.data.status === 'completed' && playerStats.length > 0 && (
       <>
-        <MatchInsights players={playerStats} team1Id={team1Id} team2Id={team2Id} team1Name={team1Name} team2Name={team2Name} />
+        <MatchInsights players={playerStats} team1Id={team1Id} team2Id={team2Id} team1Name={team1Name} team2Name={team2Name} overviewOnly />
+        <div class="match-tabs" role="tablist" aria-label="Match details">
+          {['Match Leaders','Maps & MVP','Player Stats','Player Comparison'].map((label,i)=><button id={`match-tab-${i}`} role="tab" aria-controls={`match-panel-${i}`} aria-selected={i===0?'true':'false'} tabindex={i===0?0:-1}>{label}</button>)}
+        </div>
+        <section id="match-panel-0" role="tabpanel" aria-labelledby="match-tab-0"><MatchInsights players={playerStats} team1Id={team1Id} team2Id={team2Id} team1Name={team1Name} team2Name={team2Name} leadersOnly /></section>
+        <section id="match-panel-1" role="tabpanel" aria-labelledby="match-tab-1" hidden>
+
         {roundDetails.length > 0 && (
           <section class="section-spacing">
             <h2 class="section-title">Maps & MVP</h2>
@@ -187,22 +194,17 @@ const roundMVPs = numRounds > 0 ? Array.from({ length: numRounds }, (_, i) => ge
                 const mvp = roundMVPs[i];
                 const mapName = roundMapNames[i] || 'TBD';
                 return (
-                  <div class="mvp-card">
-                    <div class="mvp-round-label">Round {i + 1}</div>
-                    <div class="mvp-map-name">{mapName}</div>
-                    {roundDetails[i]?.resultNote && <p>{roundDetails[i].resultNote}</p>}
-                    {mvp ? (
-                      <>
-                        <div class="mvp-label">Round MVP</div>
-                        <div class="mvp-player-name">{mvp.ign}</div>
-                        <div class="mvp-kda">
-                          <span class="kill">{mvp.kills ?? '—'}</span>/<span class="death">{mvp.deaths ?? '—'}</span>/<span class="assist">{mvp.assists ?? '—'}</span>
-                        </div>
-                      </>
-                    ) : (
-                      <div class="mvp-none">No MVP</div>
-                    )}
-                  </div>
+                  <article class="mvp-card map-mvp-card">
+                    <a class="map-mvp-image-link" href={roundDetails[i]?.mapId ? `/maps/${roundDetails[i].mapId}` : undefined} aria-label={`View ${mapName} map details`}>
+                      <img class="map-mvp-thumbnail" src={mapsMap.get(roundDetails[i]?.mapId)?.data.thumbnail || '/maps/placeholder.svg'} alt="" loading="lazy" onerror="this.onerror=null;this.src='/maps/placeholder.svg'" />
+                      <h3 class="map-mvp-overlay">{mapName}</h3>
+                    </a>
+                    {mvp ? <div class="map-mvp-player">
+                      <img class="map-mvp-avatar" src={playersMap.get(mvp.uid)?.data.avatar || '/players/default.webp'} alt="" width="100" height="110" onerror="this.onerror=null;this.src='/players/default.webp'" />
+                      <div><a class="map-mvp-name" href={playersMap.get(mvp.uid) ? `/players/${playersMap.get(mvp.uid).id}` : undefined}>{mvp.ign}{mvp.teamTag && mvp.teamTag !== '—' ? ` (${mvp.teamTag})` : ''}</a><p class="mvp-label">Round {roundDetails[i]?.round_number ?? i+1} MVP</p><div class="mvp-kda"><span class="kill">{mvp.kills ?? '—'}</span> / <span class="death">{mvp.deaths ?? '—'}</span> / <span class="assist">{mvp.assists ?? '—'}</span></div></div>
+                    </div> : <p class="mvp-none">No MVP</p>}
+                    {roundDetails[i]?.resultNote && <p class="map-result-note">{roundDetails[i].resultNote}</p>}
+                  </article>
                 );
               })}
             </div>
@@ -211,6 +213,8 @@ const roundMVPs = numRounds > 0 ? Array.from({ length: numRounds }, (_, i) => ge
         )}
 
 
+        </section>
+        <section id="match-panel-2" role="tabpanel" aria-labelledby="match-tab-2" hidden>
         <h2 class="section-title">Player Stats</h2>
         {playerStats.some(p => p.rounds.some(r => r.round_number === undefined)) && (
           <p class="text-muted">Some player map numbers are unknown. Their stats are included in totals, but left unassigned in map columns.</p>
@@ -314,7 +318,8 @@ const roundMVPs = numRounds > 0 ? Array.from({ length: numRounds }, (_, i) => ge
             </table>
           </div>
         )}
-        <MatchInsights players={playerStats} team1Id={team1Id} team2Id={team2Id} team1Name={team1Name} team2Name={team2Name} comparison />
+        </section>
+        <section id="match-panel-3" role="tabpanel" aria-labelledby="match-tab-3" hidden><MatchInsights players={playerStats} team1Id={team1Id} team2Id={team2Id} team1Name={team1Name} team2Name={team2Name} comparison /></section>
       </>
     )}
 
@@ -494,9 +499,31 @@ const roundMVPs = numRounds > 0 ? Array.from({ length: numRounds }, (_, i) => ge
   }
 </style>
 <style>
-.match-score-card{margin:32px 0;background:var(--bg-secondary);border:1px solid var(--border);border-radius:12px;padding:26px}
+.match-score-card{margin:32px 0;background:linear-gradient(115deg,#3f2b20,#282323 65%,#252528);border:1px solid #61412d;border-radius:12px;padding:26px}
 .score-metadata{text-align:center;margin-bottom:18px}.score-metadata h1{font-size:20px;line-height:1.5}.score-metadata p{font-size:14px;color:var(--text-muted);margin-top:8px}
 .match-score-card .match-detail-scoreboard{border:0;background:transparent;margin-bottom:18px;padding:12px;box-shadow:none}
 .match-score-card .match-status-center{margin:0;text-align:center}
 @media(max-width:640px){.match-score-card{padding:18px 10px;margin-top:24px}.score-metadata h1{font-size:17px}.score-metadata p{font-size:13px}}
+</style>
+
+<script>
+const tabs=Array.from(document.querySelectorAll<HTMLButtonElement>('.match-tabs [role="tab"]'));
+function selectTab(tab:HTMLButtonElement,focus=false){tabs.forEach(item=>{const active=item===tab;item.setAttribute('aria-selected',String(active));item.tabIndex=active?0:-1;document.getElementById(item.getAttribute('aria-controls')!)!.hidden=!active;});if(focus)tab.focus();}
+tabs.forEach((tab,i)=>{tab.addEventListener('click',()=>selectTab(tab));tab.addEventListener('keydown',event=>{let next=i;if(event.key==='ArrowRight')next=(i+1)%tabs.length;else if(event.key==='ArrowLeft')next=(i+tabs.length-1)%tabs.length;else if(event.key==='Home')next=0;else if(event.key==='End')next=tabs.length-1;else return;event.preventDefault();selectTab(tabs[next],true);});});
+</script>
+<style>
+.match-tabs{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;border-bottom:1px solid var(--border);padding:12px 0;margin:24px 0}.match-tabs button{background:var(--bg-secondary);color:var(--text-secondary);border:1px solid var(--border);border-radius:6px;padding:12px 16px;font:inherit;font-size:14px;cursor:pointer}.match-tabs button:hover{border-color:var(--accent);color:var(--accent)}.match-tabs button[aria-selected="true"]{background:var(--accent);color:#171719;font-weight:600}[role="tabpanel"][hidden]{display:none}
+</style>
+
+<style is:global>
+.interior-page .map-mvp-card{padding:0;overflow:hidden;text-align:left;background:var(--bg-secondary);border:1px solid var(--border);border-radius:10px}.map-mvp-heading{padding:16px;font-size:17px}.map-mvp-thumbnail{display:block;width:100%;height:145px;object-fit:cover}.map-mvp-player{display:flex;align-items:center;gap:16px;padding:16px;background:linear-gradient(120deg,#403023,#252528)}.map-mvp-avatar{object-fit:contain;flex-shrink:0}.map-mvp-player>div{min-width:0}.map-mvp-name{font-weight:700;font-size:16px;overflow-wrap:anywhere}.map-mvp-player .mvp-label{margin:6px 0}.map-result-note{padding:16px;font-size:13px;color:var(--text-muted)}
+</style>
+
+<style is:global>
+.map-mvp-image-link{display:block;position:relative;text-decoration:none;overflow:hidden}
+.map-mvp-image-link::after{content:"";position:absolute;inset:0;background:#0005;transition:background .2s}
+.map-mvp-image-link .map-mvp-overlay{position:absolute;inset:0;z-index:1;display:flex;align-items:center;justify-content:center;margin:0;padding:16px;text-align:center;font-size:21px;color:white;text-shadow:0 2px 6px #000}
+.map-mvp-image-link:hover::after{background:#0002}
+.map-mvp-image-link:hover .map-mvp-overlay{color:var(--accent)}
+.interior-page .map-mvp-player{justify-content:center;text-align:center}
 </style>

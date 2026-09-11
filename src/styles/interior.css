@@ -117,3 +117,87 @@
 .interior-page .club-meta span { border-color:#77604d; color:var(--text-secondary); }
 .interior-page .club-info { background:#332b25; color:var(--accent); border-top-color:#65503e; }
 .interior-page .club-info:hover { background:#463023; color:#ffb18a; }
+/* Shared map and match tab appearance, independent of Astro page scoping. */
+.interior-page :is(.map-tabs, .match-tabs) {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+  padding: 12px 0;
+  margin: 28px 0 24px;
+}
+.interior-page :is(.map-tabs, .match-tabs) button {
+  appearance: none;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px 16px;
+  min-height: 48px;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.interior-page :is(.map-tabs, .match-tabs) button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.interior-page :is(.map-tabs, .match-tabs) button[aria-selected="true"] {
+  background: var(--accent);
+  color: #171719;
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+.interior-page .match-leader .leader-entry { transition: background-color .18s, color .18s; }
+.interior-page .match-leader .leader-entry:hover,
+.interior-page .match-leader .leader-entry:focus-visible { background:var(--bg-card-hover); color:var(--accent); box-shadow:inset 3px 0 var(--accent); text-decoration:none; }
+.interior-page .mvp-card .mvp-kda .kill { color:var(--win); }
+.interior-page .mvp-card .mvp-kda .death { color:var(--loss); }
+.interior-page .mvp-card .mvp-kda .assist { color:var(--assist); }
+.interior-page .mvp-card a:hover { color:var(--accent-hover); text-decoration:none; }
+
+/* Tournament and match listings share the team card finish. */
+.interior-page .tourney-grid .tourney-card,
+.interior-page #matchesGrid .match-card {
+  background: #2c2927;
+  border: 1px solid #65503e;
+  border-top: 3px solid var(--accent);
+  border-radius: 10px;
+  padding: 24px 22px 0;
+  overflow: hidden;
+  box-shadow: none;
+}
+.interior-page .tourney-grid .tourney-card:hover,
+.interior-page #matchesGrid .match-card:hover {
+  background: #37302b;
+  border-color: var(--accent);
+  transform: none;
+}
+.interior-page .tourney-card { text-align: center; }
+.interior-page .tourney-header,
+.interior-page .tourney-meta,
+.interior-page .tourney-winner { justify-content: center; }
+.interior-page .tourney-header h3 { min-width: 0; }
+.interior-page .tourney-cta,
+.interior-page #matchesGrid .match-card-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin: auto -22px 0;
+  padding: 16px 22px;
+  border-top: 1px solid #65503e;
+  background: #332b25;
+  color: var(--accent);
+  font-size: 14px;
+  font-weight: 600;
+}
+.interior-page .tourney-cta { margin-top: 12px; }
+.interior-page #matchesGrid .match-card-info { margin-top: 20px; }
+.interior-page .tourney-card:hover .tourney-cta,
+.interior-page #matchesGrid .match-card:hover .match-card-info {
+  background: #463023;
+  color: #ffb18a;
+}

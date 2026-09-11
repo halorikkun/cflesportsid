@@ -9,26 +9,16 @@ const maps = (await getCollection('maps')).map(map => ({ ...map, stats: calculat
 <Layout title="Map Statistics - CFL Esports ID" current="Maps">
   <div class="container">
     <div class="page-header"><h1>Map Statistics</h1><p>Calculated from completed matches</p></div>
-    <div class="stat-grid">
-      <div class="stat-box"><div class="stat-value">{maps.length}</div><div class="stat-label">Maps</div></div>
-      <div class="stat-box"><div class="stat-value">{calculated.totals.mapsPlayed}</div><div class="stat-label">Map Games Played</div></div>
-      <div class="stat-box"><div class="stat-value">{calculated.totals.mvpCount}</div><div class="stat-label">Round MVP Awards</div></div>
-    </div>
-    <p class="coverage">Kills, deaths, and assists below include only player entries with confirmed map numbers.
-      {calculated.totals.unassignedPlayerRounds > 0 && ` ${calculated.totals.unassignedPlayerRounds} player-round entries (${calculated.totals.unassignedMapKills} kills) still need map numbers. They remain included in player and team totals.`}
-    </p>
-    <div class="table-wrap" tabindex="0" role="region" aria-label="Statistics table">
-      <table>
-        <thead><tr><th>Map</th><th>Games Played</th><th>Matches</th><th>Recorded Kills</th><th>Recorded Deaths</th><th>Recorded Assists</th><th>MVP Awards</th><th>Known Results</th></tr></thead>
-        <tbody>{maps.map(map => (
-          <tr>
-            <td><a href={`/maps/${map.id}`}>{map.data.name}</a></td>
-            <td>{map.stats.mapsPlayed}</td><td>{map.stats.matchesPlayed}</td>
-            <td>{map.stats.kills}</td><td>{map.stats.deaths}</td><td>{map.stats.assists}</td><td>{map.stats.mvpCount}</td><td>{map.stats.knownResults} / {map.stats.mapsPlayed}</td>
-          </tr>
-        ))}</tbody>
-      </table>
-    </div>
+    <div class="map-directory">{maps.map(map => <article class="map-card">
+      <div class="map-thumbnail">
+        <img src={map.data.thumbnail || '/maps/placeholder.svg'} alt="" width="800" height="360" loading="lazy" onerror="this.onerror=null;this.src='/maps/placeholder.svg'" />
+        <h2>{map.data.name}</h2>
+      </div>
+      <div class="map-card-body"><dl>{[['Matches',map.stats.matchesPlayed],['Kills',map.stats.kills],['Deaths',map.stats.deaths],['Assists',map.stats.assists]].map(([label,value])=><div><dt>{label}</dt><dd>{value}</dd></div>)}</dl></div>
+      <a href={`/maps/${map.id}`} class="map-info">Map info <span aria-hidden="true">↗</span></a>
+    </article>)}</div>
   </div>
 </Layout>
-<style>.coverage { color: var(--text-secondary); margin: 1.5rem 0; line-height: 1.6; }</style>
+<style>
+.map-directory{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px}.map-card{background:var(--bg-secondary);border:1px solid #65503e;border-radius:10px;overflow:hidden}.map-thumbnail{height:180px;display:block;position:relative;overflow:hidden;background:#292625;text-decoration:none}.map-thumbnail img{display:block;width:100%;height:100%;object-fit:cover}.map-thumbnail::after{content:"";position:absolute;inset:0;background:#0005;transition:background .2s}.map-card .map-thumbnail h2{position:absolute;inset:0;z-index:1;display:flex;align-items:center;justify-content:center;text-align:center;padding:16px;margin:0;color:white;font-size:23px;text-shadow:0 2px 6px #000;transition:color .2s}.map-card-body{padding:20px}.map-card h2{font-size:21px;margin-bottom:18px}.map-card dl{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}.map-card dt{font-size:12px;color:var(--text-muted)}.map-card dd{font-size:20px;font-weight:700;color:var(--accent)}.map-info{display:flex;justify-content:space-between;padding:16px 20px;background:#332b25;border-top:1px solid #65503e}.map-info:hover{background:#463023;color:#ffb18a}@media(max-width:900px){.map-directory{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:640px){.map-directory{grid-template-columns:1fr}}
+</style>

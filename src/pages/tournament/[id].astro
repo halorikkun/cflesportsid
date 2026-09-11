@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import { calculateStatistics } from '../../utils/statistics';
 import { getCollection, type CollectionEntry } from 'astro:content';
 import { getParticipantLabel, getSourceNode, resolveSourceTeam, validateTournament } from '../../utils/tournament';
 
@@ -23,9 +24,14 @@ const { tournament } = Astro.props;
 const tournamentName = tournament.data.name;
 const matches = await getCollection('matches');
 const teamsMap = new Map((await getCollection('teams')).map(t => [t.id, t]));
-const tournaments = await getCollection('tournaments');
 const tMatches = matches.filter(m => m.data.tournamentId === tournament.id);
-const completedCount = tMatches.filter(m => m.data.status === 'completed').length;
+const totalKills = calculateStatistics(tMatches).totals.kills;
+const winner = tournament.data.winner ? teamsMap.get(tournament.data.winner) : undefined;
+const season = tournamentName.match(/\bS\d+\b/i)?.[0].toUpperCase();
+const month = new Date(tournament.data.startDate).toLocaleDateString('en-GB', { month: 'long', timeZone: 'UTC' });
+const dateRange = [tournament.data.startDate, tournament.data.endDate].map(date =>
+  new Date(date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
+).join(' – ');
 type Stage = CollectionEntry<'tournaments'>['data']['stages'][number];
 function getEntries(stage: Stage, roundId: string) {
   return [
@@ -42,15 +48,21 @@ function formatDate(value: string) {
 
 <Layout title={`CFL Esports ID - ${tournamentName}`} current="Tournaments">
   <div class="container">
-    <div class="page-header">
-      <h1>{tournamentName}</h1>
-      <p>{completedCount} / {tMatches.length} matches played</p>
-    </div>
-    <div class="bracket-nav">
-      <select id="tourney-select" onchange="if(this.value) window.location.href='/tournament/'+this.value">
-        {tournaments.map(t => <option value={t.id} selected={t.id === tournament.id}>{t.data.name}</option>)}
-      </select>
-    </div>
+    <section class="profile-banner tournament-banner">
+      <div class="profile-identity">
+        <img class="profile-image team-image" src="/icons/trophy.webp" alt="Trophy" width="160" height="160" />
+        <div>
+          <p class="profile-kicker">{[season, month].filter(Boolean).join(' · ')}</p>
+          <h1>{tournamentName.includes(':') ? <>{tournamentName.slice(0, tournamentName.indexOf(':') + 1)}<br />{tournamentName.slice(tournamentName.indexOf(':') + 1).trim()}</> : tournamentName}</h1>
+          <p class="profile-subtitle">{dateRange}</p>
+        </div>
+      </div>
+      <dl class="profile-metrics">
+        <div><dt>Total teams</dt><dd>{tournament.data.teams.length}</dd></div>
+        <div><dt>Total kills</dt><dd>{totalKills.toLocaleString('en-US')}</dd></div>
+        <div><dt>Winner</dt><dd class="tournament-winner">{winner ? <a href={`/teams/${winner.id}`}>{winner.data.name}</a> : 'TBD'}</dd></div>
+      </dl>
+    </section>
     {tournament.data.stages.map(stage => {
       const rounds = stage.rounds.filter(r => r.placement !== 3).sort((a, b) => a.order - b.order);
       const placementRounds = stage.rounds.filter(r => r.placement === 3).sort((a, b) => a.order - b.order);
@@ -136,6 +148,9 @@ function formatDate(value: string) {
 </Layout>
 
 <style>
+  .tournament-banner .tournament-winner { font-size:18px; text-align:right; overflow-wrap:anywhere; }
+  .tournament-winner a { color:var(--accent); }
+  .tournament-winner a:hover { color:var(--accent-hover); }
   .tournament-stage { margin-bottom: 2rem; }
   .series-format, .bracket-empty { color: var(--text-muted); margin: 0.5rem 0 1rem; }
   .bracket-main-section { display: flex; flex-direction: column; flex: 1; }

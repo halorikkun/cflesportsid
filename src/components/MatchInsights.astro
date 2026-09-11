@@ -1,7 +1,7 @@
 ---
-interface Player { uid: string; ign: string; teamId: string | null; teamTag: string; avatar: string; totalKills: number; totalDeaths: number; totalAssists: number; }
-interface Props { players: Player[]; team1Id?: string; team2Id?: string; team1Name: string; team2Name: string; comparison?: boolean; }
-const { players, team1Id, team2Id, team1Name, team2Name, comparison = false } = Astro.props;
+interface Player { uid: string; ign: string; teamId: string | null; teamTag: string; teamName: string; avatar: string; totalKills: number; totalDeaths: number; totalAssists: number; }
+interface Props { players: Player[]; team1Id?: string; team2Id?: string; team1Name: string; team2Name: string; comparison?: boolean; overviewOnly?: boolean; leadersOnly?: boolean; }
+const { players, team1Id, team2Id, team1Name, team2Name, comparison = false, overviewOnly = false, leadersOnly = false } = Astro.props;
 const left = players.filter(p => p.teamId === team1Id);
 const right = players.filter(p => p.teamId === team2Id);
 const ratio = (p: Player) => (p.totalKills + p.totalAssists) / Math.max(p.totalDeaths, 1);
@@ -9,12 +9,12 @@ const metrics = [{ label: 'Kills', key: 'totalKills' }, { label: 'Deaths', key: 
 const leaders = [{ title: 'Top kills', value: (p: Player) => p.totalKills }, { title: 'Top assists', value: (p: Player) => p.totalAssists }, { title: 'Top KDA', value: ratio }];
 ---
 {!comparison ? <>
-  <section class="insight-summary" aria-label="Match summary"><h2>Overview</h2><div class="comparison-row team-labels"><strong>{team1Name}</strong><span></span><strong>{team2Name}</strong></div>
+  {!leadersOnly && <><h2 class="section-title" style="text-align:center;">Overview</h2><section class="insight-summary" aria-label="Match summary"><div class="comparison-row team-labels"><strong>{team1Name}</strong><span></span><strong>{team2Name}</strong></div>
     {metrics.map(metric => { const a = left.reduce((n,p) => n+p[metric.key],0); const b = right.reduce((n,p) => n+p[metric.key],0); return <div class="comparison-row"><strong class:list={[a>b && 'larger']}>{a}</strong><span>{metric.label}</span><strong class:list={[b>a && 'larger']}>{b}</strong></div>; })}
-  </section>
-  <h2 class="section-title">Match Leaders</h2><div class="match-leaders">
-    {leaders.map(board => { const ranked = [...players].sort((a,b)=>board.value(b)-board.value(a)).slice(0,3); const top=ranked[0]; return <article class="match-leader"><h3>{board.title}</h3>{top && <div class="leader-photo"><img src={top.avatar} alt="" width="100" height="110" onerror="this.onerror=null; this.src='/players/default.webp'" /><span>{top.teamTag}</span></div>}{ranked.map((p,i)=><a href={`/players/${p.uid}`} class="leader-entry"><span>{i+1}</span><strong>{p.ign}<small>{p.teamTag}</small></strong><b>{board.title==='Top KDA'?board.value(p).toFixed(2):board.value(p)}</b></a>)}</article>; })}
-  </div>
+  </section></>}
+  {!overviewOnly && <><h2 class="section-title">Match Leaders</h2><div class="match-leaders">
+    {leaders.map(board => { const ranked = [...players].sort((a,b)=>board.value(b)-board.value(a)).slice(0,3); const top=ranked[0]; return <article class="match-leader"><h3>{board.title}</h3>{top && <div class="leader-photo"><img src={top.avatar} alt="" width="100" height="110" onerror="this.onerror=null; this.src='/players/default.webp'" /><div class="featured-leader-info"><a href={`/players/${top.uid}`}>{top.ign}</a><span>{top.teamName}</span><strong>{board.title === 'Top KDA' ? board.value(top).toFixed(2) : `${board.value(top)} ${board.title === 'Top kills' ? 'kills' : 'assists'}`}</strong></div></div>}{ranked.map((p,i)=><a href={`/players/${p.uid}`} class="leader-entry"><span>{i+1}</span><strong>{p.ign}<small>{p.teamTag}</small></strong><b>{board.title==='Top KDA'?board.value(p).toFixed(2):board.value(p)}</b></a>)}</article>; })}
+  </div></>}
 </> : <section class="player-comparison">
   <h2 class="section-title">Player comparison</h2><p class="comparison-help">Compare recorded stats from this match. KDA = (kills + assists) ÷ deaths, using 1 when deaths are zero.</p>
   <div class="comparison-selects">{[{id:'a',name:team1Name,items:left},{id:'b',name:team2Name,items:right}].map(side=><label>{side.name}<select data-compare-side={side.id}><option value="">Select a player</option>{side.items.map(p=><option value={p.uid}>{p.ign}</option>)}</select></label>)}</div>
@@ -66,3 +66,5 @@ const leaders = [{ title: 'Top kills', value: (p: Player) => p.totalKills }, { t
 .player-comparison [data-compare-reset]:hover { background:#ff955f; border-color:#ff955f; box-shadow:0 3px 12px #ff742e33; transform:translateY(-1px); }
 .player-comparison [data-compare-reset]:active { transform:translateY(0); }
 </style>
+
+<style>.leader-photo{padding:12px 14px 0;gap:14px;justify-content:flex-start}.leader-photo img{flex-shrink:0}.featured-leader-info{min-width:0;padding-bottom:12px}.featured-leader-info a,.featured-leader-info span,.featured-leader-info strong{display:block;overflow-wrap:anywhere}.featured-leader-info a{font-size:15px;font-weight:700}.featured-leader-info span{font-size:12px;color:var(--text-muted);margin:4px 0}.featured-leader-info strong{font-size:17px}</style>

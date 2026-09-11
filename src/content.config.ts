@@ -52,6 +52,7 @@ const maps = defineCollection({
     name: z.string(),
     game: z.string().default('crossfire-legends'),
     active: z.boolean().default(true),
+    thumbnail: z.string().min(1).optional(),
   }),
 });
 
