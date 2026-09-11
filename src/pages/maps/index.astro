@@ -20,5 +20,9 @@ const maps = (await getCollection('maps')).map(map => ({ ...map, stats: calculat
   </div>
 </Layout>
 <style>
+.map-card { transition: border-color .2s, background-color .2s; }
+.map-card:hover, .map-card:focus-within { border-color: var(--accent); background: #2c2927; }
+.map-card:hover .map-info, .map-card:focus-within .map-info { background: #463023; color: #ffb18a; border-top-color: var(--accent); }
+.map-info { transition: background-color .2s, color .2s, border-color .2s; }
 .map-directory{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px}.map-card{background:var(--bg-secondary);border:1px solid #65503e;border-radius:10px;overflow:hidden}.map-thumbnail{height:180px;display:block;position:relative;overflow:hidden;background:#292625;text-decoration:none}.map-thumbnail img{display:block;width:100%;height:100%;object-fit:cover}.map-thumbnail::after{content:"";position:absolute;inset:0;background:#0005;transition:background .2s}.map-card .map-thumbnail h2{position:absolute;inset:0;z-index:1;display:flex;align-items:center;justify-content:center;text-align:center;padding:16px;margin:0;color:white;font-size:23px;text-shadow:0 2px 6px #000;transition:color .2s}.map-card-body{padding:20px}.map-card h2{font-size:21px;margin-bottom:18px}.map-card dl{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}.map-card dt{font-size:12px;color:var(--text-muted)}.map-card dd{font-size:20px;font-weight:700;color:var(--accent)}.map-info{display:flex;justify-content:space-between;padding:16px 20px;background:#332b25;border-top:1px solid #65503e}.map-info:hover{background:#463023;color:#ffb18a}@media(max-width:900px){.map-directory{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:640px){.map-directory{grid-template-columns:1fr}}
 </style>
