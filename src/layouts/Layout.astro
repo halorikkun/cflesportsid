@@ -7,9 +7,14 @@ import '../styles/interior.css';
 interface Props {
   title: string;
   current?: string;
+  description?: string;
+  canonicalPath?: string;
+  noindex?: boolean;
 }
 
-const { title, current } = Astro.props;
+const { title, current, description = `${title}. Explore Crossfire: Legends Indonesia team standings, player statistics, tournament results and match records.`, canonicalPath = Astro.url.pathname, noindex = false } = Astro.props;
+const canonical = new URL(canonicalPath.replace(/\/$/, '') || '/', Astro.site);
+const shareImage = new URL('/brand/cflesports-id.webp', Astro.site);
 ---
 
 <!DOCTYPE html>
@@ -17,15 +22,31 @@ const { title, current } = Astro.props;
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
+  <link rel="icon" href="/favicon.ico" />
+  <meta name="description" content={description} />
+  <meta name="theme-color" content="#171719" />
+  {noindex && <meta name="robots" content="noindex, follow" />}
+  <link rel="canonical" href={canonical} />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="CFL Esports Indonesia" />
+  <meta property="og:title" content={title} />
+  <meta property="og:description" content={description} />
+  <meta property="og:url" content={canonical} />
+  <meta property="og:image" content={shareImage} />
+  <meta property="og:image:alt" content="CFL Esports Indonesia" />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content={title} />
+  <meta name="twitter:description" content={description} />
+  <meta name="twitter:image" content={shareImage} />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <title>{title}</title>
 </head>
 <body class:list={[current !== 'Home' && 'interior-page']}>
+  <a class="skip-link" href="#main-content">Skip to content</a>
   <Header current={current} />
-  <main>
+  <main id="main-content" tabindex="-1">
     <slot />
   </main>
   <Footer />

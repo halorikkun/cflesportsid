@@ -1,95 +1,47 @@
-# CFL Tournament Hub (Astro)
+# CFL Esports Indonesia
 
-A Crossfire tournament hub built with [Astro](https://astro.build) and deployed on Cloudflare Pages.
+Crossfire: Legends Indonesia standings, player and team statistics, tournament brackets, maps, and a public map veto tool. Built with Astro and deployed to https://cflesportsid.pages.dev.
 
-## Features 
+## Local development
 
-- **Teams** — Browse all teams with stats, rosters, and match history
-- **Players** — Player profiles with KDA stats, K/D ratio, MVP awards, and socials
-- **Matches** — Match results with scores, MVPs, and team KDA breakdowns
-- **Type-safe data** — Content Collections with Zod schemas for all data
-- **Zero JS by default** — Pure static HTML output, fastest possible load times
-- **No request limits** — Static assets are free and unlimited on Cloudflare
+Use Node.js 22 LTS and npm.
 
-## Data Structure
-
-All data is stored as JSON files in `src/data/`:
-
-```
-src/data/
-  teams/       — One JSON file per team
-  players/     — One JSON file per player
-  matches/     — One JSON file per match
+```sh
+npm ci
+npm run dev
 ```
 
-### Adding a new team
+## Verify before publishing
 
-Create `src/data/teams/my-team.json`:
-
-```json
-{
-  "name": "My Team",
-  "tag": "MYT",
-  "region": "SEA",
-  "players": ["player-id-1", "player-id-2"],
-  "stats": { "wins": 0, "losses": 0, "draws": 0, "matchesPlayed": 0 }
-}
+```sh
+npm run data:check
+npm test
+npm run build
+npm run build:check
+npm run preview
 ```
 
-### Adding a new player
+The build creates the static site in `dist/`. Cloudflare Pages builds the site after a push; build command: `npm run build`, output directory: `dist`. Do not edit generated files in `dist/` or `.astro/`.
 
-Create `src/data/players/my-player.json`:
+## Data entry
 
-```json
-{
-  "name": "Real Name",
-  "ign": "myPlayer",
-  "team": "my-team",
-  "role": "Rifler",
-  "stats": { "kills": 0, "deaths": 0, "assists": 0, "matchesPlayed": 0, "mvpCount": 0 }
-}
-```
+Content lives in `src/data/teams`, `players`, `matches`, `maps`, and `tournaments`. Filenames are canonical IDs; player filenames use their UID. Display names can change without changing IDs.
 
-### Adding a new match
+Statistics are calculated from completed matches. Record each player's team at match time so transfers do not rewrite historical results. See these guides instead of copying legacy profile totals:
 
-Create `src/data/matches/m04.json`:
+- [Adding data and creating match drafts](docs/data-entry.md)
+- [Tournament brackets](docs/tournament-data.md)
+- [Calculated statistics](docs/calculated-statistics.md)
+- [Map veto configuration](docs/veto.md)
 
-```json
-{
-  "tournament": "CFL Monthly #2",
-  "round": "Group Stage",
-  "date": "2026-09-20",
-  "team1": "black-ops",
-  "team2": "crimson-wolves",
-  "score1": 0,
-  "score2": 0,
-  "status": "upcoming"
-}
-```
+Create a match draft with `npm run data:new-match`, review it, then move it into the match collection. Validate before publishing.
 
-## Development
+## SEO and assets
 
-```bash
-npm install
-npm run dev      # Local dev server at http://localhost:4321
-npm run build     # Build to dist/
-npm run preview   # Preview the built site
-```
+The production URL is configured in `astro.config.mjs`. The sitemap and robots file derive from that setting. Update it if the primary domain changes. The old `/tournament/1` URL remains available and has a canonical link to the main tournament page.
 
-## Deploy to Cloudflare Pages
+Store images in `public/` and reference them with root-relative paths. Existing images use WebP; maps without a thumbnail use the shared placeholder.
 
-1. Push this repo to GitHub
-2. Go to [Cloudflare Pages](https://dash.cloudflare.com/?to=/:account/workers-and-pages/create)
-3. Connect your Git repository
-4. Build settings (auto-detected):
-   - **Build command:** `npm run build`
-   - **Output directory:** `dist`
-5. Deploy — every push to `main` triggers a new build
+## Release status
 
-## Why Astro?
-
-- **Zero JS by default** — ships pure HTML, smallest possible output
-- **Type-safe data** — Content Collections validate your data at build time
-- **Automatic pages** — each player and team gets its own page automatically
-- **No request limits** — static assets are free and unlimited on Cloudflare
-- **Scales well** — handles hundreds of teams, players, and matches with no performance impact
+See [Step 15 checks](docs/release-checklist.md) for verification results and remaining work.

@@ -41,13 +41,13 @@ const rounds = [...new Set(matches.map(m => getRoundName(m, tournamentsMap)))];
     </div>
 
     <div class="matches-toolbar">
-      <input type="text" id="searchInput" placeholder="Search tournament or team..." class="matches-search" />
-      <select id="statusFilter" class="matches-select">
+      <input type="text" id="searchInput" aria-label="Search matches" placeholder="Search tournament or team..." class="matches-search" />
+      <select id="statusFilter" aria-label="Filter by status" class="matches-select">
         <option value="">All Status</option>
         <option value="upcoming">Upcoming</option>
         <option value="completed">Completed</option>
       </select>
-      <select id="roundFilter" class="matches-select">
+      <select id="roundFilter" aria-label="Filter by round" class="matches-select">
         <option value="">All Rounds</option>
         {rounds.map(r => <option value={r}>{r}</option>)}
       </select>

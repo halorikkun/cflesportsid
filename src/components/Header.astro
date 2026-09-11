@@ -44,6 +44,14 @@ const { current } = Astro.props;
       });
       
       // Close menu when clicking a link
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && nav.classList.contains('active')) {
+          nav.classList.remove('active');
+          menuBtn.setAttribute('aria-expanded', 'false');
+          menuBtn.classList.remove('active');
+          menuBtn.focus();
+        }
+      });
       nav.querySelectorAll('a').forEach(link => {
         link.addEventListener('click', () => {
           nav.classList.remove('active');
@@ -99,6 +107,7 @@ const { current } = Astro.props;
     
     /* Mobile navigation - hidden by default */
     .nav {
+      visibility: hidden;
       position: fixed;
       top: 64px;
       left: 0;
@@ -115,6 +124,7 @@ const { current } = Astro.props;
     }
     
     .nav.active {
+      visibility: visible;
       max-height: 400px;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
     }

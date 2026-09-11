@@ -57,8 +57,8 @@ const teams = (await getCollection('teams')).map(team => {
     </div>
 
     <div class="teams-toolbar">
-      <input type="text" id="searchInput" placeholder="Search team name or tag..." class="teams-search" />
-      <select id="sortSelect" class="teams-sort">
+      <input type="text" id="searchInput" aria-label="Search teams" placeholder="Search team name or tag..." class="teams-search" />
+      <select id="sortSelect" aria-label="Sort teams" class="teams-sort">
         <option value="name-asc">Name (A–Z)</option>
         <option value="name-desc">Name (Z–A)</option>
         <option value="wins-desc">Wins (High–Low)</option>

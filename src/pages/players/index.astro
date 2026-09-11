@@ -40,8 +40,8 @@ const teamNames = [...new Set(players.map(p => p.teamName).filter(t => t !== 'â€
     </div>
 
     <div class="players-toolbar">
-      <input type="text" id="searchInput" placeholder="Search player or team..." class="players-search" />
-      <select id="teamFilter" class="players-filter">
+      <input type="text" id="searchInput" aria-label="Search players" placeholder="Search player or team..." class="players-search" />
+      <select id="teamFilter" aria-label="Filter by team" class="players-filter">
         <option value="">All Teams</option>
         {teamNames.map(name => (
           <option value={name.toLowerCase()}>{name}</option>
