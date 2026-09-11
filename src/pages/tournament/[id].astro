@@ -8,15 +8,28 @@ export async function getStaticPaths() {
   const tournaments = await getCollection('tournaments');
   const matches = await getCollection('matches');
   const teams = await getCollection('teams');
+
   const tournamentIds = new Set(tournaments.map(t => t.id));
+
   for (const match of matches) {
-    if (!tournamentIds.has(match.data.tournamentId)) throw new Error(`${match.id}: unknown tournament ${match.data.tournamentId}`);
+    if (!tournamentIds.has(match.data.tournamentId)) {
+      throw new Error(`${match.id}: unknown tournament ${match.data.tournamentId}`);
+    }
   }
+
   return tournaments.flatMap(tournament => {
-    validateTournament(tournament, matches, new Set(teams.map(team => team.id)));
-    const paths = [{ params: { id: tournament.id }, props: { tournament } }];
-    if (tournament.id === 'clash-for-glory-s1') paths.push({ params: { id: '1' }, props: { tournament } });
-    return paths;
+    validateTournament(
+      tournament,
+      matches,
+      new Set(teams.map(team => team.id))
+    );
+
+    return [
+      {
+        params: { id: tournament.id },
+        props: { tournament }
+      }
+    ];
   });
 }
 
