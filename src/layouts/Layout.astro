@@ -13,7 +13,10 @@ interface Props {
 }
 
 const { title, current, description = `${title}. Explore Crossfire: Legends Indonesia team standings, player statistics, tournament results and match records.`, canonicalPath = Astro.url.pathname, noindex = false } = Astro.props;
-const canonical = new URL(canonicalPath.replace(/\/$/, '') || '/', Astro.site);
+const normalizedPath =
+  canonicalPath === '/' ? '/' : `${canonicalPath.replace(/\/$/, '')}/`;
+
+const canonical = new URL(normalizedPath, Astro.site);
 const shareImage = new URL('/brand/cflesports-id.webp', Astro.site);
 ---
 
