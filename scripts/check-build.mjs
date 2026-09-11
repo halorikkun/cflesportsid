@@ -11,6 +11,7 @@ const pages = (await walk(root)).filter(path => path.endsWith('.html'));
 const errors = [];
 for (const page of pages) {
   const html = await readFile(page, 'utf8');
+  if (/^google-site-verification: google[a-z0-9]+\.html\s*$/.test(html)) continue;
   const tags = [...html.matchAll(/<([a-z][\w-]*)\b((?:"[^"]*"|'[^']*'|[^'">])*)>/gi)];
   const ids = new Set();
   let description = false, canonicals = 0;

@@ -1,0 +1,16 @@
+---
+import { getImage } from 'astro:assets';
+import type { ImageMetadata } from 'astro';
+import type { HTMLAttributes } from 'astro/types';
+
+interface Props extends HTMLAttributes<'img'> {
+  src: string;
+  width: number;
+}
+const { src, width, ...attributes } = Astro.props;
+const images = import.meta.glob<{ default: ImageMetadata }>('/public/**/*.webp', { eager: true });
+const original = images[`/public${src}`]?.default;
+const small = original ? await getImage({ src: original, width, format: 'webp', quality: 80 }) : undefined;
+const retina = original ? await getImage({ src: original, width: width * 2, format: 'webp', quality: 80 }) : undefined;
+---
+<img {...attributes} width={width} src={small?.src || src} srcset={small && retina ? `${small.src} 1x, ${retina.src} 2x` : undefined} />
