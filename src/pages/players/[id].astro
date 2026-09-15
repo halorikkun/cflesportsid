@@ -1,8 +1,17 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
-import { calculateStatistics, emptyStats, kdRatio } from '../../utils/statistics';
-import { getRoundName, getParticipantLabel } from '../../utils/tournament';
+import {
+  calculateStatistics,
+  emptyStats,
+  kdRatio
+} from '../../utils/statistics';
+
+import {
+  getRoundName,
+  getParticipantLabel
+} from '../../utils/tournament';
+
 import {
   getTournamentMap,
   getMapMap,
@@ -14,6 +23,7 @@ import {
 
 export async function getStaticPaths() {
   const players = await getCollection('players');
+
   return players.map(player => ({
     params: { id: player.id },
     props: { player },
@@ -21,78 +31,251 @@ export async function getStaticPaths() {
 }
 
 const { player } = Astro.props;
+
 const allTeams = await getCollection('teams');
 const allPlayers = await getCollection('players');
-const teamsMap = new Map(allTeams.map(t => [t.id, t]));
-const team = player.data.team ? teamsMap.get(player.data.team) : undefined;
-const teammates = team ? allPlayers.filter(p => p.id !== player.id && team.data.players.includes(p.id)) : [];
 const allMatches = await getCollection('matches');
+
+const teamsMap = new Map(
+  allTeams.map(t => [t.id, t])
+);
+
+const team = player.data.team
+  ? teamsMap.get(player.data.team)
+  : undefined;
+
+const teammates = team
+  ? allPlayers.filter(
+      p =>
+        p.id !== player.id &&
+        team.data.players.includes(p.id)
+    )
+  : [];
 
 const tournamentsMap = await getTournamentMap();
 const mapsMap = await getMapMap();
 
-const playerMatches = allMatches.filter(m => 
-  m.data.status === 'completed' && m.data.playerStats && m.data.playerStats.some(ps => ps.uid === player.data.uid)
-).sort((a, b) => b.data.date.localeCompare(a.data.date) || b.id.localeCompare(a.id));
+const playerMatches = allMatches
+  .filter(
+    m =>
+      m.data.status === 'completed' &&
+      m.data.playerStats &&
+      m.data.playerStats.some(
+        ps => ps.uid === player.data.uid
+      )
+  )
+  .sort(
+    (a, b) =>
+      b.data.date.localeCompare(a.data.date) ||
+      b.id.localeCompare(a.id)
+  );
 
-const careerStats = calculateStatistics(allMatches).players.get(player.data.uid || player.id) ?? emptyStats();
+const careerStats =
+  calculateStatistics(allMatches).players.get(
+    player.data.uid || player.id
+  ) ?? emptyStats();
+
 const matchesPlayed = careerStats.matchesPlayed;
 const kd = kdRatio(careerStats).toFixed(2);
-const kdClass = parseFloat(kd) >= 1 ? 'kd-positive' : 'kd-negative';
-const hasSocials = player.data.socials && Object.values(player.data.socials).some(v => v);
-
 const mvpCount = careerStats.mvpCount;
+
+const hasSocials =
+  player.data.socials &&
+  Object.values(player.data.socials).some(v => v);
+
+const playerStatus =
+  player.data.status === 'inactive'
+    ? 'inactive'
+    : 'active';
+
 const mvpMatches = [];
+
 playerMatches.forEach(m => {
-  const roundDetails = m.data.roundDetails || [];
-  const mvpsThisMatch = roundDetails.filter(rd => rd.mvp === player.data.uid);
+  const roundDetails =
+    m.data.roundDetails || [];
+
+  const mvpsThisMatch =
+    roundDetails.filter(
+      rd => rd.mvp === player.data.uid
+    );
+
   if (mvpsThisMatch.length > 0) {
     mvpMatches.push({
       match: m,
-      mvpRounds: mvpsThisMatch.map(rd => rd.round_number),
-      maps: mvpsThisMatch.map(rd => mapsMap.get(getRoundMapId(rd))?.data.name ?? 'TBD'),
+
+      mvpRounds: mvpsThisMatch.map(
+        rd => rd.round_number
+      ),
+
+      maps: mvpsThisMatch.map(
+        rd =>
+          mapsMap.get(
+            getRoundMapId(rd)
+          )?.data.name ?? 'TBD'
+      ),
     });
   }
 });
-
 ---
 
-<Layout title={`${player.data.ign} - CFL Tournament Hub`} current="Players">
+<Layout
+  title={`${player.data.ign} - CFL Tournament Hub`}
+  current="Players"
+>
   <div class="container">
 
-    <section class="profile-banner" aria-label="Player overview">
-      <div class="profile-identity"><img class="profile-image" src={player.data.avatar || '/players/default.webp'} alt={`${player.data.ign} photo`} width="160" height="160" onerror="this.onerror=null; this.src='/players/default.webp'" />
-        <div><p class="profile-kicker">{team ? <a href={`/teams/${team.id}`}>{team.data.name} ({team.data.tag})</a> : 'No current team'}</p><h1>{player.data.ign}</h1><p class="profile-subtitle"><span class="profile-active">Active</span></p></div>
-      </div>
-      <dl class="profile-metrics"><div><dt>Matches played</dt><dd>{matchesPlayed}</dd></div><div><dt>Total kills</dt><dd>{careerStats.kills}</dd></div><div><dt>K/D ratio</dt><dd>{kd}</dd></div><div><dt>MVP awards</dt><dd>{mvpCount}</dd></div></dl>
-    </section>
+    <!-- PLAYER HERO -->
 
-    {player.data.bio && (
-      <p class="player-description">{player.data.bio}</p>
-    )}
+    <section
+      class="profile-banner"
+      aria-label="Player overview"
+    >
+      <div class="profile-identity">
 
-    {hasSocials && (
-      <div class="section-spacing">
-        <h3 class="section-title">Socials</h3>
-        <div class="socials-list">
-          {player.data.socials?.discord && (
-            <span class="badge badge-discord">Discord: {player.data.socials.discord}</span>
-          )}
-          {player.data.socials?.youtube && (
-            <a href={`https://youtube.com/${player.data.socials.youtube}`} target="_blank" rel="noopener noreferrer" class="badge badge-youtube">YouTube</a>
-          )}
-          {player.data.socials?.twitch && (
-            <a href={`https://twitch.tv/${player.data.socials.twitch}`} target="_blank" rel="noopener noreferrer" class="badge badge-twitch">Twitch</a>
-          )}
+        <img
+          class="profile-image"
+          src={
+            player.data.avatar ||
+            '/players/default.webp'
+          }
+          alt={`${player.data.ign} photo`}
+          width="160"
+          height="160"
+          onerror="this.onerror=null; this.src='/players/default.webp'"
+        />
+
+        <div class="profile-info">
+
+          <p class="profile-kicker">
+            {team ? (
+              <a href={`/teams/${team.id}`}>
+                {team.data.name} ({team.data.tag})
+              </a>
+            ) : (
+              'No current team'
+            )}
+          </p>
+
+          <h1>{player.data.ign}</h1>
+
+          <p class="profile-subtitle">
+            <span
+              class:list={[
+                'player-status',
+                playerStatus === 'inactive'
+                  ? 'player-status-inactive'
+                  : 'player-status-active'
+              ]}
+            >
+              {playerStatus === 'inactive'
+                ? 'Inactive'
+                : 'Active'}
+            </span>
+          </p>
+
         </div>
       </div>
+
+      <dl class="profile-metrics">
+
+        <div>
+          <dt>Matches played</dt>
+          <dd>{matchesPlayed}</dd>
+        </div>
+
+        <div>
+          <dt>Total kills</dt>
+          <dd>{careerStats.kills}</dd>
+        </div>
+
+        <div>
+          <dt>K/D ratio</dt>
+          <dd>{kd}</dd>
+        </div>
+
+        <div>
+          <dt>MVP awards</dt>
+          <dd>{mvpCount}</dd>
+        </div>
+
+      </dl>
+    </section>
+
+
+    <!-- BIO -->
+
+    {player.data.bio && (
+      <p class="player-description">
+        {player.data.bio}
+      </p>
     )}
 
+
+    <!-- SOCIALS -->
+
+    {hasSocials && (
+      <section class="section-spacing">
+
+        <h2 class="section-title">
+          Socials
+        </h2>
+
+        <div class="socials-list">
+
+          {player.data.socials?.discord && (
+            <span class="badge badge-discord">
+              Discord: {player.data.socials.discord}
+            </span>
+          )}
+
+          {player.data.socials?.youtube && (
+            <a
+              href={`https://youtube.com/${player.data.socials.youtube}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="badge badge-youtube"
+            >
+              YouTube
+            </a>
+          )}
+
+          {player.data.socials?.twitch && (
+            <a
+              href={`https://twitch.tv/${player.data.socials.twitch}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="badge badge-twitch"
+            >
+              Twitch
+            </a>
+          )}
+
+        </div>
+      </section>
+    )}
+
+
+    <!-- MVP AWARDS -->
+
     {mvpMatches.length > 0 && (
-      <div class="section-spacing">
-        <h2 class="section-title">MVP Awards</h2>
-        <div class="table-wrap" tabindex="0" role="region" aria-label="Statistics table">
-          <table class="match-history-table">
+      <section class="section-spacing">
+
+        <h2 class="section-title">
+          MVP Awards
+        </h2>
+
+        <p class="table-scroll-hint">
+          Swipe to view full MVP history →
+        </p>
+
+        <div
+          class="table-wrap player-table-wrap"
+          tabindex="0"
+          role="region"
+          aria-label="Player MVP awards"
+        >
+          <table class="match-history-table player-mvp-table">
+
             <thead>
               <tr>
                 <th>Date</th>
@@ -102,50 +285,135 @@ playerMatches.forEach(m => {
                 <th>MVP Rounds</th>
               </tr>
             </thead>
+
             <tbody>
-              {mvpMatches.map(({ match: m, mvpRounds, maps }) => {
-                const team1Id = getMatchTeam1Id(m);
-                const team2Id = getMatchTeam2Id(m);
-                const t1 = team1Id ? teamsMap.get(team1Id) : undefined;
-                const t2 = team2Id ? teamsMap.get(team2Id) : undefined;
-                const matchName = `${t1?.data.name ?? team1Id ?? getParticipantLabel(m, 1)} vs ${t2?.data.name ?? team2Id ?? getParticipantLabel(m, 2)}`;
-                const tournamentId = getMatchTournamentId(m);
-                const tournament = tournamentId ? tournamentsMap.get(tournamentId) : undefined;
-                const tournamentName = tournament?.data.name ?? tournamentId ?? 'TBD';
-                
-                return (
-                  <tr>
-                    <td>{m.data.date}</td>
-                    <td>
-                      {tournament ? (
-                        <a href={`/tournament/${tournament.id}`} class="match-link">{tournamentName}</a>
-                      ) : tournamentName}
-                    </td>
-                    <td>{getRoundName(m, tournamentsMap)}</td>
-                    <td><a href={`/matches/${m.id}`} class="match-link">{matchName}</a></td>
-                    <td>
-                      <div class="mvp-rounds">
-                        {mvpRounds.map((rn, i) => (
-                          <span class="badge badge-completed">
-                            R{rn} — {maps[i] || ''}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+
+              {mvpMatches.map(
+                ({ match: m, mvpRounds, maps }) => {
+
+                  const team1Id =
+                    getMatchTeam1Id(m);
+
+                  const team2Id =
+                    getMatchTeam2Id(m);
+
+                  const t1 = team1Id
+                    ? teamsMap.get(team1Id)
+                    : undefined;
+
+                  const t2 = team2Id
+                    ? teamsMap.get(team2Id)
+                    : undefined;
+
+                  const matchName =
+                    `${
+                      t1?.data.name ??
+                      team1Id ??
+                      getParticipantLabel(m, 1)
+                    } vs ${
+                      t2?.data.name ??
+                      team2Id ??
+                      getParticipantLabel(m, 2)
+                    }`;
+
+                  const tournamentId =
+                    getMatchTournamentId(m);
+
+                  const tournament =
+                    tournamentId
+                      ? tournamentsMap.get(
+                          tournamentId
+                        )
+                      : undefined;
+
+                  const tournamentName =
+                    tournament?.data.name ??
+                    tournamentId ??
+                    'TBD';
+
+                  return (
+                    <tr>
+
+                      <td>
+                        {m.data.date}
+                      </td>
+
+                      <td>
+                        {tournament ? (
+                          <a
+                            href={`/tournament/${tournament.id}`}
+                            class="match-link"
+                          >
+                            {tournamentName}
+                          </a>
+                        ) : (
+                          tournamentName
+                        )}
+                      </td>
+
+                      <td>
+                        {getRoundName(
+                          m,
+                          tournamentsMap
+                        )}
+                      </td>
+
+                      <td>
+                        <a
+                          href={`/matches/${m.id}`}
+                          class="match-link"
+                        >
+                          {matchName}
+                        </a>
+                      </td>
+
+                      <td>
+                        <div class="mvp-rounds">
+
+                          {mvpRounds.map(
+                            (rn, i) => (
+                              <span class="badge badge-completed">
+                                R{rn} — {maps[i] || ''}
+                              </span>
+                            )
+                          )}
+
+                        </div>
+                      </td>
+
+                    </tr>
+                  );
+                }
+              )}
+
             </tbody>
           </table>
         </div>
-      </div>
+      </section>
     )}
 
+
+    <!-- RECENT MATCHES -->
+
     {playerMatches.length > 0 && (
-      <div>
-        <h2 class="section-title">Recent Matches</h2>
-        <div class="table-wrap" tabindex="0" role="region" aria-label="Statistics table">
-          <table class="match-history-table">
+      <section class="section-spacing">
+
+        <h2 class="section-title">
+          Recent Matches
+        </h2>
+
+        <p class="table-scroll-hint">
+          Swipe to view full match history →
+        </p>
+
+        <div
+          class="table-wrap player-table-wrap"
+          tabindex="0"
+          role="region"
+          aria-label="Player recent matches"
+        >
+          <table class="match-history-table player-match-table">
+
             <thead>
               <tr>
                 <th>Date</th>
@@ -155,209 +423,460 @@ playerMatches.forEach(m => {
                 <th>K/D/A</th>
               </tr>
             </thead>
+
             <tbody>
-              {playerMatches.slice(0, 10).map(m => {
-                const team1Id = getMatchTeam1Id(m);
-                const team2Id = getMatchTeam2Id(m);
-                const t1 = team1Id ? teamsMap.get(team1Id) : undefined;
-                const t2 = team2Id ? teamsMap.get(team2Id) : undefined;
-                const matchName = `${t1?.data.name ?? team1Id ?? getParticipantLabel(m, 1)} vs ${t2?.data.name ?? team2Id ?? getParticipantLabel(m, 2)}`;
-                const ps = m.data.playerStats.find(ps => ps.uid === player.data.uid);
-                const tournamentId = getMatchTournamentId(m);
-                const tournament = tournamentId ? tournamentsMap.get(tournamentId) : undefined;
-                const tournamentName = tournament?.data.name ?? tournamentId ?? 'TBD';
-                
-                let pKills = 0, pDeaths = 0, pAssists = 0;
-                if (ps && ps.rounds) {
-                  ps.rounds.forEach(r => {
-                    pKills += r.kills || 0;
-                    pDeaths += r.deaths || 0;
-                    pAssists += r.assists || 0;
-                  });
-                }
-                
-                const wonMVP = (m.data.roundDetails || []).some(rd => rd.mvp === player.data.uid);
-                
-                return (
-                  <tr>
-                    <td>{m.data.date}</td>
-                    <td>
-                      {tournament ? (
-                        <a href={`/tournament/${tournament.id}`} class="match-link">{tournamentName}</a>
-                      ) : tournamentName}
-                    </td>
-                    <td>{getRoundName(m, tournamentsMap)}</td>
-                    <td><a href={`/matches/${m.id}`} class="match-link">{matchName}</a></td>
-                    <td>
-                      <div class="match-kda">
-                        <span class="kda">
-                          <span class="kill">{pKills}</span> / <span class="death">{pDeaths}</span> / <span class="assist">{pAssists}</span>
-                        </span>
-                        {wonMVP && <span class="badge badge-completed">MVP</span>}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+
+              {playerMatches
+                .slice(0, 10)
+                .map(m => {
+
+                  const team1Id =
+                    getMatchTeam1Id(m);
+
+                  const team2Id =
+                    getMatchTeam2Id(m);
+
+                  const t1 = team1Id
+                    ? teamsMap.get(team1Id)
+                    : undefined;
+
+                  const t2 = team2Id
+                    ? teamsMap.get(team2Id)
+                    : undefined;
+
+                  const matchName =
+                    `${
+                      t1?.data.name ??
+                      team1Id ??
+                      getParticipantLabel(m, 1)
+                    } vs ${
+                      t2?.data.name ??
+                      team2Id ??
+                      getParticipantLabel(m, 2)
+                    }`;
+
+                  const ps =
+                    m.data.playerStats.find(
+                      ps =>
+                        ps.uid ===
+                        player.data.uid
+                    );
+
+                  const tournamentId =
+                    getMatchTournamentId(m);
+
+                  const tournament =
+                    tournamentId
+                      ? tournamentsMap.get(
+                          tournamentId
+                        )
+                      : undefined;
+
+                  const tournamentName =
+                    tournament?.data.name ??
+                    tournamentId ??
+                    'TBD';
+
+                  let pKills = 0;
+                  let pDeaths = 0;
+                  let pAssists = 0;
+
+                  if (ps && ps.rounds) {
+                    ps.rounds.forEach(r => {
+                      pKills += r.kills || 0;
+                      pDeaths += r.deaths || 0;
+                      pAssists += r.assists || 0;
+                    });
+                  }
+
+                  const wonMVP =
+                    (
+                      m.data.roundDetails || []
+                    ).some(
+                      rd =>
+                        rd.mvp ===
+                        player.data.uid
+                    );
+
+                  return (
+                    <tr>
+
+                      <td>
+                        {m.data.date}
+                      </td>
+
+                      <td>
+                        {tournament ? (
+                          <a
+                            href={`/tournament/${tournament.id}`}
+                            class="match-link"
+                          >
+                            {tournamentName}
+                          </a>
+                        ) : (
+                          tournamentName
+                        )}
+                      </td>
+
+                      <td>
+                        {getRoundName(
+                          m,
+                          tournamentsMap
+                        )}
+                      </td>
+
+                      <td>
+                        <a
+                          href={`/matches/${m.id}`}
+                          class="match-link"
+                        >
+                          {matchName}
+                        </a>
+                      </td>
+
+                      <td>
+                        <div class="match-kda">
+
+                          <span class="kda">
+                            <span class="kill">
+                              {pKills}
+                            </span>
+                            {' / '}
+                            <span class="death">
+                              {pDeaths}
+                            </span>
+                            {' / '}
+                            <span class="assist">
+                              {pAssists}
+                            </span>
+                          </span>
+
+                          {wonMVP && (
+                            <span class="badge badge-completed">
+                              MVP
+                            </span>
+                          )}
+
+                        </div>
+                      </td>
+
+                    </tr>
+                  );
+                })}
+
             </tbody>
           </table>
         </div>
-      </div>
+      </section>
     )}
 
-    {teammates.length > 0 && <section class="section-spacing"><h2 class="section-title">Teammates</h2><div class="teammate-grid">{teammates.map(p=><a class="teammate-card" href={`/players/${p.id}`}><img src={p.data.avatar || '/players/default.webp'} alt="" width="48" height="48" loading="lazy" onerror="this.onerror=null;this.src='/players/default.webp'" /><span><strong>{p.data.ign}</strong><small>{p.data.role || 'Player'}</small></span><span class="badge badge-completed">Active</span></a>)}</div></section>}
+
+    <!-- TEAMMATES -->
+    <!-- Reuses roster styles from interior.css -->
+
+    {teammates.length > 0 && (
+      <section class="section-spacing">
+
+        <h2 class="section-title">
+          Teammates
+        </h2>
+
+        <div class="roster-detail-grid">
+
+          {teammates.map(p => (
+            <a
+              href={`/players/${p.id}`}
+              class="roster-card"
+            >
+
+              <img
+                class="avatar"
+                src={
+                  p.data.avatar ||
+                  '/players/default.webp'
+                }
+                alt={`${p.data.ign} photo`}
+                width="40"
+                height="40"
+                loading="lazy"
+                onerror="this.onerror=null; this.src='/players/default.webp'"
+              />
+
+              <div class="roster-card-info">
+
+                <strong>
+                  {p.data.ign}
+                </strong>
+
+                <span>
+                  {p.data.role || 'Player'}
+                </span>
+
+              </div>
+
+              <span
+                class={`badge ${
+                  p.data.status === 'inactive'
+                    ? 'badge-upcoming'
+                    : 'badge-completed'
+                }`}
+              >
+                {p.data.status === 'inactive'
+                  ? 'Inactive'
+                  : 'Active'}
+              </span>
+
+            </a>
+          ))}
+
+        </div>
+      </section>
+    )}
+
   </div>
 </Layout>
 
+
 <style>
-  .back-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    margin-bottom: 1.5rem;
-    color: var(--text-muted);
-    font-weight: 600;
-    font-size: 0.9rem;
-    text-decoration: none;
-    transition: color 0.2s, transform 0.2s;
-  }
-  .back-link:hover { 
-    color: var(--accent); 
-    transform: translateX(-4px);
-  }
+  /* =========================
+     PLAYER DESCRIPTION
+     ========================= */
 
   .player-description {
-    color: var(--text-secondary);
     max-width: 700px;
     margin-bottom: 2rem;
+    color: var(--text-secondary);
     line-height: 1.6;
   }
 
-  .section-title {
-    font-size: 1.25rem;
-    font-weight: 700;
-    margin-bottom: 1rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--border);
-  }
-  .section-spacing { margin-bottom: 2.5rem; }
 
-  .detail-hero {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-    padding: 2rem;
-    background: linear-gradient(135deg, var(--accent-dim), transparent), var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    margin-bottom: 1.5rem;
+  /* =========================
+     PROFILE
+     ========================= */
+
+  .profile-kicker a {
+    color: inherit;
+    text-decoration: none;
+    transition: color .18s;
   }
 
-  .avatar-large {
-    width: 80px;
-    height: 80px;
-    font-size: 2rem;
-    background: var(--bg-primary);
-    border: 2px solid var(--accent);
-    flex-shrink: 0;
-    display: flex;
+  .profile-kicker a:hover {
+    color: var(--accent);
+  }
+
+  .player-status {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-weight: 700;
-    color: var(--accent);
+    min-height: 26px;
+    padding: 0 11px;
+    border: 1px solid;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .04em;
+    text-transform: uppercase;
   }
 
-  .detail-hero-info h1 { 
-    font-size: 1.75rem; 
-    margin-bottom: 0.25rem; 
-    line-height: 1.2;
+  .player-status-active {
+    color: #22c55e;
+    background: rgba(34, 197, 94, .08);
+    border-color: rgba(34, 197, 94, .32);
   }
 
-  .hero-subtitle { 
-    color: var(--text-secondary); 
-    font-weight: 500; 
-    font-size: 1rem; 
-    margin: 0; 
+  .player-status-inactive {
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, .035);
+    border-color: var(--border);
+  }
+
+
+  /* =========================
+     PLAYER-SPECIFIC SECTIONS
+     ========================= */
+
+  .player-description {
+    color: var(--text-secondary);
+  }
+
+
+  /* =========================
+     SOCIALS
+     ========================= */
+
+  .socials-list {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.25rem;
+    gap: .75rem;
   }
-  .hero-subtitle a {
-    color: var(--accent);
+
+  .badge-discord {
+    color: white;
+    background: #5865f2;
+  }
+
+  .badge-youtube {
+    color: white;
+    background: #ff0000;
     text-decoration: none;
+  }
+
+  .badge-twitch {
+    color: white;
+    background: #9146ff;
+    text-decoration: none;
+  }
+
+  .badge-youtube:hover,
+  .badge-twitch:hover {
+    opacity: .9;
+  }
+
+
+  /* =========================
+     TABLE CONTENT
+     ========================= */
+
+  .match-link {
+    color: var(--text-primary);
     font-weight: 600;
+    text-decoration: none;
+    transition: color .18s;
   }
-  .hero-subtitle a:hover {
-    text-decoration: underline;
+
+  .match-link:hover {
+    color: var(--accent);
   }
 
-  .stat-kills { background: rgba(34, 197, 94, 0.12); border-color: rgba(34, 197, 94, 0.3); }
-  .stat-kills .stat-value { color: #4ade80; }
-  
-  .stat-deaths { background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.3); }
-  .stat-deaths .stat-value { color: #f87171; }
-  
-  .stat-assists { background: rgba(168, 85, 247, 0.12); border-color: rgba(168, 85, 247, 0.3); }
-  .stat-assists .stat-value { color: #c084fc; }
-  
-  .stat-kd { background: rgba(245, 158, 11, 0.12); border-color: rgba(245, 158, 11, 0.3); }
-  .stat-kd .stat-value { color: #fbbf24; }
-  
-  .stat-matches { background: rgba(59, 130, 246, 0.12); border-color: rgba(59, 130, 246, 0.3); }
-  .stat-matches .stat-value { color: #60a5fa; }
-  
-  .stat-mvp { background: rgba(250, 204, 21, 0.12); border-color: rgba(250, 204, 21, 0.3); }
-  .stat-mvp .stat-value { color: #facc15; }
+  .mvp-rounds {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem;
+  }
 
-  .socials-list { display: flex; gap: 0.75rem; flex-wrap: wrap; }
-  .badge-discord { background: #5865F2; color: white; }
-  .badge-youtube { background: #FF0000; color: white; text-decoration: none; }
-  .badge-twitch { background: #9146FF; color: white; text-decoration: none; }
-  .badge-youtube:hover, .badge-twitch:hover { opacity: 0.9; }
+  .match-kda {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    white-space: nowrap;
+  }
 
-  .match-link { color: var(--text-primary); font-weight: 600; text-decoration: none; }
-  .match-link:hover { color: var(--accent); text-decoration: underline; }
-  
-  .mvp-rounds { display: flex; gap: 0.4rem; flex-wrap: wrap; }
-  .match-kda { display: flex; align-items: center; gap: 0.5rem; }
 
-  @media (max-width: 600px) {
-    .detail-hero { 
-      flex-direction: column; 
-      align-items: flex-start; 
-      text-align: left; 
-      gap: 1rem; 
-      padding: 1.5rem;
+  /* =========================
+     SWIPE HINT
+     ========================= */
+
+  .table-scroll-hint {
+    display: none !important;
+  }
+
+
+  /* =========================
+     MOBILE TABLES
+     ========================= */
+
+  @media (max-width: 640px) {
+
+    .table-scroll-hint {
+      display: block !important;
+      margin: -4px 0 10px;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 600;
+      text-align: right;
     }
-    .avatar-large {
-      width: 64px;
-      height: 64px;
-      font-size: 1.5rem;
+
+    .player-table-wrap {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
     }
-    .detail-hero-info h1 { font-size: 1.5rem; }
+
+    .player-table-wrap table {
+      table-layout: auto;
+    }
+
+    .player-table-wrap th,
+    .player-table-wrap td {
+      padding: 14px 12px;
+      white-space: nowrap;
+    }
+
+
+    /* MVP AWARDS */
+
+    .player-mvp-table {
+      width: 900px;
+      min-width: 900px;
+    }
+
+    .player-mvp-table th:nth-child(1),
+    .player-mvp-table td:nth-child(1) {
+      width: 110px;
+      min-width: 110px;
+    }
+
+    .player-mvp-table th:nth-child(2),
+    .player-mvp-table td:nth-child(2) {
+      width: 240px;
+      min-width: 240px;
+    }
+
+    .player-mvp-table th:nth-child(3),
+    .player-mvp-table td:nth-child(3) {
+      width: 120px;
+      min-width: 120px;
+    }
+
+    .player-mvp-table th:nth-child(4),
+    .player-mvp-table td:nth-child(4) {
+      width: 230px;
+      min-width: 230px;
+    }
+
+    .player-mvp-table th:nth-child(5),
+    .player-mvp-table td:nth-child(5) {
+      width: 200px;
+      min-width: 200px;
+    }
+
+
+    /* RECENT MATCHES */
+
+    .player-match-table {
+      width: 850px;
+      min-width: 850px;
+    }
+
+    .player-match-table th:nth-child(1),
+    .player-match-table td:nth-child(1) {
+      width: 110px;
+      min-width: 110px;
+    }
+
+    .player-match-table th:nth-child(2),
+    .player-match-table td:nth-child(2) {
+      width: 240px;
+      min-width: 240px;
+    }
+
+    .player-match-table th:nth-child(3),
+    .player-match-table td:nth-child(3) {
+      width: 120px;
+      min-width: 120px;
+    }
+
+    .player-match-table th:nth-child(4),
+    .player-match-table td:nth-child(4) {
+      width: 230px;
+      min-width: 230px;
+    }
+
+    .player-match-table th:nth-child(5),
+    .player-match-table td:nth-child(5) {
+      width: 150px;
+      min-width: 150px;
+    }
   }
-</style>
-<style>.teammate-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}.teammate-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text-primary);
-
-  text-decoration: none;
-
-  transition:
-    transform 0.2s,
-    border-color 0.2s,
-    background 0.2s;
-}
-
-.teammate-card:hover {
-  border-color: var(--accent);
-  transform: translateY(-2px);
-  background: var(--bg-card-hover);
-}.teammate-card img{object-fit:cover;border-radius:6px}.teammate-card>span:nth-child(2){flex:1;min-width:0;overflow-wrap:anywhere}.teammate-card small{display:block;color:var(--text-muted)}@media(max-width:640px){.teammate-grid{grid-template-columns:minmax(0,1fr)}}
 </style>

@@ -4,7 +4,6 @@ import { getCollection } from 'astro:content';
 import { calculateStatistics, emptyStats } from '../../utils/statistics';
 
 const allMatches = await getCollection('matches');
-const completedMatches = allMatches.filter(m => m.data.status === 'completed');
 
 const calculated = calculateStatistics(allMatches);
 
@@ -84,13 +83,13 @@ const teams = (await getCollection('teams')).map(team => {
             <h2>{team.name}</h2>
           </div>
           <div class="club-meta"><strong>{team.tag}</strong><span>{team.region === 'ID' ? 'Indonesia' : team.region}</span></div>
-          <a class="club-info" href={`/teams/${team.id}`}>Team info <span aria-hidden="true">↗</span></a>
+          <a class="club-info" href={`/teams/${team.id}`}>Team info <span aria-hidden="true">→</span></a>
         </div>
       ))}
     </div>
 
     <p id="noResults" class="no-results">No teams found.</p>
-    <div class="pagination" id="pagination"></div>
+    <div class="pagination" id="pagination" role="navigation" aria-label="Team pages"></div>
   </div>
 
   <script>
@@ -146,11 +145,14 @@ const teams = (await getCollection('teams')).map(team => {
 
       noResults.style.display = visible.length === 0 ? 'block' : 'none';
       
+      const focusedLabel = pagination.contains(document.activeElement)
+        ? document.activeElement?.getAttribute('aria-label') : null;
       pagination.innerHTML = '';
       if (totalPages > 1) {
         const prev = document.createElement('button');
         prev.className = 'page-btn';
         prev.textContent = '‹';
+        prev.setAttribute('aria-label', 'Previous page');
         prev.disabled = currentPage === 1;
         prev.addEventListener('click', () => { currentPage--; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
         pagination.appendChild(prev);
@@ -159,6 +161,8 @@ const teams = (await getCollection('teams')).map(team => {
           const btn = document.createElement('button');
           btn.className = `page-btn ${i === currentPage ? 'active' : ''}`;
           btn.textContent = i;
+          btn.setAttribute('aria-label', `Page ${i}`);
+          if (i === currentPage) btn.setAttribute('aria-current', 'page');
           btn.addEventListener('click', () => { currentPage = i; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
           pagination.appendChild(btn);
         }
@@ -166,9 +170,16 @@ const teams = (await getCollection('teams')).map(team => {
         const next = document.createElement('button');
         next.className = 'page-btn';
         next.textContent = '›';
+        next.setAttribute('aria-label', 'Next page');
         next.disabled = currentPage === totalPages;
         next.addEventListener('click', () => { currentPage++; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
         pagination.appendChild(next);
+        if (focusedLabel) {
+          const target = Array.from(pagination.querySelectorAll('button'))
+            .find(button => button.getAttribute('aria-label') === focusedLabel && !button.disabled)
+            || pagination.querySelector<HTMLButtonElement>('[aria-current="page"]');
+          target?.focus({ preventScroll: true });
+        }
       }
     }
 
@@ -189,7 +200,7 @@ const teams = (await getCollection('teams')).map(team => {
   .teams-toolbar {
     display: flex;
     gap: 0.75rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.25rem;
   }
   
   /* NEW: Stack toolbar on very small screens */

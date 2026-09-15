@@ -61,20 +61,63 @@ function formatDate(value: string) {
 
 <Layout title={`CFL Esports ID - ${tournamentName}`} current="Tournaments" canonicalPath={`/tournament/${tournament.id}`}>
   <div class="container">
-    <section class="profile-banner tournament-banner">
-      <div class="profile-identity">
-        <img class="profile-image team-image" src="/icons/trophy.webp" alt="Trophy" width="160" height="160" />
-        <div>
-          <p class="profile-kicker">{[season, month].filter(Boolean).join(' · ')}</p>
-          <h1>{tournamentName.includes(':') ? <>{tournamentName.slice(0, tournamentName.indexOf(':') + 1)}<br />{tournamentName.slice(tournamentName.indexOf(':') + 1).trim()}</> : tournamentName}</h1>
-          <p class="profile-subtitle">{dateRange}</p>
+    <section class="tournament-hero">
+      <div class="tournament-hero-top">
+        <span class="tournament-kicker">
+          {[season, month].filter(Boolean).join(' · ')}
+        </span>
+
+        <span class:list={[
+          'tournament-status',
+          tournament.data.winner ? 'completed' : 'ongoing'
+        ]}>
+          {tournament.data.winner ? 'Completed' : 'Ongoing'}
+        </span>
+      </div>
+
+      <div class="tournament-hero-main">
+        <h1>
+          {tournamentName.includes(':') ? (
+            <>
+              {tournamentName.slice(0, tournamentName.indexOf(':') + 1)}
+              <br />
+              <span>
+                {tournamentName.slice(tournamentName.indexOf(':') + 1).trim()}
+              </span>
+            </>
+          ) : (
+            tournamentName
+          )}
+        </h1>
+
+        <p class="tournament-date">{dateRange}</p>
+      </div>
+
+      <div class="tournament-metrics">
+        <div class="tournament-metric teams-metric">
+          <strong>{tournament.data.teams.length}</strong>
+          <span>Teams</span>
+        </div>
+
+        <div class="tournament-metric kills-metric">
+          <strong>{totalKills.toLocaleString('en-US')}</strong>
+          <span>Total Kills</span>
+        </div>
+
+        <div class="tournament-metric winner-metric">
+          {winner ? (
+            <a href={`/teams/${winner.id}`}>
+              <strong class="winner-name">
+                <span class="winner-crown" aria-hidden="true">👑</span>
+                <span class="winner-team-name">{winner.data.name}</span>
+              </strong>
+            </a>
+          ) : (
+            <strong>TBD</strong>
+          )}
+          <span>Winner</span>
         </div>
       </div>
-      <dl class="profile-metrics">
-        <div><dt>Total teams</dt><dd>{tournament.data.teams.length}</dd></div>
-        <div><dt>Total kills</dt><dd>{totalKills.toLocaleString('en-US')}</dd></div>
-        <div><dt>Winner</dt><dd class="tournament-winner">{winner ? <a href={`/teams/${winner.id}`}>{winner.data.name}</a> : 'TBD'}</dd></div>
-      </dl>
     </section>
     {tournament.data.stages.map(stage => {
       const rounds = stage.rounds.filter(r => r.placement !== 3).sort((a, b) => a.order - b.order);
@@ -83,6 +126,9 @@ function formatDate(value: string) {
         <section class="tournament-stage">
           <h2>{stage.name}</h2>
           <p class="series-format">All {stage.series.mapCount} maps played per match</p>
+          <p class="bracket-scroll-hint">
+            Swipe to view the full bracket →
+          </p>
           <div class="bracket-scroll">
             <div class="bracket-wrapper">
               <div class="bracket">
@@ -161,12 +207,217 @@ function formatDate(value: string) {
 </Layout>
 
 <style>
-  .tournament-banner .tournament-winner { font-size:18px; text-align:right; overflow-wrap:anywhere; }
-  .tournament-winner a { color:var(--accent); }
-  .tournament-winner a:hover { color:var(--accent-hover); }
-  .tournament-stage { margin-bottom: 2rem; }
-  .series-format, .bracket-empty { color: var(--text-muted); margin: 0.5rem 0 1rem; }
-  .bracket-main-section { display: flex; flex-direction: column; flex: 1; }
+  .tournament-hero {
+    position: relative;
+    overflow: hidden;
+    margin-top: 20px;
+    margin-bottom: 36px;
+    padding: 28px 32px 0;
+    background:
+      radial-gradient(
+        circle at 85% 15%,
+        rgba(255, 116, 46, .12),
+        transparent 32%
+      ),
+      linear-gradient(
+        135deg,
+        rgba(255, 116, 46, .035),
+        transparent 45%
+      ),
+      var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--accent);
+    border-radius: 10px;
+  }
+
+  .tournament-hero::after {
+    content: "";
+    position: absolute;
+    top: -80px;
+    right: -40px;
+    width: 280px;
+    height: 280px;
+    border: 1px solid rgba(255, 116, 46, .07);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+
+  .tournament-hero-top {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .tournament-kicker {
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+  }
+
+  .tournament-status {
+    display: inline-flex;
+    align-items: center;
+    min-height: 26px;
+    padding: 0 10px;
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, .04);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+  }
+
+  .tournament-status.completed {
+    color: #22c55e;
+    background: rgba(34, 197, 94, .08);
+    border-color: rgba(34, 197, 94, .32);
+  }
+
+  .status-ongoing {
+    color: var(--accent);
+    background: rgba(255, 116, 46, .08);
+    border-color: rgba(255, 116, 46, .30);
+  }
+
+  .status-upcoming {
+    color: #e7bf59;
+    background: rgba(231, 191, 89, .08);
+    border-color: rgba(231, 191, 89, .30);
+  }
+
+  .tournament-hero-main {
+    position: relative;
+    z-index: 1;
+    padding: 38px 0 42px;
+  }
+
+  .tournament-hero h1 {
+    max-width: 760px;
+    margin: 0;
+    font-size: clamp(36px, 5vw, 58px);
+    line-height: .98;
+    font-weight: 800;
+    letter-spacing: -.045em;
+  }
+
+  .tournament-hero h1 span {
+    color: var(--text-secondary);
+  }
+
+  .tournament-date {
+    margin: 18px 0 0;
+    color: var(--text-muted);
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .tournament-metrics {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: .7fr .9fr 1.4fr;
+    margin: 0 -32px;
+    border-top: 1px solid var(--border);
+  }
+
+  .tournament-metric {
+    min-width: 0;
+    padding: 18px 32px 20px;
+  }
+
+  .teams-metric strong {
+    color: var(--accent);
+  }
+
+  .kills-metric strong {
+    color: #fff;
+  }
+
+  .winner-metric .winner-name {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #e7bf59;
+  }
+
+  .winner-crown {
+    display: inline-block;
+    font-size: 15px;
+    line-height: 1;
+  }
+
+  .winner-team-name {
+    display: inline-block;
+    line-height: 1;
+  }
+  .tournament-metric + .tournament-metric {
+    border-left: 1px solid var(--border);
+  }
+
+  .tournament-metric strong {
+    display: block;
+    overflow: hidden;
+    color: var(--text-primary);
+    font-size: 20px;
+    font-weight: 800;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tournament-metric > span {
+    display: block;
+    margin-top: 4px;
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+  }
+
+  .winner-metric a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  winner-metric a:hover .winner-name {
+    color: #f2cf72;
+  }
+
+  .tournament-stage { margin-bottom: 40px; }
+  .tournament-stage > h2 {
+    margin: 0;
+    font-size: 26px;
+    line-height: 1.2;
+    font-weight: 800;
+    letter-spacing: -.025em;
+  }
+  .series-format { 
+    color: var(--text-muted); 
+    margin: 8px 0 18px;
+    font-size: 14px;
+  }
+
+  .bracket-empty {
+    margin: 0;
+    padding: 18px;
+    color: var(--text-muted);
+    font-size: 12px;
+    text-align: center;
+  }
+
+  .bracket-main-section { 
+    display: flex; 
+    flex-direction: column; 
+    flex: 1; 
+  }
   .bracket-nav {
     display: flex;
     align-items: center;
@@ -182,6 +433,31 @@ function formatDate(value: string) {
   }
   .back-link:hover { color: var(--accent); }
   
+  .teams-metric strong {
+  color: var(--accent);
+  }
+
+  .kills-metric strong {
+    color: #fff;
+  }
+
+  .winner-metric .winner-name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #e7bf59;
+  }
+
+  .winner-crown {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    font-size: 15px;
+    line-height: 1;
+    transform: translateY(-1px);
+  }
+
   #tourney-select {
     background: var(--bg-card);
     border: 1px solid var(--border);
@@ -196,119 +472,169 @@ function formatDate(value: string) {
   #tourney-select:focus { outline: none; border-color: var(--accent); }
 
   .bracket-scroll { 
-    overflow-x: auto; 
-    padding-bottom: 2rem; 
+    overflow-x: auto;
+    padding: 8px 20px 28px;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(255, 116, 46, .018),
+        transparent 160px
+      ),
+      var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 10px;
     scrollbar-width: thin;
     scrollbar-color: var(--border) transparent;
   }
-  .bracket-scroll::-webkit-scrollbar { height: 8px; }
+  .bracket-scroll::-webkit-scrollbar { height: 7px; }
   .bracket-scroll::-webkit-scrollbar-track { background: transparent; }
-  .bracket-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+  .bracket-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
+
+  .bracket-scroll-hint {
+    display: none;
+  }
 
   .bracket-wrapper {
     position: relative;
     min-width: max-content;
-    padding: 1rem 0;
+    padding: 20px 0 8px;
   }
   .bracket { 
-    display: flex; 
-    gap: 3rem; 
-    align-items: stretch; 
-    position: relative; 
-    z-index: 1; 
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: stretch;
+    gap: 48px;
   }
 
   .bracket-round {
     display: flex;
     flex-direction: column;
-    min-width: 220px;
+    min-width: 230px;
   }
-  .bracket-round-header { margin-bottom: 1.5rem; }
+  .bracket-round-header { margin-bottom: 16px; }
   .bracket-round-title {
-    text-align: center;
-    font-size: 0.85rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
+    padding-bottom: 11px;
     color: var(--accent);
-    padding-bottom: 0.5rem;
-    border-bottom: 2px solid var(--accent-dim);
+    border-bottom: 1px solid rgba(255, 116, 46, .35);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-align: center;
+    text-transform: uppercase;
   }
   .bracket-round-date {
-    text-align: center;
-    font-size: 0.75rem;
+    margin-top: 9px;
     color: var(--text-muted);
-    margin-top: 0.5rem;
+    font-size: 11px;
+    font-weight: 500;
+    text-align: center;
   }
 
   .bracket-round-matches {
     display: flex;
+    flex: 1;
     flex-direction: column;
     justify-content: space-around;
-    flex: 1;
-    gap: 1.5rem;
+    gap: 24px;
   }
 
   .bracket-match {
     position: relative;
+    display: block;
+    overflow: hidden;
+    color: inherit;
     background: var(--bg-card);
     border: 1px solid var(--border);
-    border-radius: var(--radius);
-    transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+    border-radius: 7px;
     text-decoration: none;
-    color: inherit;
-    display: block;
+    transition:
+      border-color .18s,
+      background-color .18s,
+      transform .18s;
   }
   .bracket-match:hover { 
-    border-color: var(--accent); 
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    background: var(--bg-card-hover);
+    border-color: rgba(255, 116, 46, .45);
+    transform: translateY(-1px);
   }
   .bracket-match.upcoming { border-style: dashed; }
-  .bracket-match.bye { border-style: dashed; border-color: var(--border-hover); opacity: 0.8; pointer-events: none; }
+  .bracket-match.bye { 
+    opacity: .72;
+    border-style: dashed;
+    pointer-events: none; 
+  }
 
   .bracket-team-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.6rem 0.85rem;
-    font-size: 0.88rem;
+    min-height: 42px;
+    padding: 8px 11px;
+    font-size: 13px;
   }
   .bracket-team-row + .bracket-team-row { border-top: 1px solid var(--border); }
   
-  .bracket-team-row.winner { background: rgba(250, 204, 21, 0.06); }
-  .bracket-team-row.loser { opacity: 0.5; }
+  .bracket-team-row.winner { background: rgba(231, 191, 89, .07); }
+  .bracket-team-row.loser { opacity: .48; }
   .bracket-team-row.empty { opacity: 0.4; }
   
-  .bracket-team-info { display: flex; align-items: center; gap: 0.5rem; min-width: 0; flex: 1; }
-  .bracket-team-tag {
-    font-size: 0.8rem;
-    font-weight: 700;
-    color: var(--accent);
-    background: var(--bg-card-hover);
-    padding: 0.1rem 0.4rem;
-    border-radius: 4px;
-    flex-shrink: 0;
+  .bracket-team-info {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    align-items: center;
+    gap: 8px;
   }
-  .bracket-team-row.winner .bracket-team-tag { background: rgba(250, 204, 21, 0.2); color: #facc15; }
+  .bracket-team-tag {
+    min-width: 34px;
+    flex-shrink: 0;
+    padding: 3px 5px;
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, .045);
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 800;
+    text-align: center;
+  }
+  .bracket-team-row.winner .bracket-team-tag {
+    color: #e7bf59;
+    background: rgba(231, 191, 89, .14);
+  }
+
+  .bracket-team-row.winner .bracket-team-name {
+    color: var(--text-primary);
+  }
   
   .bracket-team-name {
-    font-weight: 600;
-    white-space: nowrap;
     overflow: hidden;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 650;
     text-overflow: ellipsis;
+    white-space: nowrap;
   }
-  .bracket-team-score { font-weight: 800; font-size: 1rem; min-width: 24px; text-align: right; }
-  .bracket-team-row.winner .bracket-team-score { color: #facc15; }
+  .bracket-team-score {
+    min-width: 22px;
+    margin-left: 8px;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 800;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .bracket-team-row.winner .bracket-team-score { color: #e7bf59; }
   .bracket-team-row.loser .bracket-team-score { color: var(--text-muted); }
   
   .bracket-bye-label {
-    font-size: 0.8rem;
-    font-weight: 700;
+    flex-shrink: 0;
+    padding: 3px 6px;
     color: var(--text-muted);
-    background: var(--bg-card-hover);
-    padding: 0.1rem 0.5rem;
+    background: rgba(255, 255, 255, .04);
     border-radius: 4px;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .05em;
   }
 
   .bracket-connectors {
@@ -335,9 +661,78 @@ function formatDate(value: string) {
     border-bottom-color: rgba(245, 158, 11, 0.2);
   }
 
+  .bracket-round:last-child .bracket-main-section .bracket-match {
+    border-color: rgba(231, 191, 89, .28);
+  }
+
+  .bracket-round:last-child .bracket-main-section .bracket-team-row.winner {
+    background: rgba(231, 191, 89, .11);
+  }
+
   @media (max-width: 768px) {
-    .bracket-round { min-width: 180px; }
-    .bracket { gap: 1.5rem; }
+    .bracket-scroll {
+      padding: 8px 12px 24px;
+    }
+
+    .bracket-scroll-hint {
+      display: block;
+      margin: 0 0 6px;
+      color: var(--text-muted);
+      font-size: 11px;
+      text-align: right;
+    }
+
+    .bracket-wrapper {
+      padding-top: 16px;
+    }
+
+    .bracket-round {
+      min-width: 220px;
+    }
+
+    .bracket {
+      gap: 24px;
+    }
+    .tournament-hero {
+      margin-top: 14px;
+      margin-bottom: 28px;
+      padding: 22px 20px 0;
+    }
+
+    .tournament-hero-main {
+      padding: 32px 0 34px;
+    }
+
+    .tournament-hero h1 {
+      font-size: 33px;
+      line-height: 1;
+    }
+
+    .tournament-date {
+      margin-top: 14px;
+      font-size: 13px;
+    }
+
+    .tournament-metrics {
+      grid-template-columns: .65fr .85fr 1.5fr;
+      margin: 0 -20px;
+    }
+
+    .tournament-metric {
+      padding: 15px 14px 17px;
+    }
+
+    .tournament-metric strong {
+      font-size: 16px;
+    }
+
+    .tournament-metric > span {
+      font-size: 9px;
+    }
+
+    .winner-crown {
+      font-size: 12px;
+    }
   }
 </style>
 

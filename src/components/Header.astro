@@ -1,6 +1,5 @@
 ---
 import Thumbnail from './Thumbnail.astro';
-// 1. Define the 'current' prop so Astro knows it exists
 interface Props {
   current?: string;
 }
@@ -44,7 +43,6 @@ const { current } = Astro.props;
         menuBtn.classList.toggle('active');
       });
       
-      // Close menu when clicking a link
       document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape' && nav.classList.contains('active')) {
           nav.classList.remove('active');
@@ -69,6 +67,10 @@ const { current } = Astro.props;
   @media (max-width:768px) { .logo img { width:132px; height:48px; } }
   /* Mobile menu button - hidden on desktop */
   .mobile-menu-btn {
+    min-width: 44px;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
     display: none;
     flex-direction: column;
     gap: 4px;
@@ -102,12 +104,21 @@ const { current } = Astro.props;
   }
 
   @media (max-width: 768px) {
+    .site-header .container {
+      position: relative;
+      gap: 0.5rem;
+    }
+
+    .logo { font-size: 1.1rem; }
+
     .mobile-menu-btn {
       display: flex;
     }
     
     /* Mobile navigation - hidden by default */
     .nav {
+      width: 100%;
+      flex-wrap: nowrap;
       visibility: hidden;
       position: fixed;
       top: 64px;

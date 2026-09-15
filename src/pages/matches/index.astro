@@ -53,13 +53,20 @@ const rounds = [...new Set(matches.map(m => getRoundName(m, tournamentsMap)))];
       </select>
     </div>
 
-    <div id="sortBar" class="matches-sortbar">
-      <span class="sort-label">Sort by:</span>
-      <button class="sort-btn active" data-column="default">Default ↓</button>
-      <button class="sort-btn" data-column="tournament">Tournament ↓</button>
-      <button class="sort-btn" data-column="date">Date ↓</button>
-      <button class="sort-btn" data-column="round">Round ↓</button>
-      <button class="sort-btn" data-column="status">Status ↓</button>
+    <div class="matches-sortbar">
+      <label for="sortSelect" class="sort-label">Sort by</label>
+
+      <select
+        id="sortSelect"
+        class="matches-select sort-select"
+        aria-label="Sort matches"
+      >
+        <option value="default">Default</option>
+        <option value="date">Date</option>
+        <option value="tournament">Tournament</option>
+        <option value="round">Round</option>
+        <option value="status">Status</option>
+      </select>
     </div>
 
     <div id="matchesGrid" class="matches-grid">
@@ -106,7 +113,9 @@ const rounds = [...new Set(matches.map(m => getRoundName(m, tournamentsMap)))];
               <div class="match-card-tournament">{tournamentName}</div>
               <div class="match-card-date">{m.data.date}</div>
               <div class="match-card-round">
-                <span class={`badge badge-${m.data.status}`}>{getRoundName(m, tournamentsMap)}</span>
+                <span class="badge match-round-badge">
+                  {getRoundName(m, tournamentsMap)}
+                </span>
               </div>
             </div>
 
@@ -144,14 +153,14 @@ const rounds = [...new Set(matches.map(m => getRoundName(m, tournamentsMap)))];
                 </div>
               </div>
             )}
-            <div class="match-card-info">Match info <span aria-hidden="true">↗</span></div>
+            <div class="match-card-info">Match info <span aria-hidden="true">→</span></div>
           </a>
         );
       })}
     </div>
 
     <p id="noResults" class="no-results">No matches found.</p>
-    <div class="pagination" id="pagination"></div>
+    <div class="pagination" id="pagination" role="navigation" aria-label="Match pages"></div>
   </div>
 
   <script is:inline>
@@ -162,7 +171,7 @@ const rounds = [...new Set(matches.map(m => getRoundName(m, tournamentsMap)))];
       const grid = document.getElementById('matchesGrid');
       const noResults = document.getElementById('noResults');
       const cards = Array.from(grid.querySelectorAll('.match-card'));
-      const sortBtns = document.querySelectorAll('.sort-btn');
+      const sortSelect = document.getElementById('sortSelect');
       const pagination = document.getElementById('pagination');
       const perPage = 10;
       
@@ -232,12 +241,15 @@ const rounds = [...new Set(matches.map(m => getRoundName(m, tournamentsMap)))];
       }
 
       function renderPagination(totalPages) {
+        const focusedLabel = pagination.contains(document.activeElement)
+          ? document.activeElement.getAttribute('aria-label') : null;
         pagination.innerHTML = '';
         if (totalPages <= 1) return;
 
         const prev = document.createElement('button');
         prev.className = 'page-btn';
         prev.textContent = '‹';
+        prev.setAttribute('aria-label', 'Previous page');
         prev.disabled = currentPage === 1;
         prev.addEventListener('click', () => { currentPage--; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
         pagination.appendChild(prev);
@@ -246,6 +258,8 @@ const rounds = [...new Set(matches.map(m => getRoundName(m, tournamentsMap)))];
           const btn = document.createElement('button');
           btn.className = `page-btn ${i === currentPage ? 'active' : ''}`;
           btn.textContent = i;
+          btn.setAttribute('aria-label', `Page ${i}`);
+          if (i === currentPage) btn.setAttribute('aria-current', 'page');
           btn.addEventListener('click', () => { currentPage = i; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
           pagination.appendChild(btn);
         }
@@ -253,28 +267,23 @@ const rounds = [...new Set(matches.map(m => getRoundName(m, tournamentsMap)))];
         const next = document.createElement('button');
         next.className = 'page-btn';
         next.textContent = '›';
+        next.setAttribute('aria-label', 'Next page');
         next.disabled = currentPage === totalPages;
         next.addEventListener('click', () => { currentPage++; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
         pagination.appendChild(next);
+        if (focusedLabel) {
+          const target = Array.from(pagination.querySelectorAll('button'))
+            .find(button => button.getAttribute('aria-label') === focusedLabel && !button.disabled)
+            || pagination.querySelector('[aria-current="page"]');
+          target?.focus({ preventScroll: true });
+        }
       }
 
-      sortBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-          const col = btn.dataset.column;
-          if (sortColumn === col) {
-            sortDirection = sortDirection === 'desc' ? 'asc' : 'desc';
-          } else {
-            sortColumn = col;
-            sortDirection = 'desc';
-          }
-          sortBtns.forEach(b => {
-            b.classList.remove('active');
-            b.textContent = b.textContent.replace(/ [↑↓]$/, '');
-          });
-          btn.classList.add('active');
-          btn.textContent = btn.textContent.replace(/ [↑↓]$/, '') + ' ' + (sortDirection === 'desc' ? '↓' : '↑');
-          render();
-        });
+      sortSelect.addEventListener('change', () => {
+        sortColumn = sortSelect.value;
+        sortDirection = 'desc';
+        currentPage = 1;
+        render();
       });
 
       searchInput.addEventListener('input', () => { currentPage = 1; render(); });
@@ -317,22 +326,22 @@ const rounds = [...new Set(matches.map(m => getRoundName(m, tournamentsMap)))];
   }
   .sort-label { color: var(--text-muted); font-size: 0.85rem; margin-right: 0.25rem; }
   
-  .sort-btn {
-    padding: 0.4rem 0.85rem;
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    color: var(--text-secondary);
-    cursor: pointer;
-    font-size: 0.85rem;
-    transition: all 0.2s;
-    font-weight: 600;
+  .matches-sortbar {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 1.5rem;
   }
-  .sort-btn:hover { border-color: var(--border-hover); color: var(--text-primary); }
-  .sort-btn.active {
-    background: var(--accent-dim);
-    border-color: var(--accent);
-    color: var(--accent);
+
+  .sort-label {
+    flex-shrink: 0;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+  }
+
+  .sort-select {
+    width: auto;
+    min-width: 150px;
   }
 
   /* NEW: 2-Column Grid on Desktop */
@@ -402,5 +411,67 @@ const rounds = [...new Set(matches.map(m => getRoundName(m, tournamentsMap)))];
   .match-card-kda-team1 { color: var(--t1-color); font-weight: 600; margin-right: 0.25rem; }
   .match-card-kda-team2 { color: var(--t2-color); font-weight: 600; margin-right: 0.25rem; }
 
+  .match-round-badge {
+    color: var(--accent);
+    background: var(--accent-dim);
+    border: 1px solid rgba(255, 116, 46, .28);
+  }
+
   .no-results { text-align: center; color: var(--text-muted); display: none; padding: 2rem; }
+
+  @media (max-width: 600px) {
+    .match-card {
+      padding: 1.25rem 1rem;
+    }
+
+    .match-card-score {
+      width: 100%;
+      gap: 0.75rem;
+      padding: 1rem 0;
+    }
+
+    .match-card-team {
+      min-width: 0;
+      flex: 1;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 0.45rem;
+      text-align: center;
+    }
+
+    .match-card-team.team-b {
+      flex-direction: column;
+      text-align: center;
+    }
+
+    .match-card-team .team-logo {
+      flex-shrink: 0;
+    }
+
+    .match-card-team > span {
+      width: 100%;
+      min-width: 0;
+      font-size: 0.95rem;
+      line-height: 1.2;
+      text-align: center;
+      overflow-wrap: anywhere;
+    }
+
+    .vs {
+      flex: 0 0 auto;
+      min-width: 32px;
+      text-align: center;
+    }
+
+    .matches-sortbar {
+      align-items: center;
+    }
+
+    .sort-select {
+      width: 160px;
+      min-width: 0;
+    }
+  }
+
 </style>

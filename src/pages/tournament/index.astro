@@ -2,60 +2,133 @@
 import Layout from '../../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
 import { getMatchRound } from '../../utils/tournament';
-import { getMatchTournamentId, getMatchWinnerId } from '../../utils/content';
+import {
+  getMatchTournamentId,
+  getMatchWinnerId,
+} from '../../utils/content';
 
 const matches = await getCollection('matches');
 const teams = await getCollection('teams');
-
 const allTournaments = await getCollection('tournaments');
 
+const tournamentPosters: Record<string, string> = {
+  'clash-for-glory-s1': '/tournaments/clash-for-glory-s1.webp',
+};
+
 const tournaments = allTournaments.map((tournament) => {
-  const tMatches = matches.filter(m => getMatchTournamentId(m) === tournament.id);
-  const completed = tMatches.filter(m => m.data.status === 'completed');
-  const upcoming = tMatches.filter(m => m.data.status !== 'completed');
-  const rounds = [...new Set(tMatches.map(m => `${m.data.stageId}/${m.data.roundId}`).filter(Boolean))];
+  const tMatches = matches.filter(
+    (match) => getMatchTournamentId(match) === tournament.id
+  );
+
+  const completedMatches = tMatches.filter(
+    (match) => match.data.status === 'completed'
+  );
 
   let status = 'upcoming';
   let statusLabel = 'Upcoming';
-  if (tMatches.length > 0 && completed.length === tMatches.length) {
+
+  if (
+    tMatches.length > 0 &&
+    completedMatches.length === tMatches.length
+  ) {
     status = 'completed';
     statusLabel = 'Completed';
-  } else if (completed.length > 0) {
+  } else if (completedMatches.length > 0) {
     status = 'ongoing';
     statusLabel = 'Ongoing';
   }
 
-  const dates = tMatches.map(m => m.data.date).filter(Boolean).sort();
-  const finalMatch = tMatches.find(m => getMatchRound(m, tournament)?.placement === 1 && m.data.status === 'completed');
-  const winner = finalMatch ? teams.find(t => t.id === getMatchWinnerId(finalMatch)) : null;
+  const matchDates = tMatches
+    .map((match) => match.data.date)
+    .filter(Boolean)
+    .sort();
+
+  const startDate =
+    matchDates[0] ||
+    tournament.data.startDate ||
+    null;
+
+  const endDate =
+    matchDates[matchDates.length - 1] ||
+    tournament.data.endDate ||
+    null;
+
+  const finalMatch = tMatches.find(
+    (match) =>
+      getMatchRound(match, tournament)?.placement === 1 &&
+      match.data.status === 'completed'
+  );
+
+  const winner = finalMatch
+    ? teams.find(
+        (team) =>
+          team.id === getMatchWinnerId(finalMatch)
+      )
+    : null;
+
+  const season =
+    tournament.data.name
+      .match(/\bS\d+\b/i)?.[0]
+      ?.toUpperCase() ?? null;
+
+  const month = startDate
+    ? new Date(startDate).toLocaleDateString(
+        'en-GB',
+        {
+          month: 'long',
+          timeZone: 'UTC',
+        }
+      )
+    : null;
 
   return {
-    name: tournament.data.name,
     id: tournament.id,
-    totalMatches: tMatches.length,
-    completedMatches: completed.length,
-    upcomingMatches: upcoming.length,
-    rounds,
+    name: tournament.data.name,
     status,
     statusLabel,
-    startDate: dates[0] || null,
-    endDate: dates[dates.length - 1] || null,
+    startDate,
+    endDate,
+    season,
+    month,
     winner,
+    poster: tournamentPosters[tournament.id] ?? null,
   };
 });
 
-const statusOrder = { ongoing: 0, upcoming: 1, completed: 2 };
-tournaments.sort((a, b) => statusOrder[a.status] - statusOrder[b.status]);
+const statusOrder = {
+  ongoing: 0,
+  upcoming: 1,
+  completed: 2,
+};
 
-function formatDate(d) {
-  if (!d) return null;
-  const date = new Date(d);
-  if (isNaN(date)) return d;
-  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-}
+tournaments.sort((a, b) => {
+  const statusDifference =
+    statusOrder[a.status] - statusOrder[b.status];
+
+  if (statusDifference !== 0) {
+    return statusDifference;
+  }
+
+  const dateA = a.startDate
+    ? new Date(a.startDate).getTime()
+    : 0;
+
+  const dateB = b.startDate
+    ? new Date(b.startDate).getTime()
+    : 0;
+
+  if (a.status === 'upcoming') {
+    return dateA - dateB;
+  }
+
+  return dateB - dateA;
+});
 ---
 
-<Layout title="CFL Esports ID Tournament Hub - Tournaments" current="Tournaments">
+<Layout
+  title="CFL Esports ID Tournament Hub - Tournaments"
+  current="Tournaments"
+>
   <div class="container">
     <div class="page-header">
       <h1>Tournaments</h1>
@@ -63,35 +136,76 @@ function formatDate(d) {
     </div>
 
     <div class="tourney-grid">
-      {tournaments.map(t => (
-        <a href={`/tournament/${t.id}`} class="tourney-card">
-          <div class="tourney-header">
-            <div class="tourney-icon"><img src="/icons/trophy.webp" alt="" /></div>
-            <h3>{t.name}</h3>
+      {tournaments.map((tournament) => (
+        <a
+          href={`/tournament/${tournament.id}`}
+          class="tourney-card"
+        >
+          <div class="poster-meta">
+            <span class="poster-season">
+              {[
+                tournament.season,
+                tournament.month,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </span>
+
+            <span
+              class:list={[
+                'status-badge',
+                `status-${tournament.status}`,
+              ]}
+            >
+              {tournament.statusLabel}
+            </span>
           </div>
-          
-          {t.startDate && (
-            <div class="tourney-date">
-              {t.endDate && t.endDate !== t.startDate
-                ? `${formatDate(t.startDate)} – ${formatDate(t.endDate)}`
-                : formatDate(t.startDate)}
+
+          {tournament.poster ? (
+            <img
+              class="tourney-poster-image"
+              src={tournament.poster}
+              alt={`${tournament.name} tournament poster`}
+              loading="lazy"
+              width="768"
+              height="1024"
+            />
+          ) : (
+            <div class="poster-placeholder">
+              <span>{tournament.name}</span>
             </div>
           )}
-          
-          <div class="tourney-meta">
-            <span class={`badge badge-${t.status}`}>{t.statusLabel}</span>
-            <span class="badge badge-secondary">{t.rounds.length} Rounds</span>
-            <span class="badge badge-secondary">{t.completedMatches}/{t.totalMatches} Matches</span>
+
+          <div class="tourney-content">
+            <h2>{tournament.name}</h2>
+
+            {tournament.winner && (
+              <div class="tourney-champion">
+                <div class="champion-name">
+                  <img
+                    src="/icons/gold-medal.webp"
+                    alt=""
+                    width="18"
+                    height="18"
+                  />
+
+                  <strong>
+                    {tournament.winner.data.name}
+                  </strong>
+                </div>
+              </div>
+            )}
           </div>
-          
-          {t.winner && (
-            <div class="tourney-winner">
-              <span class="winner-icon"><img src="/icons/gold-medal.webp" alt="" /></span> 
-              <span>Champion: <strong>{t.winner.data.name}</strong></span>
-            </div>
-          )}
-          
-          <div class="tourney-cta">View Bracket & Results <span aria-hidden="true">↗</span></div>
+
+          <div class="tourney-cta">
+            <span>View Bracket & Results</span>
+            <span
+              class="tourney-arrow"
+              aria-hidden="true"
+            >
+              →
+            </span>
+          </div>
         </a>
       ))}
     </div>
@@ -101,119 +215,266 @@ function formatDate(d) {
 <style>
   .tourney-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1.5rem;
+    grid-template-columns:
+      repeat(auto-fill, minmax(280px, 340px));
+    gap: 24px;
+    align-items: start;
   }
 
   .tourney-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 1.5rem;
-    text-decoration: none;
-    color: inherit;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-    height: 100%; /* Ensures equal height in grid */
-    transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+    width: 100%;
+    padding: 0;
+    color: inherit;
+
+    /* ONE card surface */
+    background: var(--bg-secondary);
+
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--accent);
+    border-radius: 10px;
+    text-decoration: none;
+
+    transition:
+      border-color .18s,
+      transform .18s;
   }
 
   .tourney-card:hover {
-    transform: translateY(-4px);
-    border-color: var(--accent);
-    box-shadow: 0 8px 24px rgba(255, 77, 46, 0.12);
+    border-color: rgba(255, 116, 46, .5);
+    transform: translateY(-2px);
   }
 
-  .tourney-header {
+  /* Season + tournament status */
+
+  .poster-meta {
+    width: 100%;
+    min-height: 52px;
+    padding: 0 16px;
+
     display: flex;
     align-items: center;
-    gap: 0.75rem;
+    justify-content: space-between;
+    gap: 12px;
+
+    background: transparent;
   }
 
-  .tourney-icon {
-    width: 28px;
-    height: 28px;
+  .poster-season {
+    margin-right: auto;
+    color: var(--accent);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    text-align: left;
+  }
+
+  .status-badge {
     flex-shrink: 0;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    min-height: 25px;
+    padding: 0 9px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .07em;
+    text-transform: uppercase;
   }
 
-  .tourney-icon img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
+  .poster-meta .status-badge {
+    margin-left: auto;
+  }
+
+  .status-completed {
+    color: #22c55e;
+    background: rgba(34, 197, 94, .08);
+    border-color: rgba(34, 197, 94, .32);
+  }
+
+  .status-ongoing {
+    color: var(--accent);
+    background: rgba(255, 116, 46, .08);
+    border-color: rgba(255, 116, 46, .30);;
+  }
+
+  .status-upcoming {
+    color: #e7bf59;
+    background: rgba(231, 191, 89, .08);
+    border-color: rgba(231, 191, 89, .30);
+  }
+
+  /* Poster */
+
+  .tourney-card > .tourney-poster-image {
     display: block;
+    width: 100% !important;
+    max-width: none;
+    height: auto;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0;
+    border-radius: 0;
+    object-fit: initial;
   }
 
-  .winner-icon {
-    width: 20px;
-    height: 20px;
-    flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .winner-icon img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
+  .tourney-poster-image {
     display: block;
-  }
+    width: 100%;
+    max-width: none;
+    height: auto;
 
-  .tourney-card h3 { 
-    font-size: 1.15rem; 
-    font-weight: 800; 
-    line-height: 1.3;
     margin: 0;
+    padding: 0;
+
+    border: 0;
+    border-radius: 0;
+
+    /* don't crop */
+    object-fit: initial;
   }
 
-  .tourney-date { 
-    color: var(--text-secondary); 
-    font-size: 0.85rem; 
-    font-weight: 500;
-  }
-
-  .tourney-meta { 
-    display: flex; 
-    gap: 0.5rem; 
-    flex-wrap: wrap; 
-    margin-top: 0.25rem; 
-  }
-
-  /* Reusing global badge styles, adding specific variants */
-  .badge-ongoing { background: rgba(245, 158, 11, 0.15); color: var(--live); }
-  .badge-upcoming { background: var(--accent-dim); color: var(--accent); }
-  .badge-completed { background: rgba(34, 197, 94, 0.15); color: var(--win); }
-  .badge-secondary { background: var(--bg-card-hover); color: var(--text-secondary); }
-
-  .tourney-winner { 
-    font-size: 0.85rem; 
-    color: var(--text-secondary); 
+  .poster-placeholder {
+    box-sizing: border-box;
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    margin: 0;
+    padding: 28px;
     display: flex;
     align-items: center;
-    gap: 0.4rem;
-    margin-top: 0.5rem;
-    padding-top: 0.75rem;
+    justify-content: center;
+    color: var(--text-muted);
+    background: var(--bg-card);
+    text-align: center;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  /* Tournament info */
+
+  .tourney-content {
+    padding: 20px 20px 22px;
+  }
+
+  .tourney-content h2 {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 15px;
+    font-weight: 800;
+    line-height: 1.2;
+    letter-spacing: -.02em;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  /* Winner */
+
+  .tourney-champion {
+    margin-top: 20px;
+    padding-top: 16px;
     border-top: 1px solid var(--border);
   }
-  .tourney-winner strong { color: var(--accent-orange); }
 
-  .tourney-cta { 
-    margin-top: auto; /* Pushes CTA to the bottom of the card */
-    color: var(--accent); 
-    font-weight: 700; 
-    font-size: 0.9rem;
-    padding-top: 0.5rem;
-    transition: color 0.2s;
+  .champion-name {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    color: #e7bf59;
   }
-  .tourney-card:hover .tourney-cta {
-    color: var(--accent-hover);
+
+  .champion-name img {
+    display: block;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    object-fit: contain;
+  }
+
+  .champion-name strong {
+    min-width: 0;
+    overflow: hidden;
+    color: inherit;
+    font-size: 14px;
+    font-weight: 800;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* CTA */
+
+  .tourney-cta {
+    min-height: 50px;
+    margin-top: auto;
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    color: var(--accent);
+    background: rgba(255, 116, 46, .025);
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .tourney-arrow {
+    flex-shrink: 0;
+    font-size: 16px;
+    transition: transform .18s;
+  }
+
+  .tourney-card:hover .tourney-arrow {
+    transform: translateX(3px);
   }
 
   @media (max-width: 640px) {
-    .tourney-grid { grid-template-columns: 1fr; }
+    .tourney-grid {
+      grid-template-columns: 1fr;
+      gap: 18px;
+    }
+
+    .poster-meta {
+      min-height: 50px;
+      padding: 0 16px;
+    }
+
+    .poster-season {
+      font-size: 8px;
+    }
+
+    .status-badge {
+      min-height: 24px;
+      padding: 0 8px;
+      font-size: 8px;
+    }
+
+    .tourney-content {
+      padding: 18px 18px 20px;
+    }
+
+    .tourney-content h2 {
+      font-size: 15px;
+    }
+
+    .tourney-champion {
+      margin-top: 18px;
+      padding-top: 14px;
+    }
+
+    .champion-name strong {
+      font-size: 14px;
+    }
+
+    .tourney-cta {
+      min-height: 50px;
+      padding: 0 18px;
+    }
   }
 </style>

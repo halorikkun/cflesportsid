@@ -1,9 +1,211 @@
 ---
-const year = new Date().getFullYear();
+const socials = [
+  {
+    label: 'YouTube',
+    href: 'https://www.youtube.com/@cflesportsid',
+    icon: 'youtube',
+  },
+  {
+    label: 'TikTok',
+    href: 'https://www.tiktok.com/@cflesports_id?lang=en',
+    icon: 'tiktok',
+  },
+  {
+    label: 'Facebook',
+    href: 'https://www.facebook.com/groups/cflindonesia',
+    icon: 'facebook',
+  },
+  {
+    label: 'WhatsApp',
+    href: 'https://chat.whatsapp.com/DWEwhpStew0Hsbf9xPsH3N',
+    icon: 'whatsapp',
+  },
+  {
+    label: 'Discord',
+    href: 'https://dsc.gg/cflesportssea',
+    icon: 'discord',
+  },
+];
 ---
 
 <footer class="site-footer">
-  <div class="container">
-    <p>&copy; {year} Crossfire: Legends Esports Indonesia</p>
+  <div class="container footer-main">
+    <div class="footer-brand">
+      <a href="/" class="footer-logo">
+        <img
+          src="/brand/cflesports-id.webp"
+          alt="CFL Esports Indonesia"
+          width="180"
+          height="66"
+        />
+      </a>
+
+      <p>
+        CFL Esports Indonesia Tournament Hub<br />
+        Connect With Us!
+      </p>
+
+      <div class="footer-socials">
+        {socials.map((social) => (
+          <a
+            href={social.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`CFL Esports Indonesia ${social.label}`}
+            title={social.label}
+            class="social-link"
+          >
+            {social.icon === 'youtube' && (
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1A31 31 0 0 0 24 12a31 31 0 0 0-.5-5.8ZM9.6 15.6V8.4l6.2 3.6-6.2 3.6Z" />
+              </svg>
+            )}
+
+            {social.icon === 'tiktok' && (
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M16.7 2c.4 2.5 1.8 4 4.3 4.2v3.1c-1.5 0-2.9-.5-4.2-1.3v6.3a6.4 6.4 0 1 1-5.5-6.3v3.3a3.2 3.2 0 1 0 2.3 3.1V2h3.1Z" />
+              </svg>
+            )}
+
+            {social.icon === 'facebook' && (
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M14 8h3V4.5c-.5-.1-2-.2-3.7-.2-3.6 0-6.1 2.2-6.1 6.3V14H3v4h4.2v10h5.2V18h3.8l.6-4h-4.4v-3c0-1.2.3-2 1.6-2Z"
+                  transform="scale(.86) translate(2 0)"
+                />
+              </svg>
+            )}
+
+            {social.icon === 'whatsapp' && (
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18a8 8 0 0 1-4.1-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8 8 0 1 1 12 20Zm4.4-6c-.2-.1-1.4-.7-1.6-.8-.2-.1-.4-.1-.5.1-.2.2-.6.8-.8.9-.1.2-.3.2-.5.1a6.5 6.5 0 0 1-1.9-1.2 7.2 7.2 0 0 1-1.3-1.7c-.1-.2 0-.4.1-.5l.4-.5.2-.4c.1-.1 0-.3 0-.4l-.7-1.7c-.2-.4-.4-.4-.5-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 2s.8 2.3.9 2.5a9.7 9.7 0 0 0 3.7 3.3c.5.2.9.4 1.3.5.5.2 1 .2 1.4.1.4-.1 1.4-.6 1.6-1.1.2-.5.2-.9.1-1-.1-.1-.2-.2-.5-.3Z" />
+              </svg>
+            )}
+
+            {social.icon === 'discord' && (
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M19.5 5.3A16 16 0 0 0 15.7 4l-.5 1a14 14 0 0 0-6.4 0l-.5-1a16 16 0 0 0-3.8 1.3C2.1 9 1.5 12.5 1.8 16a15 15 0 0 0 4.7 2.4l1.2-1.7a9.4 9.4 0 0 1-1.8-.9l.5-.4c3.4 1.6 7.2 1.6 10.6 0l.5.4c-.6.4-1.2.7-1.8.9l1.2 1.7a15 15 0 0 0 4.7-2.4c.4-4.1-.7-7.5-2.1-10.7ZM8.3 14.3c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2Zm7.4 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2Z" />
+              </svg>
+            )}
+          </a>
+        ))}
+      </div>
+    </div>
+  </div>
+
+  <div class="container footer-bottom">
+    <span>
+      © {new Date().getFullYear()} Crossfire: Legends Esports Indonesia
+    </span>
   </div>
 </footer>
+
+<style>
+  .site-footer {
+    margin-top: 24px;
+    padding: 0;
+    background: rgba(255, 255, 255, .015);
+    border-top: 1px solid var(--border);
+  }
+
+  .footer-main {
+    display: flex;
+    justify-content: center;
+    padding: 24px 0 28px;
+  }
+
+  .footer-brand {
+    max-width: 420px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .footer-logo {
+    display: flex;
+    margin: 0;
+  }
+
+  .footer-logo img {
+    display: block;
+    width: 165px;
+    height: auto;
+  }
+
+  .footer-brand p {
+    margin: 14px 0 0;
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.65;
+  }
+
+  .footer-socials {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 20px;
+  }
+
+  .social-link {
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    padding: 0;
+    color: var(--text-secondary);
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    transition:
+      color .18s,
+      border-color .18s,
+      background-color .18s,
+      transform .18s;
+  }
+
+  .social-link svg {
+    width: 17px;
+    height: 17px;
+    fill: currentColor;
+  }
+
+  .social-link:hover {
+    color: var(--accent);
+    border-color: rgba(255, 116, 46, .45);
+    background: rgba(255, 116, 46, .06);
+    transform: translateY(-1px);
+  }
+
+  .footer-bottom {
+    padding: 18px 0 22px;
+    border-top: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 11px;
+    text-align: center;
+  }
+
+  @media (max-width: 640px) {
+    .site-footer {
+      margin-top: 24px;
+    }
+
+    .footer-main {
+      padding: 24px 0;
+    }
+
+    .footer-logo img {
+      width: 145px;
+    }
+
+    .footer-brand p {
+      font-size: 12px;
+    }
+
+    .footer-socials {
+      margin-top: 18px;
+    }
+  }
+</style>

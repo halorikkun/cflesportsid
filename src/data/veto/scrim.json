@@ -4,19 +4,6 @@
     "mapCount": 3
   },
   "veto": {
-    "mapPoolIds": [
-      "desert",
-      "sub-base",
-      "satellite",
-      "island",
-      "ankara",
-      "eagle-eye",
-      "power-supply",
-      "greece",
-      "black-widow",
-      "port",
-      "aztec"
-    ],
     "steps": [
       {
         "team": "A",

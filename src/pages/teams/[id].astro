@@ -29,7 +29,6 @@ const teamPlayers = team.data.players.map(pid => playersMap.get(pid)).filter(Boo
 const allMatches = await getCollection('matches');
 
 const teamMatches = allMatches.filter(m => getMatchTeam1Id(m) === team.id || getMatchTeam2Id(m) === team.id);
-const completedMatches = teamMatches.filter(m => m.data.status === 'completed');
 
 const teamStats = calculateStatistics(allMatches).teams.get(team.id) ?? emptyStats();
 const { wins, losses, matchesPlayed, kills: totalKills, deaths: totalDeaths, assists: totalAssists } = teamStats;
@@ -46,8 +45,6 @@ const sortedMatches = [...teamMatches].sort((a, b) => {
   return prioB - prioA;
 });
 
-const activePlayerCount = teamPlayers.filter(p => (p.data.status || 'active') === 'active').length;
-const initial = team.data.name.charAt(0).toUpperCase();
 ---
 
 <Layout title={`${team.data.name} - CFL Esports ID Tournament Hub`} current="Teams">
@@ -57,7 +54,7 @@ const initial = team.data.name.charAt(0).toUpperCase();
       <div class="profile-identity"><img class="profile-image team-image" src={team.data.logo || `/logos/${team.data.tag}.webp`} alt={team.data.name} width="160" height="160" onerror="this.onerror=null; this.src='/logos/default.webp'" />
         <div><p class="profile-kicker">{team.data.region === 'ID' ? 'Indonesia' : team.data.region}</p><h1>{team.data.name}</h1><p class="profile-subtitle">{team.data.tag}</p></div>
       </div>
-      <dl class="profile-metrics"><div><dt>Current position</dt><dd>#{currentPosition}</dd></div><div><dt>Matches played</dt><dd>{matchesPlayed}</dd></div><div><dt>Wins</dt><dd>{wins}</dd></div><div><dt>Total kills</dt><dd>{totalKills}</dd></div></dl>
+      <dl class="profile-metrics"><div><dt>Overall standing</dt><dd>#{currentPosition}</dd></div><div><dt>Matches played</dt><dd>{matchesPlayed}</dd></div><div><dt>Wins</dt><dd>{wins}</dd></div><div><dt>Total kills</dt><dd>{totalKills}</dd></div></dl>
     </section>
 
     {team.data.description && (
@@ -99,7 +96,10 @@ const initial = team.data.name.charAt(0).toUpperCase();
     {sortedMatches.length > 0 && (
       <div>
         <h2 class="section-title">Match History</h2>
-        <div class="table-wrap" tabindex="0" role="region" aria-label="Statistics table">
+        <p class="table-scroll-hint">
+          Swipe to view full match history →
+        </p>
+        <div class="table-wrap" tabindex="0" role="region" aria-label="Match history table">
           <!-- NEW: Added class for targeted mobile sticky columns -->
           <table class="match-history-table">
             <thead>
@@ -154,40 +154,7 @@ const initial = team.data.name.charAt(0).toUpperCase();
 </Layout>
 
 <style>
-  .back-link {
-    display: inline-block;
-    margin-bottom: 1.5rem;
-    color: var(--text-secondary);
-    font-weight: 600;
-    font-size: 0.9rem;
-    text-decoration: none;
-    transition: color 0.2s;
-  }
-  .back-link:hover { color: var(--accent); }
-
   /* NEW: Detail Hero Styling */
-  .detail-hero {
-    display: flex;
-    align-items: center;
-    gap: 1.5rem;
-    padding: 2rem;
-    background: linear-gradient(135deg, var(--accent-dim), transparent), var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    margin-bottom: 1.5rem;
-  }
-  .avatar-large {
-    width: 80px;
-    height: 80px;
-    font-size: 2rem;
-    background: var(--bg-primary);
-    border: 2px solid var(--accent);
-    flex-shrink: 0;
-  }
-  .detail-hero-info h1 { font-size: 1.75rem; margin-bottom: 0.25rem; }
-  .hero-tag { color: var(--text-muted); font-size: 1rem; font-weight: 600; }
-  .hero-subtitle { color: var(--accent); font-weight: 600; font-size: 1rem; margin: 0; }
-
   .team-description {
     color: var(--text-secondary);
     margin-bottom: 2rem;
@@ -204,49 +171,36 @@ const initial = team.data.name.charAt(0).toUpperCase();
   }
   .section-spacing { margin-bottom: 2.5rem; }
 
-  /* NEW: Clean Roster Grid Cards */
-  .roster-detail-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 1rem;
+  .table-scroll-hint {
+    display: none;
   }
-  .roster-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 1rem;
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    text-decoration: none;
-    color: inherit;
-    transition: all 0.2s;
+
+  @media (max-width: 768px) {
+    .table-scroll-hint {
+      display: block;
+      margin: -4px 0 10px;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 600;
+      text-align: right;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .match-history-table {
+      min-width: 620px;
+    }
   }
-  .roster-card:hover {
-    border-color: var(--accent);
-    transform: translateY(-2px);
-    background: var(--bg-card-hover);
-  }
-  .roster-card .avatar {
-    width: 40px;
-    height: 40px;
-    font-size: 0.9rem;
-  }
-  .roster-card-info {
-    flex: 1;
-    min-width: 0;
-  }
-  .roster-card-info strong {
-    display: block;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    color: var(--text-primary);
-    font-size: 1rem;
-  }
-  .roster-card-info span {
-    font-size: 0.8rem;
-    color: var(--text-muted);
+
+  @media (min-width: 769px) {
+    .profile-banner {
+      height: auto;
+      min-height: 300px;
+      padding: 34px 44px;
+    }
   }
 
   /* Table link styling */

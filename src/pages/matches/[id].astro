@@ -14,6 +14,7 @@ import {
 
 export async function getStaticPaths() {
   const matches = await getCollection('matches');
+
   return matches.map(m => ({
     params: { id: m.id },
     props: { match: m },
@@ -56,8 +57,15 @@ const tournament = tournamentId
   ? tournamentsMap.get(tournamentId)
   : undefined;
 
-const team1Name = t1?.data.name ?? team1Id ?? getParticipantLabel(m, 1);
-const team2Name = t2?.data.name ?? team2Id ?? getParticipantLabel(m, 2);
+const team1Name =
+  t1?.data.name ??
+  team1Id ??
+  getParticipantLabel(m, 1);
+
+const team2Name =
+  t2?.data.name ??
+  team2Id ??
+  getParticipantLabel(m, 2);
 
 const team1Tag = t1?.data.tag ?? team1Id ?? 'TBD';
 const team2Tag = t2?.data.tag ?? team2Id ?? 'TBD';
@@ -65,18 +73,29 @@ const team2Tag = t2?.data.tag ?? team2Id ?? 'TBD';
 const t1Won = Boolean(winnerId && winnerId === team1Id);
 const t2Won = Boolean(winnerId && winnerId === team2Id);
 
-const t1Color = m.data.status === 'completed' ? (t1Won ? 'var(--win)' : 'var(--text-muted)') : 'var(--text-primary)';
-const t2Color = m.data.status === 'completed' ? (t2Won ? 'var(--win)' : 'var(--text-muted)') : 'var(--text-primary)';
+const t1Color =
+  m.data.status === 'completed'
+    ? (t1Won ? 'var(--win)' : 'var(--text-muted)')
+    : 'var(--text-primary)';
+
+const t2Color =
+  m.data.status === 'completed'
+    ? (t2Won ? 'var(--win)' : 'var(--text-muted)')
+    : 'var(--text-primary)';
 
 const roundDetails = m.data.roundDetails || [];
+
 const roundMapNames = roundDetails.map((rd) => {
   const mapId = getRoundMapId(rd);
   return mapsMap.get(mapId)?.data.name ?? 'TBD';
 });
+
 const roundMVPuids = roundDetails.map(rd => rd.mvp || null);
 
 const numRounds = Math.max(
-  ...((m.data.playerStats || []).map(ps => (ps.rounds || []).length)),
+  ...((m.data.playerStats || []).map(
+    ps => (ps.rounds || []).length
+  )),
   roundDetails.length,
   0
 );
@@ -85,263 +104,976 @@ const playerStats = (m.data.playerStats || [])
   .filter(ps => ps.uid)
   .map(ps => {
     const player = playersMap.get(ps.uid);
-    const team = ps.teamId ? teamsMap.get(ps.teamId) : undefined;
+    const team = ps.teamId
+      ? teamsMap.get(ps.teamId)
+      : undefined;
+
     const rounds = ps.rounds || [];
+
     return {
       uid: ps.uid,
-      avatar: player?.data.avatar || '/players/default.webp',
-      ign: player ? player.data.ign : (ps.ign || ps.uid),
-      teamName: team ? team.data.name : '—',
-      teamTag: team ? team.data.tag : '—',
+      avatar:
+        player?.data.avatar ||
+        '/players/default.webp',
+
+      ign:
+        player
+          ? player.data.ign
+          : (ps.ign || ps.uid),
+
+      teamName:
+        team
+          ? team.data.name
+          : '—',
+
+      teamTag:
+        team
+          ? team.data.tag
+          : '—',
+
       teamId: ps.teamId,
       rounds,
-      totalKills: rounds.reduce((s, r) => s + (r.kills || 0), 0),
-      totalDeaths: rounds.reduce((s, r) => s + (r.deaths || 0), 0),
-      totalAssists: rounds.reduce((s, r) => s + (r.assists || 0), 0),
+
+      totalKills: rounds.reduce(
+        (s, r) => s + (r.kills || 0),
+        0
+      ),
+
+      totalDeaths: rounds.reduce(
+        (s, r) => s + (r.deaths || 0),
+        0
+      ),
+
+      totalAssists: rounds.reduce(
+        (s, r) => s + (r.assists || 0),
+        0
+      ),
     };
   });
 
-const team1Players = playerStats.filter(p => p.teamId === team1Id);
-const team2Players = playerStats.filter(p => p.teamId === team2Id);
+const team1Players = playerStats.filter(
+  p => p.teamId === team1Id
+);
 
-const team1Kills = team1Players.reduce((s, p) => s + p.totalKills, 0);
-const team1Deaths = team1Players.reduce((s, p) => s + p.totalDeaths, 0);
-const team1Assists = team1Players.reduce((s, p) => s + p.totalAssists, 0);
-const team2Kills = team2Players.reduce((s, p) => s + p.totalKills, 0);
-const team2Deaths = team2Players.reduce((s, p) => s + p.totalDeaths, 0);
-const team2Assists = team2Players.reduce((s, p) => s + p.totalAssists, 0);
+const team2Players = playerStats.filter(
+  p => p.teamId === team2Id
+);
 
 function getRoundMVP(roundIdx) {
   const uid = roundMVPuids[roundIdx];
+
   if (!uid) return null;
+
   const player = playersMap.get(uid);
-  const ps = playerStats.find(p => p.uid === uid);
-  const r = ps?.rounds.find(r => r.round_number === roundDetails[roundIdx]?.round_number);
+
+  const ps = playerStats.find(
+    p => p.uid === uid
+  );
+
+  const r = ps?.rounds.find(
+    r =>
+      r.round_number ===
+      roundDetails[roundIdx]?.round_number
+  );
+
   return {
     uid,
-    ign: player ? player.data.ign : (ps ? ps.ign : uid),
+
+    ign:
+      player
+        ? player.data.ign
+        : (ps ? ps.ign : uid),
+
     teamTag: ps?.teamTag,
+
     kills: r?.kills ?? null,
     deaths: r?.deaths ?? null,
     assists: r?.assists ?? null,
   };
 }
 
-function kda(k, d, a) { return (k + a) / Math.max(d, 1); }
-
-const roundMVPs = numRounds > 0 ? Array.from({ length: numRounds }, (_, i) => getRoundMVP(i)) : [];
+const roundMVPs =
+  numRounds > 0
+    ? Array.from(
+        { length: numRounds },
+        (_, i) => getRoundMVP(i)
+      )
+    : [];
 ---
 
-<Layout title={`${team1Name} vs ${team2Name} - CFL Esports ID Tournament Hub`} current="Matches">
+<Layout
+  title={`${team1Name} vs ${team2Name} - CFL Esports ID Tournament Hub`}
+  current="Matches"
+>
   <div class="container">
-    {m.data.status === 'upcoming' && tournament?.data.stages.find(stage => stage.id === m.data.stageId)?.veto && team1Id && team2Id && (
-      <p><a href={`/veto?match=${m.id}`}>{m.data.status === 'completed' ? 'Practice map veto' : 'Start map veto'}</a></p>
-    )}
 
-    <section class="match-score-card" aria-label="Match score and details">
+    {
+      m.data.status === 'upcoming' &&
+      tournament?.data.stages.find(
+        stage => stage.id === m.data.stageId
+      )?.veto &&
+      team1Id &&
+      team2Id && (
+        <p>
+          <a href={`/veto?match=${m.id}`}>
+            Start map veto
+          </a>
+        </p>
+      )
+    }
+
+    <!-- =========================
+         MATCH HERO
+    ========================== -->
+
+    <section
+      class="match-score-card"
+      aria-label="Match score and details"
+    >
       <header class="score-metadata">
-        <h1>{tournament?.data.name ?? tournamentId ?? 'TBD'} — {tournament?.data.region === 'ID' ? 'Indonesia' : tournament?.data.region ?? 'Indonesia'}</h1>
-        <p><time datetime={m.data.date}>{m.data.date}</time> · {getRoundName(m, tournamentsMap)}</p>
-      </header>
-    <div class="match-detail-scoreboard">
-      <div class="match-detail-team">
-        <img 
-          src={t1?.data.logo || `/logos/${team1Tag}.webp`} 
-          alt={team1Name} 
-          class="team-logo-large"
-          onerror="this.onerror=null; this.src='/logos/default.webp'"
-        />
-        <a href={team1Id ? `/teams/${team1Id}` : undefined} style={`color: ${t1Color};`}>{team1Name}</a>
-        <span class="tag">[{team1Tag}]</span>
-      </div>
-      <div class="match-detail-score">
-        {m.data.status === 'completed' ? `${m.data.score1} - ${m.data.score2}` : 'VS'}
-      </div>
-      <div class="match-detail-team">
-        <img 
-          src={t2?.data.logo || `/logos/${team2Tag}.webp`} 
-          alt={team2Name} 
-          class="team-logo-large"
-          onerror="this.onerror=null; this.src='/logos/default.webp'"
-        />
-        <a href={team2Id ? `/teams/${team2Id}` : undefined} style={`color: ${t2Color};`}>{team2Name}</a>
-        <span class="tag">[{team2Tag}]</span>
-      </div>
-    </div>
 
-    <div class="match-status-center">
-      <span class={`badge badge-${m.data.status}`}>
-        {m.data.status === 'completed' ? (t1Won ? `${team1Name} wins` : t2Won ? `${team2Name} wins` : 'Completed') : m.data.status}
-      </span>
-    </div>
+        <h1>
+          {tournament?.data.name ?? tournamentId ?? 'TBD'}
+        </h1>
+
+        <p>
+          <time datetime={m.data.date}>
+            {m.data.date}
+          </time>
+        </p>
+
+        <span class="match-round-badge">
+          {getRoundName(m, tournamentsMap)}
+        </span>
+
+      </header>
+
+      <div class="match-detail-scoreboard">
+
+        <!-- TEAM 1 -->
+
+        <div class="match-detail-team">
+
+          <img
+            src={
+              t1?.data.logo ||
+              `/logos/${team1Tag}.webp`
+            }
+            alt={team1Name}
+            class="team-logo-large"
+            onerror="this.onerror=null; this.src='/logos/default.webp'"
+          />
+
+          <a
+            href={
+              team1Id
+                ? `/teams/${team1Id}`
+                : undefined
+            }
+            style={`color: ${t1Color};`}
+          >
+            {team1Name}
+          </a>
+
+          <span class="tag">
+            [{team1Tag}]
+          </span>
+
+        </div>
+
+        <!-- SCORE -->
+
+        <div class="match-detail-score">
+          {
+            m.data.status === 'completed'
+              ? `${m.data.score1} - ${m.data.score2}`
+              : 'VS'
+          }
+        </div>
+
+        <!-- TEAM 2 -->
+
+        <div class="match-detail-team">
+
+          <img
+            src={
+              t2?.data.logo ||
+              `/logos/${team2Tag}.webp`
+            }
+            alt={team2Name}
+            class="team-logo-large"
+            onerror="this.onerror=null; this.src='/logos/default.webp'"
+          />
+
+          <a
+            href={
+              team2Id
+                ? `/teams/${team2Id}`
+                : undefined
+            }
+            style={`color: ${t2Color};`}
+          >
+            {team2Name}
+          </a>
+
+          <span class="tag">
+            [{team2Tag}]
+          </span>
+
+        </div>
+
+      </div>
 
     </section>
 
-    {m.data.status === 'completed' && playerStats.length > 0 && (
-      <>
-        <MatchInsights players={playerStats} team1Id={team1Id} team2Id={team2Id} team1Name={team1Name} team2Name={team2Name} overviewOnly />
-        <div class="match-tabs" role="tablist" aria-label="Match details">
-          {['Match Leaders','Maps & MVP','Player Stats','Player Comparison'].map((label,i)=><button id={`match-tab-${i}`} role="tab" aria-controls={`match-panel-${i}`} aria-selected={i===0?'true':'false'} tabindex={i===0?0:-1}>{label}</button>)}
-        </div>
-        <section id="match-panel-0" role="tabpanel" aria-labelledby="match-tab-0"><MatchInsights players={playerStats} team1Id={team1Id} team2Id={team2Id} team1Name={team1Name} team2Name={team2Name} leadersOnly /></section>
-        <section id="match-panel-1" role="tabpanel" aria-labelledby="match-tab-1" hidden>
+    <!-- =========================
+         COMPLETED MATCH DATA
+    ========================== -->
 
-        {roundDetails.length > 0 && (
-          <section class="section-spacing">
-            <h2 class="section-title">Maps & MVP</h2>
-            <div class="mvp-grid">
-              {Array.from({ length: numRounds }, (_, i) => {
-                const mvp = roundMVPs[i];
-                const mapName = roundMapNames[i] || 'TBD';
-                return (
-                  <article class="mvp-card map-mvp-card">
-                    <a class="map-mvp-image-link" href={roundDetails[i]?.mapId ? `/maps/${roundDetails[i].mapId}` : undefined} aria-label={`View ${mapName} map details`}>
-                      <img class="map-mvp-thumbnail" src={mapsMap.get(roundDetails[i]?.mapId)?.data.thumbnail || '/maps/placeholder.svg'} alt="" loading="lazy" onerror="this.onerror=null;this.src='/maps/placeholder.svg'" />
-                      <h3 class="map-mvp-overlay">{mapName}</h3>
-                    </a>
-                    {mvp ? <div class="map-mvp-player">
-                      <img class="map-mvp-avatar" src={playersMap.get(mvp.uid)?.data.avatar || '/players/default.webp'} alt="" width="100" height="110" onerror="this.onerror=null;this.src='/players/default.webp'" />
-                      <div><a class="map-mvp-name" href={playersMap.get(mvp.uid) ? `/players/${playersMap.get(mvp.uid).id}` : undefined}>{mvp.ign}{mvp.teamTag && mvp.teamTag !== '—' ? ` (${mvp.teamTag})` : ''}</a><p class="mvp-label">Round {roundDetails[i]?.round_number ?? i+1} MVP</p><div class="mvp-kda"><span class="kill">{mvp.kills ?? '—'}</span> / <span class="death">{mvp.deaths ?? '—'}</span> / <span class="assist">{mvp.assists ?? '—'}</span></div></div>
-                    </div> : <p class="mvp-none">No MVP</p>}
-                    {roundDetails[i]?.resultNote && <p class="map-result-note">{roundDetails[i].resultNote}</p>}
-                  </article>
-                );
-              })}
-            </div>
+    {
+      m.data.status === 'completed' &&
+      playerStats.length > 0 && (
+        <>
+
+          <!-- OVERVIEW -->
+
+          <MatchInsights
+            players={playerStats}
+            team1Id={team1Id}
+            team2Id={team2Id}
+            team1Name={team1Name}
+            team2Name={team2Name}
+            overviewOnly
+          />
+
+          <!-- TABS -->
+
+          <div
+            class="match-tabs"
+            role="tablist"
+            aria-label="Match details"
+          >
+            {[
+              'Match Leaders',
+              'Maps & MVP',
+              'Player Stats',
+              'Player Comparison'
+            ].map((label, i) => (
+              <button
+                id={`match-tab-${i}`}
+                role="tab"
+                aria-controls={`match-panel-${i}`}
+                aria-selected={
+                  i === 0 ? 'true' : 'false'
+                }
+                tabindex={i === 0 ? 0 : -1}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          <!-- =====================
+               MATCH LEADERS
+          ====================== -->
+
+          <section
+            id="match-panel-0"
+            role="tabpanel"
+            aria-labelledby="match-tab-0"
+          >
+            <MatchInsights
+              players={playerStats}
+              team1Id={team1Id}
+              team2Id={team2Id}
+              team1Name={team1Name}
+              team2Name={team2Name}
+              leadersOnly
+            />
+          </section>
+
+          <!-- =====================
+               MAPS & MVP
+          ====================== -->
+
+          <section
+            id="match-panel-1"
+            role="tabpanel"
+            aria-labelledby="match-tab-1"
+            hidden
+          >
+
+            {
+              roundDetails.length > 0 && (
+                <section class="section-spacing">
+
+                  <h2 class="section-title">
+                    Maps & MVP
+                  </h2>
+
+                  <div class="mvp-grid">
+
+                    {
+                      Array.from(
+                        { length: numRounds },
+                        (_, i) => {
+
+                          const mvp =
+                            roundMVPs[i];
+
+                          const mapName =
+                            roundMapNames[i] ||
+                            'TBD';
+
+                          const mapId =
+                            getRoundMapId(
+                              roundDetails[i]
+                            );
+
+                          return (
+                            <article class="mvp-card map-mvp-card">
+
+                              <a
+                                class="map-mvp-image-link"
+                                href={
+                                  mapId
+                                    ? `/maps/${mapId}`
+                                    : undefined
+                                }
+                                aria-label={`View ${mapName} map details`}
+                              >
+
+                                <img
+                                  class="map-mvp-thumbnail"
+                                  src={
+                                    mapsMap.get(mapId)
+                                      ?.data.thumbnail ||
+                                    '/maps/placeholder.svg'
+                                  }
+                                  alt=""
+                                  loading="lazy"
+                                  onerror="this.onerror=null;this.src='/maps/placeholder.svg'"
+                                />
+
+                                <h3 class="map-mvp-overlay">
+                                  {mapName}
+                                </h3>
+
+                              </a>
+
+                              {
+                                mvp ? (
+
+                                  <div class="map-mvp-player">
+
+                                    <img
+                                      class="map-mvp-avatar"
+                                      src={
+                                        playersMap.get(
+                                          mvp.uid
+                                        )?.data.avatar ||
+                                        '/players/default.webp'
+                                      }
+                                      alt=""
+                                      width="100"
+                                      height="110"
+                                      onerror="this.onerror=null;this.src='/players/default.webp'"
+                                    />
+
+                                    <div>
+
+                                      <a
+                                        class="map-mvp-name"
+                                        href={
+                                          playersMap.get(
+                                            mvp.uid
+                                          )
+                                            ? `/players/${
+                                                playersMap.get(
+                                                  mvp.uid
+                                                ).id
+                                              }`
+                                            : undefined
+                                        }
+                                      >
+                                        {mvp.ign}
+
+                                        {
+                                          mvp.teamTag &&
+                                          mvp.teamTag !== '—'
+                                            ? ` (${mvp.teamTag})`
+                                            : ''
+                                        }
+                                      </a>
+
+                                      <p class="mvp-label">
+                                        Round {
+                                          roundDetails[i]
+                                            ?.round_number ??
+                                          i + 1
+                                        } MVP
+                                      </p>
+
+                                      <div class="mvp-kda">
+
+                                        <span class="kill">
+                                          {mvp.kills ?? '—'}
+                                        </span>
+
+                                        {' / '}
+
+                                        <span class="death">
+                                          {mvp.deaths ?? '—'}
+                                        </span>
+
+                                        {' / '}
+
+                                        <span class="assist">
+                                          {mvp.assists ?? '—'}
+                                        </span>
+
+                                      </div>
+
+                                    </div>
+
+                                  </div>
+
+                                ) : (
+
+                                  <p class="mvp-none">
+                                    No MVP
+                                  </p>
+
+                                )
+                              }
+
+                              {
+                                roundDetails[i]
+                                  ?.resultNote && (
+                                  <p class="map-result-note">
+                                    {
+                                      roundDetails[i]
+                                        .resultNote
+                                    }
+                                  </p>
+                                )
+                              }
+
+                            </article>
+                          );
+                        }
+                      )
+                    }
+
+                  </div>
+
+                </section>
+              )
+            }
 
           </section>
-        )}
 
+          <!-- =====================
+               PLAYER STATS
+          ====================== -->
 
-        </section>
-        <section id="match-panel-2" role="tabpanel" aria-labelledby="match-tab-2" hidden>
-        <h2 class="section-title">Player Stats</h2>
-        {playerStats.some(p => p.rounds.some(r => r.round_number === undefined)) && (
-          <p class="text-muted">Some player map numbers are unknown. Their stats are included in totals, but left unassigned in map columns.</p>
-        )}
+          <section
+            id="match-panel-2"
+            role="tabpanel"
+            aria-labelledby="match-tab-2"
+            hidden
+          >
 
-        {team1Players.length > 0 && (
-          <div class="section-spacing" style={`--team-color: ${t1Color};`}>
-            <h3 class="team-header">
-              <a href={team1Id ? `/teams/${team1Id}` : undefined}>{team1Name}</a>
-              <span class="tag"> [{team1Tag}]</span>
-            </h3>
-            <div class="table-wrap" tabindex="0" role="region" aria-label="Statistics table">
-              <table class="match-stats-table">
-                <thead>
-                  <tr>
-                    <th>Player</th>
-                    {numRounds > 1 && Array.from({ length: numRounds }, (_, i) => (
-                      <th>Round {i + 1}{roundMapNames[i] ? ` — ${roundMapNames[i]}` : ''}</th>
-                    ))}
-                    <th>Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {team1Players.map(p => (
-                    <tr>
-                      <td><a href={`/players/${playersMap.get(p.uid)?.id || ''}`}><strong>{p.ign}</strong></a></td>
-                      {numRounds > 1 && Array.from({ length: numRounds }, (_, i) => {
-                        const r = p.rounds.find(r => r.round_number === roundDetails[i]?.round_number);
-                        return r ? (
-                          <td class="kda"><span class="kill">{r.kills}</span>/<span class="death">{r.deaths}</span>/<span class="assist">{r.assists}</span></td>
-                        ) : <td class="text-muted">—</td>;
-                      })}
-                      <td class="kda total-kda"><span class="kill">{p.totalKills}</span>/<span class="death">{p.totalDeaths}</span>/<span class="assist">{p.totalAssists}</span></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+            <h2 class="section-title">
+              Player Stats
+            </h2>
 
-        {team2Players.length > 0 && (
-          <div class="section-spacing" style={`--team-color: ${t2Color};`}>
-            <h3 class="team-header">
-              <a href={team2Id ? `/teams/${team2Id}` : undefined}>{team2Name}</a>
-              <span class="tag"> [{team2Tag}]</span>
-            </h3>
-            <div class="table-wrap" tabindex="0" role="region" aria-label="Statistics table">
-              <table class="match-stats-table">
-                <thead>
-                  <tr>
-                    <th>Player</th>
-                    {numRounds > 1 && Array.from({ length: numRounds }, (_, i) => (
-                      <th>Round {i + 1}{roundMapNames[i] ? ` — ${roundMapNames[i]}` : ''}</th>
-                    ))}
-                    <th>Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {team2Players.map(p => (
-                    <tr>
-                      <td><a href={`/players/${playersMap.get(p.uid)?.id || ''}`}><strong>{p.ign}</strong></a></td>
-                      {numRounds > 1 && Array.from({ length: numRounds }, (_, i) => {
-                        const r = p.rounds.find(r => r.round_number === roundDetails[i]?.round_number);
-                        return r ? (
-                          <td class="kda"><span class="kill">{r.kills}</span>/<span class="death">{r.deaths}</span>/<span class="assist">{r.assists}</span></td>
-                        ) : <td class="text-muted">—</td>;
-                      })}
-                      <td class="kda total-kda"><span class="kill">{p.totalKills}</span>/<span class="death">{p.totalDeaths}</span>/<span class="assist">{p.totalAssists}</span></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+            {
+              playerStats.some(
+                p =>
+                  p.rounds.some(
+                    r =>
+                      r.round_number ===
+                      undefined
+                  )
+              ) && (
+                <p class="text-muted">
+                  Some player map numbers are
+                  unknown. Their stats are included
+                  in totals, but left unassigned in
+                  map columns.
+                </p>
+              )
+            }
 
-        {numRounds <= 1 && (
-          <div class="table-wrap section-spacing">
-            <table class="match-stats-table">
-              <thead>
-                <tr>
-                  <th>Player</th>
-                  <th>Team</th>
-                  <th>Kills</th>
-                  <th>Deaths</th>
-                  <th>Assists</th>
-                </tr>
-              </thead>
-              <tbody>
-                {playerStats.map(p => (
-                  <tr>
-                    <td><a href={`/players/${playersMap.get(p.uid)?.id || ''}`}><strong>{p.ign}</strong></a></td>
-                    <td class="text-muted">{p.teamTag}</td>
-                    <td class="kda"><span class="kill">{p.totalKills}</span></td>
-                    <td class="kda"><span class="death">{p.totalDeaths}</span></td>
-                    <td class="kda"><span class="assist">{p.totalAssists}</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        </section>
-        <section id="match-panel-3" role="tabpanel" aria-labelledby="match-tab-3" hidden><MatchInsights players={playerStats} team1Id={team1Id} team2Id={team2Id} team1Name={team1Name} team2Name={team2Name} comparison /></section>
-      </>
-    )}
+            <!-- TEAM 1 -->
 
-    {m.data.status !== 'completed' && (
-      <div class="empty-state">
-        Match stats will be available after the match is completed.
-      </div>
-    )}
+            {
+              team1Players.length > 0 && (
+                <div
+                  class="section-spacing"
+                  style={`--team-color: ${t1Color};`}
+                >
+
+                  <h3 class="team-header">
+
+                    <a
+                      href={
+                        team1Id
+                          ? `/teams/${team1Id}`
+                          : undefined
+                      }
+                    >
+                      {team1Name}
+                    </a>
+
+                    <span class="tag">
+                      {' '}[{team1Tag}]
+                    </span>
+
+                  </h3>
+
+                  <p class="mobile-table-hint">
+                    Swipe to view all rounds →
+                  </p>
+
+                  <div
+                    class="table-wrap"
+                    tabindex="0"
+                    role="region"
+                    aria-label={`${team1Name} player statistics`}
+                  >
+
+                    <table class="match-stats-table">
+
+                      <thead>
+                        <tr>
+
+                          <th>Player</th>
+
+                          {
+                            numRounds > 1 &&
+                            Array.from(
+                              {
+                                length:
+                                  numRounds
+                              },
+                              (_, i) => (
+                                <th>
+                                  Round {i + 1}
+                                  {
+                                    roundMapNames[i]
+                                      ? ` — ${roundMapNames[i]}`
+                                      : ''
+                                  }
+                                </th>
+                              )
+                            )
+                          }
+
+                          <th>Total</th>
+
+                        </tr>
+                      </thead>
+
+                      <tbody>
+
+                        {
+                          team1Players.map(
+                            p => (
+                              <tr>
+
+                                <td>
+                                  <a
+                                    href={`/players/${
+                                      playersMap.get(
+                                        p.uid
+                                      )?.id || ''
+                                    }`}
+                                  >
+                                    <strong>
+                                      {p.ign}
+                                    </strong>
+                                  </a>
+                                </td>
+
+                                {
+                                  numRounds > 1 &&
+                                  Array.from(
+                                    {
+                                      length:
+                                        numRounds
+                                    },
+                                    (_, i) => {
+
+                                      const r =
+                                        p.rounds.find(
+                                          r =>
+                                            r.round_number ===
+                                            roundDetails[
+                                              i
+                                            ]
+                                              ?.round_number
+                                        );
+
+                                      return r ? (
+                                        <td class="kda">
+
+                                          <span class="kill">
+                                            {r.kills}
+                                          </span>
+
+                                          /
+
+                                          <span class="death">
+                                            {r.deaths}
+                                          </span>
+
+                                          /
+
+                                          <span class="assist">
+                                            {r.assists}
+                                          </span>
+
+                                        </td>
+                                      ) : (
+                                        <td class="text-muted">
+                                          —
+                                        </td>
+                                      );
+                                    }
+                                  )
+                                }
+
+                                <td class="kda total-kda">
+
+                                  <span class="kill">
+                                    {p.totalKills}
+                                  </span>
+
+                                  /
+
+                                  <span class="death">
+                                    {p.totalDeaths}
+                                  </span>
+
+                                  /
+
+                                  <span class="assist">
+                                    {p.totalAssists}
+                                  </span>
+
+                                </td>
+
+                              </tr>
+                            )
+                          )
+                        }
+
+                      </tbody>
+
+                    </table>
+
+                  </div>
+
+                </div>
+              )
+            }
+
+            <!-- TEAM 2 -->
+
+            {
+              team2Players.length > 0 && (
+                <div
+                  class="section-spacing"
+                  style={`--team-color: ${t2Color};`}
+                >
+
+                  <h3 class="team-header">
+
+                    <a
+                      href={
+                        team2Id
+                          ? `/teams/${team2Id}`
+                          : undefined
+                      }
+                    >
+                      {team2Name}
+                    </a>
+
+                    <span class="tag">
+                      {' '}[{team2Tag}]
+                    </span>
+
+                  </h3>
+
+                  <p class="mobile-table-hint">
+                    Swipe to view all rounds →
+                  </p>
+
+                  <div
+                    class="table-wrap"
+                    tabindex="0"
+                    role="region"
+                    aria-label={`${team2Name} player statistics`}
+                  >
+
+                    <table class="match-stats-table">
+
+                      <thead>
+                        <tr>
+
+                          <th>Player</th>
+
+                          {
+                            numRounds > 1 &&
+                            Array.from(
+                              {
+                                length:
+                                  numRounds
+                              },
+                              (_, i) => (
+                                <th>
+                                  Round {i + 1}
+                                  {
+                                    roundMapNames[i]
+                                      ? ` — ${roundMapNames[i]}`
+                                      : ''
+                                  }
+                                </th>
+                              )
+                            )
+                          }
+
+                          <th>Total</th>
+
+                        </tr>
+                      </thead>
+
+                      <tbody>
+
+                        {
+                          team2Players.map(
+                            p => (
+                              <tr>
+
+                                <td>
+                                  <a
+                                    href={`/players/${
+                                      playersMap.get(
+                                        p.uid
+                                      )?.id || ''
+                                    }`}
+                                  >
+                                    <strong>
+                                      {p.ign}
+                                    </strong>
+                                  </a>
+                                </td>
+
+                                {
+                                  numRounds > 1 &&
+                                  Array.from(
+                                    {
+                                      length:
+                                        numRounds
+                                    },
+                                    (_, i) => {
+
+                                      const r =
+                                        p.rounds.find(
+                                          r =>
+                                            r.round_number ===
+                                            roundDetails[
+                                              i
+                                            ]
+                                              ?.round_number
+                                        );
+
+                                      return r ? (
+                                        <td class="kda">
+
+                                          <span class="kill">
+                                            {r.kills}
+                                          </span>
+
+                                          /
+
+                                          <span class="death">
+                                            {r.deaths}
+                                          </span>
+
+                                          /
+
+                                          <span class="assist">
+                                            {r.assists}
+                                          </span>
+
+                                        </td>
+                                      ) : (
+                                        <td class="text-muted">
+                                          —
+                                        </td>
+                                      );
+                                    }
+                                  )
+                                }
+
+                                <td class="kda total-kda">
+
+                                  <span class="kill">
+                                    {p.totalKills}
+                                  </span>
+
+                                  /
+
+                                  <span class="death">
+                                    {p.totalDeaths}
+                                  </span>
+
+                                  /
+
+                                  <span class="assist">
+                                    {p.totalAssists}
+                                  </span>
+
+                                </td>
+
+                              </tr>
+                            )
+                          )
+                        }
+
+                      </tbody>
+
+                    </table>
+
+                  </div>
+
+                </div>
+              )
+            }
+
+            <!-- FALLBACK FOR SINGLE ROUND -->
+
+            {
+              numRounds <= 1 && (
+                <div class="table-wrap section-spacing">
+
+                  <table class="match-stats-table">
+
+                    <thead>
+                      <tr>
+                        <th>Player</th>
+                        <th>Team</th>
+                        <th>Kills</th>
+                        <th>Deaths</th>
+                        <th>Assists</th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+
+                      {
+                        playerStats.map(
+                          p => (
+                            <tr>
+
+                              <td>
+                                <a
+                                  href={`/players/${
+                                    playersMap.get(
+                                      p.uid
+                                    )?.id || ''
+                                  }`}
+                                >
+                                  <strong>
+                                    {p.ign}
+                                  </strong>
+                                </a>
+                              </td>
+
+                              <td class="text-muted">
+                                {p.teamTag}
+                              </td>
+
+                              <td class="kda">
+                                <span class="kill">
+                                  {p.totalKills}
+                                </span>
+                              </td>
+
+                              <td class="kda">
+                                <span class="death">
+                                  {p.totalDeaths}
+                                </span>
+                              </td>
+
+                              <td class="kda">
+                                <span class="assist">
+                                  {p.totalAssists}
+                                </span>
+                              </td>
+
+                            </tr>
+                          )
+                        )
+                      }
+
+                    </tbody>
+
+                  </table>
+
+                </div>
+              )
+            }
+
+          </section>
+
+          <!-- =====================
+               PLAYER COMPARISON
+          ====================== -->
+
+          <section
+            id="match-panel-3"
+            role="tabpanel"
+            aria-labelledby="match-tab-3"
+            hidden
+          >
+
+            <MatchInsights
+              players={playerStats}
+              team1Id={team1Id}
+              team2Id={team2Id}
+              team1Name={team1Name}
+              team2Name={team2Name}
+              comparison
+            />
+
+          </section>
+
+        </>
+      )
+    }
+
+    {
+      m.data.status !== 'completed' && (
+        <div class="empty-state">
+          Match stats will be available after the
+          match is completed.
+        </div>
+      )
+    }
+
   </div>
 </Layout>
 
+
 <style>
-  .back-link {
-    display: inline-block;
-    margin-bottom: 1.5rem;
-    color: var(--text-secondary);
-    font-weight: 600;
-    font-size: 0.9rem;
-    text-decoration: none;
-    transition: color 0.2s;
-  }
-  .back-link:hover { color: var(--accent); }
+
+  /* =========================
+     GENERAL
+  ========================== */
 
   .section-title {
     font-size: 1.25rem;
@@ -350,180 +1082,654 @@ const roundMVPs = numRounds > 0 ? Array.from({ length: numRounds }, (_, i) => ge
     padding-bottom: 0.5rem;
     border-bottom: 1px solid var(--border);
   }
-  .section-spacing { margin-bottom: 2.5rem; }
-  .text-muted { color: var(--text-muted); }
-  .empty-state { text-align: center; color: var(--text-muted); padding: 3rem 1rem; font-size: 1.1rem; }
+
+  .section-spacing {
+    margin-bottom: 2.5rem;
+  }
+
+  .text-muted {
+    color: var(--text-muted);
+  }
+
+  .empty-state {
+    padding: 3rem 1rem;
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    text-align: center;
+  }
+
+
+  /* =========================
+     MATCH HERO
+  ========================== */
+
+  .match-score-card {
+    margin: 32px 0;
+    padding: 26px;
+
+    background:
+      linear-gradient(
+        115deg,
+        #3f2b20,
+        #282323 65%,
+        #252528
+      );
+
+    border: 1px solid #61412d;
+    border-radius: 12px;
+  }
+
+  .score-metadata {
+    margin-bottom: 18px;
+    text-align: center;
+  }
+
+  .score-metadata h1 {
+    margin: 0;
+    font-size: 20px;
+    line-height: 1.5;
+  }
+
+  .score-metadata p {
+    margin: 8px 0 0;
+    color: var(--text-muted);
+    font-size: 14px;
+  }
+
+  .match-round-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 28px;
+    margin-top: 12px;
+    padding: 0 10px;
+
+    color: var(--accent);
+    background: rgba(255, 116, 46, .10);
+
+    border: 1px solid rgba(255, 116, 46, .35);
+    border-radius: 4px;
+
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+  }
 
   .match-detail-scoreboard {
     display: flex;
     align-items: center;
     justify-content: center;
+
     gap: 2rem;
-    padding: 2.5rem 1.5rem;
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    margin-bottom: 1.5rem;
+
+    margin: 0;
+    padding: 12px;
+
+    background: transparent;
+    border: 0;
+    box-shadow: none;
   }
+
   .match-detail-team {
     display: flex;
+    flex: 1;
     flex-direction: column;
     align-items: center;
-    gap: 0.25rem;
-    flex: 1;
+
     min-width: 0;
+
+    gap: .25rem;
   }
+
   .match-detail-team a {
+    color: var(
+      --team-color,
+      var(--text-primary)
+    );
+
     font-size: 1.3rem;
     font-weight: 700;
-    color: var(--team-color, var(--text-primary));
-    text-decoration: none;
+
     text-align: center;
+    text-decoration: none;
+
     word-break: break-word;
-    transition: opacity 0.2s;
+
+    transition: opacity .2s;
   }
-  .match-detail-team a:hover { opacity: 0.8; }
-  .match-detail-team .tag { font-size: 0.85rem; color: var(--text-muted); font-weight: 600; }
-  
+
+  .match-detail-team a:hover {
+    opacity: .8;
+  }
+
+  .match-detail-team .tag {
+    color: var(--text-muted);
+    font-size: .85rem;
+    font-weight: 600;
+  }
+
   .match-detail-score {
-    font-size: 2.5rem;
-    font-weight: 800;
-    color: var(--accent);
     padding: 0 1.5rem;
+
+    color: var(--accent);
+
     border-left: 2px solid var(--border);
     border-right: 2px solid var(--border);
+
+    font-size: 2.5rem;
+    font-weight: 800;
   }
 
-  .match-status-center { text-align: center; margin-bottom: 2.5rem; }
 
-  @media (max-width: 640px) {
-    .match-detail-scoreboard { flex-direction: column; gap: 1rem; padding: 1.5rem; }
-    .match-detail-score {
-      border: none;
-      border-top: 2px solid var(--border);
-      border-bottom: 2px solid var(--border);
-      padding: 0.75rem 0;
-      width: 100%;
-      text-align: center;
-      font-size: 2rem;
-    }
-    .match-detail-team { width: 100%; }
+  /* =========================
+     TABS
+  ========================== */
+
+  .match-tabs {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+
+    gap: 8px;
+
+    margin: 24px 0;
+    padding: 12px 0;
+
+    border-bottom: 1px solid var(--border);
   }
+
+  .match-tabs button {
+    padding: 12px 16px;
+
+    color: var(--text-secondary);
+    background: var(--bg-secondary);
+
+    border: 1px solid var(--border);
+    border-radius: 6px;
+
+    font: inherit;
+    font-size: 14px;
+
+    cursor: pointer;
+  }
+
+  .match-tabs button:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .match-tabs button[aria-selected="true"] {
+    color: #171719;
+    background: var(--accent);
+    font-weight: 600;
+  }
+
+  [role="tabpanel"][hidden] {
+    display: none;
+  }
+
+
+  /* =========================
+     MVP
+  ========================== */
 
   .mvp-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+
+    grid-template-columns:
+      repeat(
+        auto-fit,
+        minmax(200px, 1fr)
+      );
+
     gap: 1rem;
+
     margin-bottom: 1.5rem;
   }
+
   .mvp-card {
+    padding: 1.25rem;
+
     background: var(--bg-card);
+
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 1.25rem;
+
     text-align: center;
   }
-  .mvp-round-label { color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; font-weight: 600; }
-  .mvp-map-name { font-size: 1.05rem; font-weight: 800; color: var(--accent); margin-bottom: 0.75rem; }
-  .mvp-label { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.25rem; font-weight: 600; }
-  .mvp-player-name { font-size: 1rem; font-weight: 700; color: #facc15; margin-bottom: 0.25rem; }
-  .mvp-kda { font-size: 0.85rem; color: var(--text-primary); font-family: monospace; }
-  .mvp-none { font-size: 0.85rem; color: var(--text-muted); font-style: italic; margin-top: 1rem; }
 
-  .overall-mvp {
-    background: linear-gradient(135deg, var(--bg-card), rgba(255, 77, 46, 0.08));
-    border: 1px solid var(--accent);
-    border-radius: var(--radius);
-    padding: 1.5rem;
-    text-align: center;
+  .mvp-label {
+    margin-bottom: .25rem;
+
+    color: var(--text-muted);
+
+    font-size: .8rem;
+    font-weight: 600;
+
+    text-transform: uppercase;
   }
-  .overall-mvp-label { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem; font-weight: 700; }
-  .overall-mvp-name { font-size: 1.6rem; font-weight: 800; color: #facc15; margin-bottom: 0.25rem; }
-  .overall-mvp-kda { font-size: 1.1rem; color: var(--accent); font-weight: 700; font-family: monospace; }
-  .overall-mvp-ratio { color: var(--text-muted); font-weight: 400; font-size: 0.9rem; margin-left: 0.5rem; }
 
-  .stat-value-small { font-size: 1.5rem !important; }
-
-  /* NEW: Center the 2-column team stats grid on desktop */
-  .team-stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-    max-width: 600px;
-    width: 100%;
-    margin-left: auto;
-    margin-right: auto;
+  .mvp-kda {
+    color: var(--text-primary);
+    font-family: monospace;
+    font-size: .85rem;
   }
+
+  .mvp-none {
+    margin-top: 1rem;
+
+    color: var(--text-muted);
+
+    font-size: .85rem;
+    font-style: italic;
+  }
+
+
+  /* =========================
+     PLAYER STATS
+  ========================== */
 
   .team-header {
     margin-bottom: 1rem;
     font-size: 1.15rem;
   }
-  .team-header a { color: var(--team-color, var(--accent)); text-decoration: none; font-weight: 700; }
-  .team-header a:hover { text-decoration: underline; }
-  .team-header .tag { color: var(--text-muted); font-weight: 600; }
+
+  .team-header a {
+    color:
+      var(
+        --team-color,
+        var(--accent)
+      );
+
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .team-header a:hover {
+    text-decoration: underline;
+  }
+
+  .team-header .tag {
+    color: var(--text-muted);
+    font-weight: 600;
+  }
 
   .match-stats-table th:first-child,
   .match-stats-table td:first-child {
     position: sticky;
+
     left: 0;
     z-index: 2;
-    background: var(--bg-card);
-    border-right: 1px solid var(--border);
+
     min-width: 120px;
+
+    background: var(--bg-card);
+
+    border-right:
+      1px solid var(--border);
   }
+
   .match-stats-table th:first-child {
-    background: rgba(255, 77, 46, 0.08);
     z-index: 3;
+
+    background:
+      rgba(255, 77, 46, .08);
   }
-  .match-stats-table tbody tr:nth-child(even) td:first-child {
-    background: rgba(255, 255, 255, 0.02);
+
+  .match-stats-table
+  tbody
+  tr:nth-child(even)
+  td:first-child {
+    background:
+      rgba(255, 255, 255, .02);
   }
-  .match-stats-table tbody tr:hover td:first-child {
-    background: var(--bg-card-hover);
+
+  .match-stats-table
+  tbody
+  tr:hover
+  td:first-child {
+    background:
+      var(--bg-card-hover);
   }
-  
-  .total-kda { font-weight: 700; font-size: 0.95rem; }
+
+  .total-kda {
+    font-size: .95rem;
+    font-weight: 700;
+  }
+
+  .mobile-table-hint {
+    display: none;
+  }
+
+
+  /* =========================
+     MOBILE
+  ========================== */
 
   @media (max-width: 640px) {
+
+    .match-score-card {
+      margin-top: 24px;
+      padding: 18px 10px;
+    }
+
+    .score-metadata h1 {
+      font-size: 17px;
+    }
+
+    .score-metadata p {
+      font-size: 13px;
+    }
+
+    .match-detail-scoreboard {
+      flex-direction: column;
+
+      gap: 1rem;
+
+      padding: 1.5rem;
+    }
+
+    .match-detail-team {
+      width: 100%;
+    }
+
     .team-logo-large {
       width: 48px;
       height: 48px;
     }
+
+    .match-detail-score {
+      width: min(220px, 100%);
+
+      padding: 14px 0;
+
+      border: 0;
+      border-top:
+        1px solid var(--border);
+      border-bottom:
+        1px solid var(--border);
+
+      font-size: 2rem;
+      text-align: center;
+    }
+
+    .mobile-table-hint {
+      display: block;
+
+      margin: 0 0 8px;
+
+      color: var(--text-muted);
+
+      font-size: 11px;
+      font-weight: 600;
+
+      text-align: right;
+    }
+
+    .match-stats-table {
+      min-width: max-content;
+    }
+
+    .match-stats-table
+    th:not(:first-child),
+    .match-stats-table
+    td:not(:first-child) {
+      min-width: 118px;
+    }
+
   }
 
-  @media (max-width: 600px) {
-    /* Stack the team stats on very small screens */
-    .team-stats-grid {
-      grid-template-columns: 1fr;
-      max-width: 100%;
-    }
+</style>
+
+
+<style is:global>
+
+  /* =========================
+     MAP MVP CARDS
+  ========================== */
+
+  .interior-page .map-mvp-card {
+    overflow: hidden;
+
+    padding: 0;
+
+    background: var(--bg-secondary);
+
+    border: 1px solid var(--border);
+    border-radius: 10px;
+
+    text-align: left;
   }
+
+  .map-mvp-thumbnail {
+    display: block;
+
+    width: 100%;
+    height: 145px;
+
+    object-fit: cover;
+  }
+
+  .map-mvp-player {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 16px;
+
+    padding: 16px;
+
+    background:
+      linear-gradient(
+        120deg,
+        #403023,
+        #252528
+      );
+
+    text-align: center;
+  }
+
+  .map-mvp-avatar {
+    flex-shrink: 0;
+    object-fit: contain;
+  }
+
+  .map-mvp-player > div {
+    min-width: 0;
+  }
+
+  .map-mvp-name {
+    overflow-wrap: anywhere;
+
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .map-mvp-player .mvp-label {
+    margin: 6px 0;
+  }
+
+  .map-result-note {
+    padding: 16px;
+
+    color: var(--text-muted);
+
+    font-size: 13px;
+  }
+
+  .map-mvp-image-link {
+    position: relative;
+
+    display: block;
+    overflow: hidden;
+
+    text-decoration: none;
+  }
+
+  .map-mvp-image-link::after {
+    position: absolute;
+    inset: 0;
+
+    content: "";
+
+    background: #0005;
+
+    transition: background .2s;
+  }
+
+  .map-mvp-image-link
+  .map-mvp-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    margin: 0;
+    padding: 16px;
+
+    color: white;
+
+    font-size: 21px;
+
+    text-align: center;
+
+    text-shadow:
+      0 2px 6px #000;
+  }
+
+  .map-mvp-image-link:hover::after {
+    background: #0002;
+  }
+
+  .map-mvp-image-link:hover
+  .map-mvp-overlay {
+    color: var(--accent);
+  }
+
 </style>
-<style>
-.match-score-card{margin:32px 0;background:linear-gradient(115deg,#3f2b20,#282323 65%,#252528);border:1px solid #61412d;border-radius:12px;padding:26px}
-.score-metadata{text-align:center;margin-bottom:18px}.score-metadata h1{font-size:20px;line-height:1.5}.score-metadata p{font-size:14px;color:var(--text-muted);margin-top:8px}
-.match-score-card .match-detail-scoreboard{border:0;background:transparent;margin-bottom:18px;padding:12px;box-shadow:none}
-.match-score-card .match-status-center{margin:0;text-align:center}
-@media(max-width:640px){.match-score-card{padding:18px 10px;margin-top:24px}.score-metadata h1{font-size:17px}.score-metadata p{font-size:13px}}
-</style>
+
 
 <script>
-const tabs=Array.from(document.querySelectorAll<HTMLButtonElement>('.match-tabs [role="tab"]'));
-function selectTab(tab:HTMLButtonElement,focus=false){tabs.forEach(item=>{const active=item===tab;item.setAttribute('aria-selected',String(active));item.tabIndex=active?0:-1;document.getElementById(item.getAttribute('aria-controls')!)!.hidden=!active;});if(focus)tab.focus();}
-tabs.forEach((tab,i)=>{tab.addEventListener('click',()=>selectTab(tab));tab.addEventListener('keydown',event=>{let next=i;if(event.key==='ArrowRight')next=(i+1)%tabs.length;else if(event.key==='ArrowLeft')next=(i+tabs.length-1)%tabs.length;else if(event.key==='Home')next=0;else if(event.key==='End')next=tabs.length-1;else return;event.preventDefault();selectTab(tabs[next],true);});});
+
+  const tabs =
+    Array.from(
+      document.querySelectorAll<HTMLButtonElement>(
+        '.match-tabs [role="tab"]'
+      )
+    );
+
+  function selectTab(
+    tab: HTMLButtonElement,
+    focus = false
+  ) {
+
+    tabs.forEach(item => {
+
+      const active =
+        item === tab;
+
+      item.setAttribute(
+        'aria-selected',
+        String(active)
+      );
+
+      item.tabIndex =
+        active ? 0 : -1;
+
+      const panelId =
+        item.getAttribute(
+          'aria-controls'
+        );
+
+      if (panelId) {
+
+        const panel =
+          document.getElementById(
+            panelId
+          );
+
+        if (panel) {
+          panel.hidden =
+            !active;
+        }
+
+      }
+
+    });
+
+    if (focus) {
+      tab.focus();
+    }
+
+  }
+
+  tabs.forEach(
+    (tab, i) => {
+
+      tab.addEventListener(
+        'click',
+        () => selectTab(tab)
+      );
+
+      tab.addEventListener(
+        'keydown',
+        event => {
+
+          let next = i;
+
+          if (
+            event.key ===
+            'ArrowRight'
+          ) {
+            next =
+              (i + 1) %
+              tabs.length;
+          }
+
+          else if (
+            event.key ===
+            'ArrowLeft'
+          ) {
+            next =
+              (i + tabs.length - 1) %
+              tabs.length;
+          }
+
+          else if (
+            event.key ===
+            'Home'
+          ) {
+            next = 0;
+          }
+
+          else if (
+            event.key ===
+            'End'
+          ) {
+            next =
+              tabs.length - 1;
+          }
+
+          else {
+            return;
+          }
+
+          event.preventDefault();
+
+          selectTab(
+            tabs[next],
+            true
+          );
+
+        }
+      );
+
+    }
+  );
+
 </script>
-<style>
-.match-tabs{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;border-bottom:1px solid var(--border);padding:12px 0;margin:24px 0}.match-tabs button{background:var(--bg-secondary);color:var(--text-secondary);border:1px solid var(--border);border-radius:6px;padding:12px 16px;font:inherit;font-size:14px;cursor:pointer}.match-tabs button:hover{border-color:var(--accent);color:var(--accent)}.match-tabs button[aria-selected="true"]{background:var(--accent);color:#171719;font-weight:600}[role="tabpanel"][hidden]{display:none}
-</style>
-
-<style is:global>
-.interior-page .map-mvp-card{padding:0;overflow:hidden;text-align:left;background:var(--bg-secondary);border:1px solid var(--border);border-radius:10px}.map-mvp-heading{padding:16px;font-size:17px}.map-mvp-thumbnail{display:block;width:100%;height:145px;object-fit:cover}.map-mvp-player{display:flex;align-items:center;gap:16px;padding:16px;background:linear-gradient(120deg,#403023,#252528)}.map-mvp-avatar{object-fit:contain;flex-shrink:0}.map-mvp-player>div{min-width:0}.map-mvp-name{font-weight:700;font-size:16px;overflow-wrap:anywhere}.map-mvp-player .mvp-label{margin:6px 0}.map-result-note{padding:16px;font-size:13px;color:var(--text-muted)}
-</style>
-
-<style is:global>
-.map-mvp-image-link{display:block;position:relative;text-decoration:none;overflow:hidden}
-.map-mvp-image-link::after{content:"";position:absolute;inset:0;background:#0005;transition:background .2s}
-.map-mvp-image-link .map-mvp-overlay{position:absolute;inset:0;z-index:1;display:flex;align-items:center;justify-content:center;margin:0;padding:16px;text-align:center;font-size:21px;color:white;text-shadow:0 2px 6px #000}
-.map-mvp-image-link:hover::after{background:#0002}
-.map-mvp-image-link:hover .map-mvp-overlay{color:var(--accent)}
-.interior-page .map-mvp-player{justify-content:center;text-align:center}
-</style>

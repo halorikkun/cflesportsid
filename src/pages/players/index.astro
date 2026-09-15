@@ -1,20 +1,29 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
-import { calculateStatistics, emptyStats, kdRatio } from '../../utils/statistics';
+import {
+  calculateStatistics,
+  emptyStats,
+  kdRatio
+} from '../../utils/statistics';
 
 const allTeams = await getCollection('teams');
 const teamsMap = new Map(allTeams.map(t => [t.id, t]));
-const allMatches = await getCollection('matches');
 
+const allMatches = await getCollection('matches');
 const calculated = calculateStatistics(allMatches);
 
 const players = (await getCollection('players')).map(p => {
-  const team = p.data.team ? teamsMap.get(p.data.team) : undefined;
-  const stats = calculated.players.get(p.data.uid || p.id) ?? emptyStats();
+  const team = p.data.team
+    ? teamsMap.get(p.data.team)
+    : undefined;
+
+  const stats =
+    calculated.players.get(p.data.uid || p.id) ??
+    emptyStats();
+
   const kd = kdRatio(stats);
-  const matchesPlayed = stats.matchesPlayed;
-  
+
   return {
     id: p.id,
     ign: p.data.ign,
@@ -25,195 +34,737 @@ const players = (await getCollection('players')).map(p => {
     assists: stats.assists,
     kd: parseFloat(kd.toFixed(2)),
     kdDisplay: kd.toFixed(2),
-    matches: matchesPlayed,
+    matches: stats.matchesPlayed,
   };
 });
 
-const teamNames = [...new Set(players.map(p => p.teamName).filter(t => t !== '—'))].sort();
+const teamNames = [
+  ...new Set(
+    players
+      .map(p => p.teamName)
+      .filter(t => t !== '—')
+  )
+].sort();
 ---
 
-<Layout title="Players - CFL Esports ID Tournament Hub" current="Players">
+<Layout
+  title="Players - CFL Esports ID Tournament Hub"
+  current="Players"
+>
   <div class="container">
+
     <div class="page-header">
       <h1>Players</h1>
       <p>Search, sort, and filter all players</p>
     </div>
 
     <div class="players-toolbar">
-      <input type="text" id="searchInput" aria-label="Search players" placeholder="Search player or team..." class="players-search" />
-      <select id="teamFilter" aria-label="Filter by team" class="players-filter">
+      <input
+        type="text"
+        id="searchInput"
+        aria-label="Search players"
+        placeholder="Search player or team..."
+        class="players-search"
+      />
+
+      <select
+        id="teamFilter"
+        aria-label="Filter by team"
+        class="players-filter"
+      >
         <option value="">All Teams</option>
+
         {teamNames.map(name => (
-          <option value={name.toLowerCase()}>{name}</option>
+          <option value={name.toLowerCase()}>
+            {name}
+          </option>
         ))}
       </select>
     </div>
 
-    <div class="table-wrap" tabindex="0" role="region" aria-label="Statistics table">
-      <table id="playersTable" class="players-table">
+    <p class="table-scroll-hint">
+      Swipe to view full stats →
+    </p>
+
+    <div
+      class="table-wrap players-table-wrap"
+      tabindex="0"
+      role="region"
+      aria-label="Player statistics table"
+    >
+      <table
+        id="playersTable"
+        class="players-table"
+      >
         <thead>
           <tr>
-            <th class="sortable" data-key="ign" data-numeric="false">Player <span class="arrow"></span></th>
-            <th class="sortable" data-key="team" data-numeric="false">Team <span class="arrow"></span></th>
-            <th class="sortable" data-key="kills" data-numeric="true">Kills <span class="arrow"></span></th>
-            <th class="sortable" data-key="deaths" data-numeric="true">Deaths <span class="arrow"></span></th>
-            <th class="sortable" data-key="assists" data-numeric="true">Assists <span class="arrow"></span></th>
-            <th class="sortable" data-key="kd" data-numeric="true">K/D Ratio <span class="arrow"></span></th>
-            <th class="sortable" data-key="matches" data-numeric="true">Matches <span class="arrow"></span></th>
+            <th
+              class="sortable"
+              data-key="ign"
+              data-numeric="false"
+            >
+              <button type="button">Player<span class="arrow" aria-hidden="true"></span></button>
+            </th>
+
+            <th
+              class="sortable"
+              data-key="team"
+              data-numeric="false"
+            >
+              <button type="button">Team<span class="arrow" aria-hidden="true"></span></button>
+            </th>
+
+            <th
+              class="sortable"
+              data-key="kills"
+              data-numeric="true"
+            >
+              <button type="button">Kills<span class="arrow" aria-hidden="true"></span></button>
+            </th>
+
+            <th
+              class="sortable"
+              data-key="deaths"
+              data-numeric="true"
+            >
+              <button type="button">Deaths<span class="arrow" aria-hidden="true"></span></button>
+            </th>
+
+            <th
+              class="sortable"
+              data-key="assists"
+              data-numeric="true"
+            >
+              <button type="button">Assists<span class="arrow" aria-hidden="true"></span></button>
+            </th>
+
+            <th
+              class="sortable"
+              data-key="kd"
+              data-numeric="true"
+            >
+              <button type="button">K/D Ratio<span class="arrow" aria-hidden="true"></span></button>
+            </th>
+
+            <th
+              class="sortable"
+              data-key="matches"
+              data-numeric="true"
+            >
+              <button type="button">Matches<span class="arrow" aria-hidden="true"></span></button>
+            </th>
           </tr>
         </thead>
+
         <tbody id="playersBody">
           {players.map(p => (
-            <tr 
-              data-ign={p.ign.toLowerCase()} 
+            <tr
+              data-ign={p.ign.toLowerCase()}
               data-team={p.teamName.toLowerCase()}
-              data-kills={p.kills} 
-              data-deaths={p.deaths} 
+              data-kills={p.kills}
+              data-deaths={p.deaths}
               data-assists={p.assists}
-              data-kd={p.kd} 
+              data-kd={p.kd}
               data-matches={p.matches}
             >
-              <td><a href={`/players/${p.id}`}><strong>{p.ign}</strong></a></td>
+              <td>
+                <a href={`/players/${p.id}`}>
+                  <strong>{p.ign}</strong>
+                </a>
+              </td>
+
               <td>
                 {p.teamId ? (
-                  <a href={`/teams/${p.teamId}`} class="team-link">{p.teamName}</a>
+                  <a
+                    href={`/teams/${p.teamId}`}
+                    class="team-link"
+                  >
+                    {p.teamName}
+                  </a>
                 ) : '—'}
               </td>
-              <td class="kda"><span class="kill">{p.kills}</span></td>
-              <td class="kda"><span class="death">{p.deaths}</span></td>
-              <td class="kda"><span class="assist">{p.assists}</span></td>
-              <td class={p.kd >= 1 ? 'kd-positive' : 'kd-negative'}>{p.kdDisplay}</td>
-              <td>{p.matches}</td>
+
+              <td class="kda">
+                <span class="kill">
+                  {p.kills}
+                </span>
+              </td>
+
+              <td class="kda">
+                <span class="death">
+                  {p.deaths}
+                </span>
+              </td>
+
+              <td class="kda">
+                <span class="assist">
+                  {p.assists}
+                </span>
+              </td>
+
+              <td
+                class={
+                  p.kd >= 1
+                    ? 'kd-positive'
+                    : 'kd-negative'
+                }
+              >
+                {p.kdDisplay}
+              </td>
+
+              <td>
+                {p.matches}
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
     </div>
-    
-    <p id="noResults" class="no-results">No players found.</p>
-    <div class="pagination" id="pagination"></div>
+
+    <p
+      id="noResults"
+      class="no-results"
+    >
+      No players found.
+    </p>
+
+    <div
+      class="pagination"
+      id="pagination"
+      role="navigation"
+      aria-label="Player pages"
+    ></div>
+
   </div>
 
-  <!-- NEW: is:inline ensures this runs exactly where it's placed, wrapped in DOMContentLoaded for safety -->
   <script is:inline>
     document.addEventListener('DOMContentLoaded', () => {
-      const searchInput = document.getElementById('searchInput');
-      const teamFilter = document.getElementById('teamFilter');
-      const tbody = document.getElementById('playersBody');
-      const noResults = document.getElementById('noResults');
-      const rows = Array.from(tbody.querySelectorAll('tr'));
-      const headers = document.querySelectorAll('.sortable');
-      const pagination = document.getElementById('pagination');
+      const searchInput =
+        document.getElementById('searchInput');
+
+      const teamFilter =
+        document.getElementById('teamFilter');
+
+      const tbody =
+        document.getElementById('playersBody');
+
+      const noResults =
+        document.getElementById('noResults');
+
+      const pagination =
+        document.getElementById('pagination');
+
+      const rows =
+        Array.from(
+          tbody.querySelectorAll('tr')
+        );
+
+      const headers =
+        document.querySelectorAll('.sortable');
+
       const perPage = 10;
-      
+
       let currentPage = 1;
       let sortKey = 'kills';
       let sortDir = 'desc';
       let isNumeric = true;
 
+      function isMobile() {
+        return window.matchMedia(
+          '(max-width: 640px)'
+        ).matches;
+      }
+
       function getVisibleRows() {
-        const search = searchInput.value.toLowerCase();
-        const team = teamFilter.value;
+        const search =
+          searchInput.value
+            .trim()
+            .toLowerCase();
+
+        const team =
+          teamFilter.value;
+
         return rows.filter(row => {
-          const matchesSearch = !search || row.dataset.ign.includes(search) || row.dataset.team.includes(search);
-          const matchesTeam = !team || row.dataset.team === team;
+          const matchesSearch =
+            !search ||
+            row.dataset.ign.includes(search) ||
+            row.dataset.team.includes(search);
+
+          const matchesTeam =
+            !team ||
+            row.dataset.team === team;
+
           return matchesSearch && matchesTeam;
         });
       }
 
       function sortRows(visible) {
         visible.sort((a, b) => {
-          let valA, valB;
+          let valA;
+          let valB;
+
           if (isNumeric) {
-            valA = parseFloat(a.dataset[sortKey]);
-            valB = parseFloat(b.dataset[sortKey]);
-            return sortDir === 'asc' ? valA - valB : valB - valA;
-          } else {
-            valA = a.dataset[sortKey];
-            valB = b.dataset[sortKey];
-            return sortDir === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+            valA =
+              parseFloat(
+                a.dataset[sortKey]
+              ) || 0;
+
+            valB =
+              parseFloat(
+                b.dataset[sortKey]
+              ) || 0;
+
+            return sortDir === 'asc'
+              ? valA - valB
+              : valB - valA;
+          }
+
+          valA =
+            a.dataset[sortKey] || '';
+
+          valB =
+            b.dataset[sortKey] || '';
+
+          return sortDir === 'asc'
+            ? valA.localeCompare(valB)
+            : valB.localeCompare(valA);
+        });
+      }
+
+      function updateSortHeader() {
+        headers.forEach(header => {
+          header.removeAttribute('aria-sort');
+          header.classList.remove(
+            'active-sort'
+          );
+
+          const arrow =
+            header.querySelector('.arrow');
+
+          if (arrow) {
+            arrow.textContent = '';
           }
         });
+
+        const activeHeader =
+          document.querySelector(
+            `[data-key="${sortKey}"]`
+          );
+
+        if (!activeHeader) return;
+        activeHeader.setAttribute('aria-sort', sortDir === 'asc' ? 'ascending' : 'descending');
+
+        activeHeader.classList.add(
+          'active-sort'
+        );
+
+        const arrow =
+          activeHeader.querySelector(
+            '.arrow'
+          );
+
+        if (arrow) {
+          arrow.textContent =
+            sortDir === 'asc'
+              ? ' ↑'
+              : ' ↓';
+        }
+      }
+
+      /*
+       * Desktop:
+       * ‹ 1 2 3 4 5 … 9 ›
+       *
+       * Middle:
+       * ‹ 1 … 4 5 6 … 9 ›
+       */
+      function getDesktopPageItems(
+        totalPages,
+        page
+      ) {
+        if (totalPages <= 7) {
+          return Array.from(
+            { length: totalPages },
+            (_, i) => i + 1
+          );
+        }
+
+        if (page <= 4) {
+          return [
+            1,
+            2,
+            3,
+            4,
+            5,
+            'ellipsis',
+            totalPages
+          ];
+        }
+
+        if (page >= totalPages - 3) {
+          return [
+            1,
+            'ellipsis',
+            totalPages - 4,
+            totalPages - 3,
+            totalPages - 2,
+            totalPages - 1,
+            totalPages
+          ];
+        }
+
+        return [
+          1,
+          'ellipsis',
+          page - 1,
+          page,
+          page + 1,
+          'ellipsis',
+          totalPages
+        ];
+      }
+
+      /*
+       * Mobile:
+       *
+       * Beginning:
+       * ‹ 1 2 … 9 ›
+       *
+       * Middle:
+       * ‹ 1 … 5 … 9 ›
+       *
+       * End:
+       * ‹ 1 … 8 9 ›
+       */
+      function getMobilePageItems(
+        totalPages,
+        page
+      ) {
+        if (totalPages <= 4) {
+          return Array.from(
+            { length: totalPages },
+            (_, i) => i + 1
+          );
+        }
+
+        if (page <= 2) {
+          return [
+            1,
+            2,
+            'ellipsis',
+            totalPages
+          ];
+        }
+
+        if (page >= totalPages - 1) {
+          return [
+            1,
+            'ellipsis',
+            totalPages - 1,
+            totalPages
+          ];
+        }
+
+        return [
+          1,
+          'ellipsis',
+          page,
+          'ellipsis',
+          totalPages
+        ];
+      }
+
+      function getPageItems(
+        totalPages,
+        page
+      ) {
+        return isMobile()
+          ? getMobilePageItems(
+              totalPages,
+              page
+            )
+          : getDesktopPageItems(
+              totalPages,
+              page
+            );
+      }
+
+      function scrollToPlayers() {
+        const toolbar =
+          document.querySelector(
+            '.players-toolbar'
+          );
+
+        if (!toolbar) return;
+
+        const top =
+          toolbar
+            .getBoundingClientRect()
+            .top +
+          window.scrollY -
+          90;
+
+        window.scrollTo({
+          top,
+          behavior: 'smooth'
+        });
+      }
+
+      function createPageButton(
+        label,
+        ariaLabel,
+        disabled,
+        onClick
+      ) {
+        const button =
+          document.createElement('button');
+
+        button.className = 'page-btn';
+        button.textContent = label;
+        button.disabled = disabled;
+
+        button.setAttribute(
+          'aria-label',
+          ariaLabel
+        );
+
+        button.addEventListener(
+          'click',
+          onClick
+        );
+
+        return button;
+      }
+
+      function renderPagination(
+        totalPages
+      ) {
+        const focusedLabel = pagination.contains(document.activeElement)
+          ? document.activeElement.getAttribute('aria-label') : null;
+        pagination.innerHTML = '';
+
+        if (totalPages <= 1) return;
+
+        const prev =
+          createPageButton(
+            '‹',
+            'Previous page',
+            currentPage === 1,
+            () => {
+              if (currentPage <= 1) return;
+
+              currentPage--;
+              render();
+              scrollToPlayers();
+            }
+          );
+
+        pagination.appendChild(prev);
+
+        const pageItems =
+          getPageItems(
+            totalPages,
+            currentPage
+          );
+
+        pageItems.forEach(item => {
+          if (item === 'ellipsis') {
+            const ellipsis =
+              document.createElement(
+                'span'
+              );
+
+            ellipsis.className =
+              'page-ellipsis';
+
+            ellipsis.textContent = '…';
+
+            pagination.appendChild(
+              ellipsis
+            );
+
+            return;
+          }
+
+          const button =
+            document.createElement(
+              'button'
+            );
+
+          button.className =
+            `page-btn ${
+              item === currentPage
+                ? 'active'
+                : ''
+            }`;
+
+          button.textContent =
+            String(item);
+
+          button.setAttribute(
+            'aria-label',
+            `Page ${item}`
+          );
+
+          if (item === currentPage) {
+            button.setAttribute(
+              'aria-current',
+              'page'
+            );
+          }
+
+          button.addEventListener(
+            'click',
+            () => {
+              currentPage = item;
+              render();
+              scrollToPlayers();
+            }
+          );
+
+          pagination.appendChild(
+            button
+          );
+        });
+
+        const next =
+          createPageButton(
+            '›',
+            'Next page',
+            currentPage === totalPages,
+            () => {
+              if (
+                currentPage >= totalPages
+              ) {
+                return;
+              }
+
+              currentPage++;
+              render();
+              scrollToPlayers();
+            }
+          );
+
+        pagination.appendChild(next);
+        if (focusedLabel) {
+          const target = Array.from(pagination.querySelectorAll('button'))
+            .find(button => button.getAttribute('aria-label') === focusedLabel && !button.disabled)
+            || pagination.querySelector('[aria-current="page"]');
+          target?.focus({ preventScroll: true });
+        }
       }
 
       function render() {
-        const visible = getVisibleRows();
+        const visible =
+          getVisibleRows();
+
         sortRows(visible);
 
-        rows.forEach(row => { row.style.display = 'none'; tbody.appendChild(row); });
+        rows.forEach(row => {
+          row.style.display = 'none';
+          tbody.appendChild(row);
+        });
 
-        const totalPages = Math.ceil(visible.length / perPage);
-        if (currentPage > totalPages) currentPage = 1;
+        const totalPages =
+          Math.ceil(
+            visible.length / perPage
+          );
 
-        const start = (currentPage - 1) * perPage;
-        const end = start + perPage;
-        visible.slice(start, end).forEach(row => { row.style.display = ''; tbody.appendChild(row); });
+        if (
+          totalPages > 0 &&
+          currentPage > totalPages
+        ) {
+          currentPage = 1;
+        }
 
-        noResults.style.display = visible.length === 0 ? 'block' : 'none';
+        const start =
+          (currentPage - 1) *
+          perPage;
+
+        const end =
+          start + perPage;
+
+        visible
+          .slice(start, end)
+          .forEach(row => {
+            row.style.display = '';
+            tbody.appendChild(row);
+          });
+
+        noResults.style.display =
+          visible.length === 0
+            ? 'block'
+            : 'none';
+
         renderPagination(totalPages);
       }
 
-      function renderPagination(totalPages) {
-        pagination.innerHTML = '';
-        if (totalPages <= 1) return;
-
-        const prev = document.createElement('button');
-        prev.className = 'page-btn';
-        prev.textContent = '‹';
-        prev.disabled = currentPage === 1;
-        prev.addEventListener('click', () => { currentPage--; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
-        pagination.appendChild(prev);
-
-        for (let i = 1; i <= totalPages; i++) {
-          const btn = document.createElement('button');
-          btn.className = `page-btn ${i === currentPage ? 'active' : ''}`;
-          btn.textContent = i;
-          btn.addEventListener('click', () => { currentPage = i; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
-          pagination.appendChild(btn);
-        }
-
-        const next = document.createElement('button');
-        next.className = 'page-btn';
-        next.textContent = '›';
-        next.disabled = currentPage === totalPages;
-        next.addEventListener('click', () => { currentPage++; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
-        pagination.appendChild(next);
-      }
-
       headers.forEach(header => {
-        const arrow = header.querySelector('.arrow');
-        header.addEventListener('click', () => {
-          const key = header.dataset.key;
-          isNumeric = header.dataset.numeric === 'true';
-          
-          if (sortKey === key) {
-            sortDir = sortDir === 'asc' ? 'desc' : 'asc';
-          } else {
-            sortKey = key;
-            sortDir = isNumeric ? 'desc' : 'asc';
+        header.querySelector('button').addEventListener(
+          'click',
+          () => {
+            const key =
+              header.dataset.key;
+
+            isNumeric =
+              header.dataset.numeric ===
+              'true';
+
+            if (sortKey === key) {
+              sortDir =
+                sortDir === 'asc'
+                  ? 'desc'
+                  : 'asc';
+            } else {
+              sortKey = key;
+
+              sortDir =
+                isNumeric
+                  ? 'desc'
+                  : 'asc';
+            }
+
+            currentPage = 1;
+
+            updateSortHeader();
+            render();
           }
-          
-          headers.forEach(h => {
-            h.classList.remove('active-sort');
-            h.querySelector('.arrow').textContent = '';
-          });
-          
-          header.classList.add('active-sort');
-          arrow.textContent = sortDir === 'asc' ? ' ↑' : ' ↓';
-          render();
-        });
+        );
       });
 
-      // Set default sort
-      const defaultHeader = document.querySelector('[data-key="kills"]');
-      if (defaultHeader) {
-        defaultHeader.classList.add('active-sort');
-        defaultHeader.querySelector('.arrow').textContent = ' ↓';
-      }
+      searchInput.addEventListener(
+        'input',
+        () => {
+          currentPage = 1;
+          render();
+        }
+      );
 
-      searchInput.addEventListener('input', () => { currentPage = 1; render(); });
-      teamFilter.addEventListener('change', () => { currentPage = 1; render(); });
-      
+      teamFilter.addEventListener(
+        'change',
+        () => {
+          currentPage = 1;
+          render();
+        }
+      );
+
+      /*
+       * Rebuild pagination whenever the
+       * viewport crosses the mobile breakpoint.
+       */
+      const mobileQuery =
+        window.matchMedia(
+          '(max-width: 640px)'
+        );
+
+      mobileQuery.addEventListener(
+        'change',
+        () => {
+          render();
+        }
+      );
+
+      updateSortHeader();
       render();
     });
   </script>
@@ -223,14 +774,11 @@ const teamNames = [...new Set(players.map(p => p.teamName).filter(t => t !== '�
   .players-toolbar {
     display: flex;
     gap: 0.75rem;
-    margin-bottom: 1.5rem;
-  }
-  @media (max-width: 480px) {
-    .players-toolbar { flex-direction: column; }
-    .players-search { width: 100%; }
+    margin-bottom: 1.25rem;
   }
 
-  .players-search, .players-filter {
+  .players-search,
+  .players-filter {
     padding: 0.6rem 0.75rem;
     background: var(--bg-card);
     border: 1px solid var(--border);
@@ -238,49 +786,223 @@ const teamNames = [...new Set(players.map(p => p.teamName).filter(t => t !== '�
     color: var(--text-primary);
     font-size: 0.9rem;
   }
-  .players-search { flex: 1; min-width: 200px; }
-  .players-filter { cursor: pointer; }
-  .players-search:focus, .players-filter:focus {
+
+  .players-search {
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .players-filter {
+    cursor: pointer;
+  }
+
+  .players-search:focus,
+  .players-filter:focus {
     outline: none;
     border-color: var(--accent);
   }
 
-  /* NEW: Clean sortable header styling */
+  /* Sortable table */
+
   .sortable {
     cursor: pointer;
     user-select: none;
     transition: color 0.2s;
   }
+
+  .sortable button {
+    background: none;
+    border: 0;
+    color: inherit;
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    text-align: left;
+    min-width: 44px;
+    min-height: 44px;
+    cursor: pointer;
+  }
+
   .sortable:hover {
     color: var(--accent-hover);
   }
+
   .sortable.active-sort {
     color: var(--accent);
   }
+
   .arrow {
-    font-size: 0.8rem;
     margin-left: 0.25rem;
+    font-size: 0.8rem;
   }
+
+  /* Team links */
 
   .team-link {
     color: var(--accent);
     font-weight: 600;
     text-decoration: none;
   }
+
   .team-link:hover {
     color: var(--accent-hover);
     text-decoration: underline;
   }
 
-  .no-results {
-    text-align: center;
-    color: var(--text-muted);
-    display: none;
-    padding: 2rem;
+  /*
+   * Hidden on desktop/tablet.
+   * Only displayed inside the mobile media query.
+   */
+  .table-scroll-hint {
+    display: none !important;
   }
 
-  /* 
-    NOTE: The sticky first/second column mobile behavior is already 
-    handled by the global CSS provided in the previous step! 
-  */
+  /* Empty state */
+
+  .no-results {
+    display: none;
+    padding: 2rem;
+    color: var(--text-muted);
+    text-align: center;
+  }
+
+  /* Pagination */
+
+  .pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  .page-ellipsis {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    color: var(--text-muted);
+    font-weight: 700;
+  }
+
+  @media (max-width: 640px) {
+    .players-toolbar {
+      flex-direction: column;
+      margin-bottom: 1rem;
+    }
+
+    .players-search,
+    .players-filter {
+      width: 100%;
+      min-width: 0;
+    }
+
+    /* Mobile-only swipe instruction */
+
+    .table-scroll-hint {
+      display: block !important;
+      margin: 0 0 10px;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 600;
+      text-align: right;
+    }
+
+    /*
+     * The viewport remains phone width.
+     * The table itself is intentionally wider
+     * and scrolls horizontally.
+     */
+    .players-table-wrap {
+      width: 100%;
+      max-width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /*
+     * Give all seven columns enough room.
+     * Do not squeeze them into the phone width.
+     */
+    .players-table {
+      width: 850px;
+      min-width: 850px;
+      table-layout: auto;
+    }
+
+    .players-table th,
+    .players-table td {
+      padding: 14px 16px;
+      white-space: nowrap;
+    }
+
+    /*
+     * Player
+     */
+    .players-table th:nth-child(1),
+    .players-table td:nth-child(1) {
+      width: 170px;
+      min-width: 170px;
+    }
+
+    /*
+     * Team
+     */
+    .players-table th:nth-child(2),
+    .players-table td:nth-child(2) {
+      width: 150px;
+      min-width: 150px;
+    }
+
+    /*
+     * Kills / Deaths / Assists
+     */
+    .players-table th:nth-child(3),
+    .players-table td:nth-child(3),
+    .players-table th:nth-child(4),
+    .players-table td:nth-child(4),
+    .players-table th:nth-child(5),
+    .players-table td:nth-child(5) {
+      width: 90px;
+      min-width: 90px;
+    }
+
+    /*
+     * K/D Ratio
+     */
+    .players-table th:nth-child(6),
+    .players-table td:nth-child(6) {
+      width: 110px;
+      min-width: 110px;
+    }
+
+    /*
+     * Matches
+     */
+    .players-table th:nth-child(7),
+    .players-table td:nth-child(7) {
+      width: 90px;
+      min-width: 90px;
+    }
+
+    .pagination {
+      width: 100%;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .pagination :global(.page-btn) {
+      width: 44px;
+      min-width: 44px;
+      height: 44px;
+      padding: 0;
+      flex: 0 0 44px;
+    }
+
+    .pagination :global(.page-ellipsis) {
+      width: 16px;
+      min-width: 16px;
+      flex: 0 0 16px;
+    }
+  }
 </style>

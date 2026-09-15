@@ -1,28 +1,271 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
-import { calculateStatistics, emptyMapStats } from '../../utils/statistics';
-const calculated = calculateStatistics(await getCollection('matches'));
-const maps = (await getCollection('maps')).map(map => ({ ...map, stats: calculated.maps.get(map.id) ?? emptyMapStats() }))
-  .sort((a, b) => b.stats.mapsPlayed - a.stats.mapsPlayed || a.data.name.localeCompare(b.data.name));
+import {
+  calculateStatistics,
+  emptyMapStats
+} from '../../utils/statistics';
+
+const calculated = calculateStatistics(
+  await getCollection('matches')
+);
+
+const maps = (await getCollection('maps'))
+  .map(map => ({
+    ...map,
+    stats:
+      calculated.maps.get(map.id) ??
+      emptyMapStats()
+  }))
+  .sort(
+    (a, b) =>
+      b.stats.mapsPlayed - a.stats.mapsPlayed ||
+      a.data.name.localeCompare(b.data.name)
+  );
 ---
-<Layout title="Map Statistics - CFL Esports ID" current="Maps">
+
+<Layout
+  title="Map Statistics - CFL Esports ID"
+  current="Maps"
+>
   <div class="container">
-    <div class="page-header"><h1>Map Statistics</h1><p>Calculated from completed matches</p></div>
-    <div class="map-directory">{maps.map(map => <article class="map-card">
-      <div class="map-thumbnail">
-        <img src={map.data.thumbnail || '/maps/placeholder.svg'} alt="" width="800" height="360" loading="lazy" onerror="this.onerror=null;this.src='/maps/placeholder.svg'" />
-        <h2>{map.data.name}</h2>
-      </div>
-      <div class="map-card-body"><dl>{[['Matches',map.stats.matchesPlayed],['Kills',map.stats.kills],['Deaths',map.stats.deaths],['Assists',map.stats.assists]].map(([label,value])=><div><dt>{label}</dt><dd>{value}</dd></div>)}</dl></div>
-      <a href={`/maps/${map.id}`} class="map-info">Map info <span aria-hidden="true">↗</span></a>
-    </article>)}</div>
+    <div class="page-header">
+      <h1>Map Statistics</h1>
+      <p>Calculated from completed matches</p>
+    </div>
+
+    <div class="map-directory">
+      {maps.map(map => {
+        const avgKills =
+          map.stats.matchesPlayed > 0
+            ? (
+                map.stats.kills /
+                map.stats.matchesPlayed
+              ).toFixed(1)
+            : '0.0';
+
+        return (
+          <article class="map-card">
+            <div class="map-thumbnail">
+              <img
+                src={
+                  map.data.thumbnail ||
+                  '/maps/placeholder.svg'
+                }
+                alt=""
+                width="800"
+                height="360"
+                loading="lazy"
+                onerror="this.onerror=null;this.src='/maps/placeholder.svg'"
+              />
+
+              <h2>{map.data.name}</h2>
+            </div>
+
+            <div class="map-card-body">
+              {map.stats.matchesPlayed > 0 ? (
+                <dl>
+                  <div>
+                    <dt>Matches</dt>
+                    <dd>{map.stats.matchesPlayed}</dd>
+                  </div>
+
+                  <div>
+                    <dt>Kills</dt>
+                    <dd>{map.stats.kills}</dd>
+                  </div>
+
+                  <div>
+                    <dt>Avg. Kills</dt>
+                    <dd>{avgKills}</dd>
+                  </div>
+
+                  <div>
+                    <dt>Assists</dt>
+                    <dd>{map.stats.assists}</dd>
+                  </div>
+                </dl>
+              ) : (
+                <div class="map-empty-state">
+                  <strong>No match data yet</strong>
+                  <span>
+                    Statistics will appear after this map
+                    is played in a completed match.
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <a
+              href={`/maps/${map.id}`}
+              class="map-info"
+            >
+              Map info
+              <span aria-hidden="true">→</span>
+            </a>
+          </article>
+        );
+      })}
+    </div>
   </div>
 </Layout>
+
 <style>
-.map-card { transition: border-color .2s, background-color .2s; }
-.map-card:hover, .map-card:focus-within { border-color: var(--accent); background: #2c2927; }
-.map-card:hover .map-info, .map-card:focus-within .map-info { background: #463023; color: #ffb18a; border-top-color: var(--accent); }
-.map-info { transition: background-color .2s, color .2s, border-color .2s; }
-.map-directory{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:22px}.map-card{background:var(--bg-secondary);border:1px solid #65503e;border-radius:10px;overflow:hidden}.map-thumbnail{height:180px;display:block;position:relative;overflow:hidden;background:#292625;text-decoration:none}.map-thumbnail img{display:block;width:100%;height:100%;object-fit:cover}.map-thumbnail::after{content:"";position:absolute;inset:0;background:#0005;transition:background .2s}.map-card .map-thumbnail h2{position:absolute;inset:0;z-index:1;display:flex;align-items:center;justify-content:center;text-align:center;padding:16px;margin:0;color:white;font-size:23px;text-shadow:0 2px 6px #000;transition:color .2s}.map-card-body{padding:20px}.map-card h2{font-size:21px;margin-bottom:18px}.map-card dl{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}.map-card dt{font-size:12px;color:var(--text-muted)}.map-card dd{font-size:20px;font-weight:700;color:var(--accent)}.map-info{display:flex;justify-content:space-between;padding:16px 20px;background:#332b25;border-top:1px solid #65503e}.map-info:hover{background:#463023;color:#ffb18a}@media(max-width:900px){.map-directory{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:640px){.map-directory{grid-template-columns:1fr}}
+  .map-directory {
+    display: grid;
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+    gap: 22px;
+  }
+
+  .map-card {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-secondary);
+    border: 1px solid #65503e;
+    border-radius: 10px;
+    overflow: hidden;
+    transition:
+      border-color .2s,
+      background-color .2s;
+  }
+
+  .map-card:hover,
+  .map-card:focus-within {
+    border-color: var(--accent);
+    background: #2c2927;
+  }
+
+  .map-thumbnail {
+    height: 180px;
+    display: block;
+    position: relative;
+    overflow: hidden;
+    background: #292625;
+    text-decoration: none;
+  }
+
+  .map-thumbnail img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .map-thumbnail::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: #0005;
+    transition: background .2s;
+  }
+
+  .map-card .map-thumbnail h2 {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 16px;
+    margin: 0;
+    color: white;
+    font-size: 23px;
+    text-shadow: 0 2px 6px #000;
+    transition: color .2s;
+  }
+
+  .map-card-body {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    padding: 20px;
+  }
+
+  .map-card h2 {
+    font-size: 21px;
+    margin-bottom: 18px;
+  }
+
+  .map-card dl {
+    display: grid;
+    grid-template-columns:
+      repeat(2, 1fr);
+    gap: 14px;
+    width: 100%;
+  }
+
+  .map-card dt {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .map-card dd {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .map-empty-state {
+    display: flex;
+    min-height: 82px;
+    width: 100%;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+
+  .map-empty-state strong {
+    display: block;
+    font-size: 14px;
+    color: var(--text-primary);
+  }
+
+  .map-empty-state span {
+    display: block;
+    max-width: 260px;
+    margin-top: 8px;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .map-info {
+    display: flex;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: #332b25;
+    border-top: 1px solid #65503e;
+    transition:
+      background-color .2s,
+      color .2s,
+      border-color .2s;
+  }
+
+  .map-info:hover {
+    background: #463023;
+    color: #ffb18a;
+  }
+
+  .map-card:hover .map-info,
+  .map-card:focus-within .map-info {
+    background: #463023;
+    color: #ffb18a;
+    border-top-color: var(--accent);
+  }
+
+  @media (max-width: 900px) {
+    .map-directory {
+      grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 640px) {
+    .map-directory {
+      grid-template-columns: 1fr;
+    }
+  }
 </style>
