@@ -1,21 +1,24 @@
 :root {
-  --bg-primary: #171719;
-  --bg-secondary: #1d1d20;
-  --bg-card: #252528;
-  --bg-card-hover: #2d2d31;
+  --bg-primary: #171918;
+  --bg-secondary: #1d201e;
+  --bg-card: #252825;
+  --bg-card-hover: #2d322c;
   --accent: #ff742e;
   --accent-hover: #ff955f;
-  --accent-dim: rgba(255, 77, 46, 0.15);
-  --text-primary: #f3f3f4;
-  --text-secondary: #c8c8cd;
-  --text-muted: #aaaab2;
-  --border: #36363a;
-  --border-hover: #505055;
+  --accent-dim: rgba(255, 116, 46, 0.12);
+  --olive: #777e65;
+  --olive-muted: #30362d;
+  --text-primary: #f1f0eb;
+  --text-secondary: #c8cbc3;
+  --text-muted: #a9afa3;
+  --border: #3c4238;
+  --border-hover: #777e65;
+  --font-heading: 'Avenir Next Condensed', 'Arial Narrow', 'Liberation Sans Narrow', sans-serif;
   --win: #22c55e;
   --loss: #ff8585;
   --assist: #eab308;
   --live: #f59e0b;
-  --radius: 8px;
+  --radius: 2px;
   --accent-orange: #ff955f;
 }
 
@@ -98,13 +101,13 @@ a:hover { color: var(--accent-hover); }
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 1.25rem;
-  transition: border-color 0.2s, background 0.2s, transform 0.2s, box-shadow 0.2s;
+  transition: border-color 0.2s, background 0.2s;
 }
 .team-card:hover, .match-card:hover {
   border-color: var(--accent);
   background: var(--bg-card-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 20px rgba(255, 77, 46, 0.15);
+  transform: none;
+  box-shadow: none;
 }
 
 .grid { display: grid; gap: 1.5rem; }
@@ -120,6 +123,7 @@ a:hover { color: var(--accent-hover); }
   text-align: center;
 }
 .page-header h1 {
+  font-family: var(--font-heading);
   font-size: 2.25rem;
   font-weight: 800;
   margin-bottom: 0.5rem;
@@ -150,7 +154,7 @@ th {
   text-transform: uppercase;
   font-size: 0.75rem;
   letter-spacing: 0.05em;
-  background: rgba(255, 77, 46, 0.08);
+  background: var(--olive-muted);
   border-bottom: 2px solid var(--accent);
 }
 tbody tr:nth-child(even) td {
@@ -166,7 +170,7 @@ tr:hover td {
 .badge {
   display: inline-block;
   padding: 0.2rem 0.6rem;
-  border-radius: 4px;
+  border-radius: var(--radius);
   font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -343,7 +347,7 @@ tr:hover td {
   
   /* Ensure sticky columns match row backgrounds */
   th:first-child, th:nth-child(2) {
-    background: rgba(255, 77, 46, 0.08);
+    background: var(--olive-muted);
   }
   tbody tr:nth-child(even) td:first-child,
   tbody tr:nth-child(even) td:nth-child(2) {
@@ -360,7 +364,7 @@ tr:hover td {
   width: 44px;
   height: 44px;
   object-fit: contain;
-  border-radius: 8px;
+  border-radius: var(--radius);
   flex-shrink: 0;
   /* Subtle background so black lines are visible */
   background: var(--bg-card); 
@@ -373,7 +377,7 @@ tr:hover td {
   width: 100px;
   height: 100px;
   object-fit: contain;
-  border-radius: 12px;
+  border-radius: var(--radius);
   margin-bottom: 0.75rem;
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -385,7 +389,7 @@ tr:hover td {
   width: 160px;
   height: 160px;
   object-fit: contain;
-  border-radius: 16px;
+  border-radius: var(--radius);
   background: var(--bg-card);
   border: 2px solid var(--border);
   padding: 12px;
@@ -397,7 +401,7 @@ tr:hover td {
   width: 64px;
   height: 64px;
   object-fit: contain;
-  border-radius: 8px;
+  border-radius: var(--radius);
   flex-shrink: 0;
   background: var(--bg-card);
   border: 1px solid var(--border);

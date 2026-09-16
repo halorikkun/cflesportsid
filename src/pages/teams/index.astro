@@ -4,27 +4,10 @@ import { getCollection } from 'astro:content';
 import { calculateStatistics, emptyStats } from '../../utils/statistics';
 
 const allMatches = await getCollection('matches');
-
 const calculated = calculateStatistics(allMatches);
-
-const allPlayers = await getCollection('players');
-const playersByUid = {};
-allPlayers.forEach(p => {
-  if (p.data.uid) playersByUid[p.data.uid] = p;
-});
 
 const teams = (await getCollection('teams')).map(team => {
   const record = calculated.teams.get(team.id) ?? emptyStats();
-  let teamPlayers = team.data.players
-    .map(uid => playersByUid[uid])
-    .filter(Boolean);
-    
-  if (teamPlayers.length === 0) {
-    teamPlayers = allPlayers.filter(p => p.data.team === team.id);
-  }
-  
-  const { kills: totalKills, deaths: totalDeaths, assists: totalAssists } =
-    record;
 
   return {
     id: team.id,
@@ -32,317 +15,1171 @@ const teams = (await getCollection('teams')).map(team => {
     tag: team.data.tag,
     logo: team.data.logo,
     region: team.data.region,
+
+    // Optional team identity color.
+    // Teams without one remain neutral.
+    color: team.data.color ?? '#777B82',
+
     wins: record.wins,
     losses: record.losses,
-    totalKills,
-    totalDeaths,
-    totalAssists,
-    players: teamPlayers.map(p => ({
-      id: p.id,
-      ign: p.data.ign,
-      uid: p.data.uid,
-      status: p.data.status || 'active',
-    })),
-    playerCount: teamPlayers.length,
+    totalKills: record.kills,
   };
 });
+
+const teamCount = teams.length;
 ---
 
-<Layout title="Teams - CFL Esports ID Tournament Hub" current="Teams">
-  <div class="container">
-    <div class="page-header">
-      <h1>Teams</h1>
-      <p>Search, sort, and filter all competing teams</p>
-    </div>
+<Layout
+  title="Teams - CFL Esports Indonesia"
+  current="Teams"
+>
+  <section class="teams-page" aria-labelledby="teams-title">
+    <div class="container">
 
-    <div class="teams-toolbar">
-      <input type="text" id="searchInput" aria-label="Search teams" placeholder="Search team name or tag..." class="teams-search" />
-      <select id="sortSelect" aria-label="Sort teams" class="teams-sort">
-        <option value="name-asc">Name (A–Z)</option>
-        <option value="name-desc">Name (Z–A)</option>
-        <option value="wins-desc">Wins (High–Low)</option>
-        <option value="wins-asc">Wins (Low–High)</option>
-        <option value="losses-desc">Losses (High–Low)</option>
-        <option value="losses-asc">Losses (Low–High)</option>
-        <option value="kills-desc">Kills (High–Low)</option>
-        <option value="kills-asc">Kills (Low–High)</option>
-      </select>
-    </div>
+      <!-- =========================
+           PAGE HEADER
+           ========================= -->
 
-    <div class="teams-grid" id="teamsGrid">
-      {teams.map(team => (
-        <div class="team-card club-card"
-          data-name={team.name.toLowerCase()}
-          data-tag={team.tag.toLowerCase()}
-          data-wins={team.wins}
-          data-losses={team.losses}
-          data-kills={team.totalKills}
-        >
-          <div class="club-identity">
-            <img src={team.logo || `/logos/${team.tag}.webp`} alt="" width="64" height="64" onerror="this.onerror=null; this.src='/logos/default.webp'" />
-            <h2>{team.name}</h2>
-          </div>
-          <div class="club-meta"><strong>{team.tag}</strong><span>{team.region === 'ID' ? 'Indonesia' : team.region}</span></div>
-          <a class="club-info" href={`/teams/${team.id}`}>Team info <span aria-hidden="true">→</span></a>
+      <header class="page-header teams-header">
+        <h1 id="teams-title">The teams</h1>
+
+        <p>
+          {teamCount} teams competing in Clash for Glory: Road to All-Star.
+        </p>
+        <a class="teams-standings-link" href="/#standings">Overall standings <span aria-hidden="true">↗</span></a>
+      </header>
+
+
+      <!-- =========================
+           SEARCH / SORT
+           ========================= -->
+
+      <div class="teams-toolbar">
+
+        <div class="teams-search-wrap">
+
+          <svg
+            class="teams-search-icon"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden="true"
+          >
+            <circle
+              cx="11"
+              cy="11"
+              r="6.5"
+              stroke="currentColor"
+              stroke-width="1.8"
+            />
+
+            <path
+              d="M16 16L21 21"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+            />
+          </svg>
+
+          <input
+            type="text"
+            id="searchInput"
+            aria-label="Search teams"
+            placeholder="Search team name or tag..."
+            class="teams-search"
+          />
+
         </div>
-      ))}
-    </div>
 
-    <p id="noResults" class="no-results">No teams found.</p>
-    <div class="pagination" id="pagination" role="navigation" aria-label="Team pages"></div>
-  </div>
+
+        <select
+          id="sortSelect"
+          aria-label="Sort teams"
+          class="teams-sort"
+        >
+          <option value="name-asc">
+            Name (A–Z)
+          </option>
+
+          <option value="name-desc">
+            Name (Z–A)
+          </option>
+
+          <option value="wins-desc">
+            Wins (High–Low)
+          </option>
+
+          <option value="wins-asc">
+            Wins (Low–High)
+          </option>
+
+          <option value="losses-desc">
+            Losses (High–Low)
+          </option>
+
+          <option value="losses-asc">
+            Losses (Low–High)
+          </option>
+
+          <option value="kills-desc">
+            Kills (High–Low)
+          </option>
+
+          <option value="kills-asc">
+            Kills (Low–High)
+          </option>
+        </select>
+
+      </div>
+
+
+      <!-- =========================
+           TEAM GRID
+           ========================= -->
+
+      <div
+        class="teams-grid"
+        id="teamsGrid"
+      >
+
+        {teams.map(team => {
+          const region =
+            team.region === 'ID'
+              ? 'Indonesia'
+              : team.region;
+
+          return (
+
+            <article
+              class="team-card"
+              style={`--team-color: ${team.color};`}
+              data-name={team.name.toLowerCase()}
+              data-tag={team.tag.toLowerCase()}
+              data-wins={team.wins}
+              data-losses={team.losses}
+              data-kills={team.totalKills}
+            >
+
+              <!-- =========================
+                   CARD CONTENT
+                   ========================= -->
+
+              <div class="team-card-body">
+
+                <!-- LOGO + NAME -->
+
+                <div class="club-identity">
+
+                  <div class="club-logo">
+
+                    <img
+                      src={
+                        team.logo ||
+                        `/logos/${team.tag}.webp`
+                      }
+                      alt={`${team.name} logo`}
+                      width="56"
+                      height="56"
+                      loading="lazy"
+                      onerror="this.onerror=null; this.src='/logos/default.webp'"
+                    />
+
+                  </div>
+
+                  <h2>
+                    {team.name}
+                  </h2>
+
+                </div>
+
+
+                <!-- TAG + LOCATION -->
+
+                <div class="club-meta">
+
+                  <strong class="club-tag">
+                    {team.tag}
+                  </strong>
+
+
+                  <span class="club-location">
+
+                    <svg
+                      class="location-icon"
+                      width="13"
+                      height="13"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M12 21s7-6.2 7-12A7 7 0 1 0 5 9c0 5.8 7 12 7 12Z"
+                        stroke="currentColor"
+                        stroke-width="1.7"
+                      />
+
+                      <circle
+                        cx="12"
+                        cy="9"
+                        r="2.4"
+                        stroke="currentColor"
+                        stroke-width="1.7"
+                      />
+                    </svg>
+
+                    <span>
+                      {region}
+                    </span>
+
+                  </span>
+
+                </div>
+
+              </div>
+
+
+              <dl class="team-record" aria-label={`${team.name} recorded results`}>
+                <div><dt>Wins</dt><dd>{team.wins}</dd></div>
+                <div><dt>Losses</dt><dd>{team.losses}</dd></div>
+                <div><dt>Kills</dt><dd>{team.totalKills.toLocaleString('en-US')}</dd></div>
+              </dl>
+
+              <a
+                class="club-info"
+                href={`/teams/${team.id}`}
+                aria-label={`View ${team.name} team information`}
+              >
+
+                <span>
+                  Team info
+                </span>
+
+                <span
+                  class="club-info-arrow"
+                  aria-hidden="true"
+                >
+                  →
+                </span>
+
+              </a>
+
+            </article>
+
+          );
+        })}
+
+      </div>
+
+
+      <!-- EMPTY SEARCH STATE -->
+
+      <p
+        id="noResults"
+        class="no-results"
+        role="status"
+      >
+        No teams found.
+      </p>
+
+    </div>
+  </section>
+
+
+  <!-- =========================
+       SEARCH / SORT
+       ========================= -->
 
   <script>
-    // ... (Your existing JS remains exactly the same, it's perfect!) ...
-    const searchInput = document.getElementById('searchInput');
-    const sortSelect = document.getElementById('sortSelect');
-    const grid = document.getElementById('teamsGrid');
-    const noResults = document.getElementById('noResults');
-    const pagination = document.getElementById('pagination');
-    const cards = Array.from(grid.querySelectorAll('.team-card'));
-    const perPage = 10;
-    let currentPage = 1;
 
-    function getVisibleCards() {
-      const search = searchInput.value.toLowerCase();
-      return cards.filter(card => {
-        const matchesSearch = !search || card.dataset.name.includes(search) || card.dataset.tag.includes(search);
-        return matchesSearch;
-      });
-    }
+    const searchInput =
+      document.getElementById(
+        'searchInput'
+      ) as HTMLInputElement;
 
-    function sortCards(visible) {
-      const sortValue = sortSelect.value;
-      const [key, dir] = sortValue.split('-');
-      const isNumeric = ['wins', 'losses', 'kills'].includes(key);
-      const asc = dir === 'asc';
-      visible.sort((a, b) => {
-        let valA, valB;
-        if (isNumeric) {
-          valA = parseFloat(a.dataset[key]);
-          valB = parseFloat(b.dataset[key]);
-          return asc ? valA - valB : valB - valA;
-        } else {
-          valA = a.dataset[key];
-          valB = b.dataset[key];
-          return asc ? valA.localeCompare(valB) : valB.localeCompare(valA);
-        }
-      });
-    }
+    const sortSelect =
+      document.getElementById(
+        'sortSelect'
+      ) as HTMLSelectElement;
+
+    const grid =
+      document.getElementById(
+        'teamsGrid'
+      ) as HTMLElement;
+
+    const noResults =
+      document.getElementById(
+        'noResults'
+      ) as HTMLElement;
+
+    const cards = Array.from(
+      grid.querySelectorAll<HTMLElement>(
+        '.team-card'
+      )
+    );
+
 
     function render() {
-      const visible = getVisibleCards();
-      sortCards(visible);
 
-      cards.forEach(card => { card.style.display = 'none'; grid.appendChild(card); });
+      const search =
+        searchInput.value
+          .trim()
+          .toLowerCase();
 
-      const totalPages = Math.ceil(visible.length / perPage);
-      if (currentPage > totalPages) currentPage = 1;
 
-      const start = (currentPage - 1) * perPage;
-      const end = start + perPage;
-      visible.slice(start, end).forEach(card => { card.style.display = ''; grid.appendChild(card); });
+      const [key, dir] =
+        sortSelect.value.split('-');
 
-      noResults.style.display = visible.length === 0 ? 'block' : 'none';
-      
-      const focusedLabel = pagination.contains(document.activeElement)
-        ? document.activeElement?.getAttribute('aria-label') : null;
-      pagination.innerHTML = '';
-      if (totalPages > 1) {
-        const prev = document.createElement('button');
-        prev.className = 'page-btn';
-        prev.textContent = '‹';
-        prev.setAttribute('aria-label', 'Previous page');
-        prev.disabled = currentPage === 1;
-        prev.addEventListener('click', () => { currentPage--; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
-        pagination.appendChild(prev);
 
-        for (let i = 1; i <= totalPages; i++) {
-          const btn = document.createElement('button');
-          btn.className = `page-btn ${i === currentPage ? 'active' : ''}`;
-          btn.textContent = i;
-          btn.setAttribute('aria-label', `Page ${i}`);
-          if (i === currentPage) btn.setAttribute('aria-current', 'page');
-          btn.addEventListener('click', () => { currentPage = i; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
-          pagination.appendChild(btn);
+      const isNumeric =
+        [
+          'wins',
+          'losses',
+          'kills'
+        ].includes(key);
+
+
+      const ascending =
+        dir === 'asc';
+
+
+      /* FILTER */
+
+      const visible =
+        cards.filter(card => {
+
+          const name =
+            card.dataset.name || '';
+
+          const tag =
+            card.dataset.tag || '';
+
+          return (
+            !search ||
+            name.includes(search) ||
+            tag.includes(search)
+          );
+
+        });
+
+
+      /* SORT */
+
+      visible.sort((a, b) => {
+
+        if (isNumeric) {
+
+          const valA =
+            Number(
+              a.dataset[key] || 0
+            );
+
+          const valB =
+            Number(
+              b.dataset[key] || 0
+            );
+
+          return ascending
+            ? valA - valB
+            : valB - valA;
+
         }
 
-        const next = document.createElement('button');
-        next.className = 'page-btn';
-        next.textContent = '›';
-        next.setAttribute('aria-label', 'Next page');
-        next.disabled = currentPage === totalPages;
-        next.addEventListener('click', () => { currentPage++; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
-        pagination.appendChild(next);
-        if (focusedLabel) {
-          const target = Array.from(pagination.querySelectorAll('button'))
-            .find(button => button.getAttribute('aria-label') === focusedLabel && !button.disabled)
-            || pagination.querySelector<HTMLButtonElement>('[aria-current="page"]');
-          target?.focus({ preventScroll: true });
-        }
-      }
+
+        const valA =
+          a.dataset[key] || '';
+
+        const valB =
+          b.dataset[key] || '';
+
+
+        return ascending
+          ? valA.localeCompare(valB)
+          : valB.localeCompare(valA);
+
+      });
+
+
+      /* HIDE ALL */
+
+      cards.forEach(card => {
+        card.style.display = 'none';
+      });
+
+
+      /* SHOW FILTERED / SORTED */
+
+      visible.forEach(card => {
+
+        card.style.display = '';
+
+        grid.appendChild(card);
+
+      });
+
+
+      /* EMPTY STATE */
+
+      noResults.style.display =
+        visible.length === 0
+          ? 'block'
+          : 'none';
+
     }
 
-    searchInput.addEventListener('input', () => { currentPage = 1; render(); });
-    sortSelect.addEventListener('change', () => { currentPage = 1; render(); });
+
+    searchInput.addEventListener(
+      'input',
+      render
+    );
+
+
+    sortSelect.addEventListener(
+      'change',
+      render
+    );
+
+
     render();
+
   </script>
+
 </Layout>
 
+
 <style>
-  /* NEW: Responsive grid instead of single column */
-  .teams-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr); 
-    gap: 1.5rem;
+
+  /* ========================================
+     TEAMS PAGE
+     ======================================== */
+
+  .teams-page {
+    padding-bottom: 4rem;
   }
+
+
+  /* ========================================
+     HEADER
+     ======================================== */
+
+  .teams-header {
+    margin-bottom: 1.5rem;
+  }
+
+
+  .teams-header h1 {
+    margin: 0;
+
+    color: var(--text-primary);
+
+    font-size: clamp(
+      2rem,
+      4vw,
+      3rem
+    );
+
+    line-height: 1;
+  }
+
+
+  .teams-header p {
+    max-width: 650px;
+
+    margin:
+      0.8rem
+      0
+      0;
+
+    color: var(--text-secondary);
+
+    font-size: 0.95rem;
+
+    line-height: 1.55;
+  }
+
+
+  /* ========================================
+     TOOLBAR
+     ======================================== */
 
   .teams-toolbar {
     display: flex;
+
     gap: 0.75rem;
+
     margin-bottom: 1.25rem;
   }
-  
-  /* NEW: Stack toolbar on very small screens */
-  @media (max-width: 480px) {
-    .teams-toolbar { flex-direction: column; }
-    .teams-search { width: 100%; }
-    .teams-grid { 
-      grid-template-columns: 1fr; 
-    }
+
+
+  .teams-search-wrap {
+    position: relative;
+
+    flex: 1;
+
+    min-width: 0;
   }
 
-  .teams-search, .teams-sort {
-    padding: 0.6rem 0.75rem;
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
+
+  .teams-search-icon {
+    position: absolute;
+
+    top: 50%;
+    left: 0.9rem;
+
+    transform:
+      translateY(-50%);
+
+    color: var(--text-muted);
+
+    pointer-events: none;
+  }
+
+
+  .teams-search,
+  .teams-sort {
+    min-height: 46px;
+
+    background: #151619;
+
+    border:
+      1px
+      solid
+      #303136;
+
+    border-radius: 0;
+
     color: var(--text-primary);
-    font-size: 0.9rem;
+
+    font: inherit;
+
+    font-size: 0.86rem;
+
+    transition:
+      border-color
+      150ms ease;
   }
-  .teams-search { flex: 1; min-width: 200px; }
-  .teams-sort { cursor: pointer; }
-  .teams-sort:focus, .teams-search:focus {
+
+
+  .teams-search {
+    width: 100%;
+
+    padding:
+      0.7rem
+      0.9rem
+      0.7rem
+      2.7rem;
+  }
+
+
+  .teams-search::placeholder {
+    color: var(--text-muted);
+  }
+
+
+  .teams-sort {
+    width: 190px;
+
+    padding:
+      0.7rem
+      0.85rem;
+
+    cursor: pointer;
+  }
+
+
+  .teams-search:hover,
+  .teams-sort:hover {
+    border-color: #44454b;
+  }
+
+
+  .teams-search:focus,
+  .teams-sort:focus {
     outline: none;
-    border-color: var(--accent);
+
+    border-color:
+      var(--accent);
   }
+
+
+  /* ========================================
+     GRID
+     ======================================== */
+
+  .teams-grid {
+    display: grid;
+
+    grid-template-columns:
+      repeat(
+        3,
+        minmax(0, 1fr)
+      );
+
+    gap: 1rem;
+  }
+
+
+  /* ========================================
+     TEAM CARD
+     ======================================== */
 
   .team-card {
-    /* Inherits global .card styles, ensuring equal height in grid */
-    height: 100%;
+    --team-color: #777B82;
+
+    position: relative;
+
     display: flex;
+
     flex-direction: column;
-  }
 
-  .team-card-header {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    margin-bottom: 1rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid var(--border);
-  }
-  .team-name-link { font-size: 1.1rem; }
-  .team-tag { color: var(--text-muted); font-size: 0.85rem; font-weight: 600; }
-  .team-region {
-    margin-left: auto;
-    font-size: 0.8rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-muted);
-    background: var(--accent-dim);
-    padding: 0.15rem 0.5rem;
-    border-radius: 4px;
-  }
+    min-width: 0;
 
-  .team-card-stats {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 1rem;
-  }
-  .team-stat-group { display: flex; gap: 1.5rem; }
-  .team-stat-wl { flex-direction: row; }
-  .team-stat-item { display: flex; flex-direction: column; gap: 0.15rem; text-align: center; }
-  .team-stat-label {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    font-weight: 600;
-  }
-
-  /* NEW: Utility classes to replace inline styles */
-  .text-win { color: var(--win); font-weight: 700; }
-  .text-loss { color: var(--loss); font-weight: 700; }
-  .text-assist { color: var(--assist); font-weight: 700; }
-
-  .team-players {
-    border-top: 1px solid var(--border);
-    padding-top: 0.75rem;
-    margin-top: auto; /* Pushes to bottom of card */
-  }
-  .team-players-label {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 0.5rem;
-    font-weight: 600;
-  }
-
-  /* NEW: Scrollable roster container */
-  .roster-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    max-height: 180px; /* Prevents card from getting too tall */
-    overflow-y: auto;
-    padding-right: 0.5rem;
-  }
-  .roster-list::-webkit-scrollbar { width: 4px; }
-  .roster-list::-webkit-scrollbar-track { background: transparent; }
-  .roster-list::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 4px; }
-
-  .player-row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.4rem 0;
-    border-bottom: 1px solid var(--border);
-  }
-  .player-row:last-child { border-bottom: none; }
-  .player-ign {
-    font-weight: 600;
-    font-size: 0.85rem;
-    color: var(--text-primary);
-    text-decoration: none;
-    white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 120px; /* Prevents long names from breaking layout */
+
+    background: #151619;
+
+    border:
+      1px
+      solid
+      #303136;
+
+    border-radius: 0;
+
+    padding: 0 !important;
+
+    margin: 0;
+
+    box-shadow: none;
+
+    isolation: isolate;
+
+    transition:
+      border-color
+      150ms ease;
   }
-  .player-ign:hover { color: var(--accent); }
-  .player-uid {
-    font-family: monospace;
-    font-size: 0.75rem;
-    color: var(--text-muted);
+
+
+  /* The SVG mask carries team identity; interface accents remain CFL orange. */
+
+  .team-card::before {
+    content: '';
+
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+
+    background: var(--team-color);
+    -webkit-mask: url('/patterns/team-card.svg') center / 100% 100% no-repeat;
+    mask: url('/patterns/team-card.svg') center / 100% 100% no-repeat;
+    opacity: 0.32;
+
+    pointer-events: none;
   }
-  .player-status {
-    margin-left: auto;
-    font-size: 0.8rem;
+
+  .team-card::after {
+    display: none;
+  }
+
+
+  /* ========================================
+     CARD BODY
+     ======================================== */
+
+  .team-card-body {
+    position: relative;
+
+    z-index: 2;
+
+    display: flex;
+
+    flex-direction: column;
+
+    min-height: 180px;
+
+    padding:
+      1.4rem
+      1.2rem
+      1.1rem !important;
+
+    margin: 0 !important;
+  }
+
+
+  /* ========================================
+     LOGO + NAME
+     ======================================== */
+
+  .club-identity {
+    display: flex;
+
+    align-items: center;
+
+    gap: 0.8rem;
+
+    min-width: 0;
+
+    margin: 0;
+
+    padding: 0;
+  }
+
+
+  .club-logo {
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+
+    width: 56px;
+    height: 56px;
+
+    flex:
+      0
+      0
+      56px;
+  }
+
+
+  .club-logo img {
+    display: block;
+
+    width: 56px;
+    height: 56px;
+
+    object-fit: contain;
+  }
+
+
+  .club-identity h2 {
+    min-width: 0;
+
+    margin: 0;
+
+    padding: 0;
+
+    color:
+      var(--text-primary);
+
+    font-size: 1.05rem;
+
     font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    padding: 0.15rem 0.5rem;
-    border-radius: 4px;
-    flex-shrink: 0;
+
+    line-height: 1.2;
   }
-  
-  .status-active { background: rgba(34, 197, 94, 0.15); color: var(--win); }
-  .status-inactive { background: rgba(156, 163, 175, 0.15); color: var(--text-muted); }
-  
-  .no-results { text-align: center; color: var(--text-muted); display: none; padding: 2rem; }
+
+
+  /* ========================================
+     TAG + LOCATION
+     ======================================== */
+
+  .club-meta {
+    display: flex;
+
+    align-items: center;
+
+    justify-content:
+      space-between;
+
+    gap: 1rem;
+
+    width: 100%;
+
+    margin:
+      auto
+      0
+      0 !important;
+
+    padding:
+      1.2rem
+      0
+      0 !important;
+
+    background: none !important;
+
+    border: 0 !important;
+
+    color:
+      var(--text-muted);
+
+    font-size: 0.78rem;
+  }
+
+
+  .club-tag {
+    margin: 0;
+
+    padding: 0;
+
+    background: none;
+
+    border: 0;
+
+    color:
+      var(--text-secondary);
+
+    font-size: 0.76rem;
+
+    font-weight: 700;
+
+    letter-spacing: 0.025em;
+  }
+
+
+  .club-location {
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 0.4rem;
+
+    margin: 0 !important;
+
+    padding: 0 !important;
+
+    background:
+      transparent !important;
+
+    border:
+      0 !important;
+
+    outline: 0 !important;
+
+    border-radius:
+      0 !important;
+
+    box-shadow:
+      none !important;
+
+    color:
+      var(--text-muted);
+
+    font-size: 0.78rem;
+
+    font-weight: 400;
+
+    text-transform: none;
+
+    letter-spacing: normal;
+
+    white-space: nowrap;
+  }
+
+
+  .club-location span {
+    margin: 0 !important;
+
+    padding: 0 !important;
+
+    background:
+      transparent !important;
+
+    border:
+      0 !important;
+
+    outline:
+      0 !important;
+
+    border-radius:
+      0 !important;
+
+    box-shadow:
+      none !important;
+  }
+
+
+  .location-icon {
+    display: block;
+
+    width: 13px;
+    height: 13px;
+
+    flex:
+      0
+      0
+      13px;
+
+    color:
+      var(--text-muted);
+
+    opacity: 0.7;
+  }
+
+
+  /* ========================================
+     TEAM INFO FOOTER
+     ======================================== */
+
+  .team-card > .club-info {
+    position: relative;
+
+    z-index: 3;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content:
+      space-between;
+
+    width:
+      100% !important;
+
+    min-height: 48px;
+
+    margin:
+      0 !important;
+
+    padding:
+      0
+      1.2rem !important;
+
+    box-sizing:
+      border-box;
+
+    background:
+      #101114 !important;
+
+    border:
+      0 !important;
+
+    border-top:
+      1px
+      solid
+      #303136 !important;
+
+    border-radius:
+      0 !important;
+
+    color:
+      var(--accent);
+
+    font-size: 0.78rem;
+
+    font-weight: 700;
+
+    text-decoration: none;
+
+    box-shadow:
+      none !important;
+
+    transition:
+      background
+      150ms ease,
+      color
+      150ms ease;
+  }
+
+
+  .club-info-arrow {
+    display: inline-block;
+
+    font-size: 1rem;
+
+    transition:
+      transform
+      150ms ease;
+  }
+
+
+  .team-card > .club-info:hover {
+    background:
+      #131417 !important;
+
+    color:
+      var(--accent-hover);
+  }
+
+
+  .club-info:hover
+  .club-info-arrow {
+    transform:
+      translateX(3px);
+  }
+
+
+  .club-info:focus-visible {
+    outline:
+      2px
+      solid
+      var(--accent);
+
+    outline-offset: -2px;
+  }
+
+
+  /* ========================================
+     EMPTY STATE
+     ======================================== */
+
+  .no-results {
+    display: none;
+
+    margin: 0;
+
+    padding:
+      3rem
+      1rem;
+
+    color:
+      var(--text-muted);
+
+    text-align: center;
+  }
+
+
+  /* ========================================
+     TABLET
+     ======================================== */
+
+  @media (
+    max-width: 900px
+  ) {
+
+    .teams-grid {
+      grid-template-columns:
+        repeat(
+          2,
+          minmax(0, 1fr)
+        );
+    }
+
+  }
+
+
+  /* ========================================
+     MOBILE
+     ======================================== */
+
+  @media (
+    max-width: 600px
+  ) {
+
+    .teams-page {
+      padding-bottom: 3rem;
+    }
+
+
+    .teams-header {
+      margin-bottom: 1.1rem;
+    }
+
+
+    .teams-header p {
+      font-size: 0.88rem;
+    }
+
+
+    .teams-toolbar {
+      flex-direction: column;
+
+      gap: 0.6rem;
+    }
+
+
+    .teams-sort {
+      width: 100%;
+    }
+
+
+    .teams-grid {
+      grid-template-columns: 1fr;
+
+      gap: 0.8rem;
+    }
+
+
+    .team-card-body {
+      min-height: 160px;
+
+      padding:
+        1.2rem
+        1rem
+        1rem !important;
+    }
+
+
+    .club-logo {
+      width: 52px;
+      height: 52px;
+
+      flex-basis: 52px;
+    }
+
+
+    .club-logo img {
+      width: 52px;
+      height: 52px;
+    }
+
+
+    .club-identity {
+      gap: 0.75rem;
+    }
+
+
+    .club-identity h2 {
+      font-size: 1rem;
+    }
+
+
+    .club-meta {
+      padding-top:
+        1rem !important;
+    }
+
+
+    .team-card > .club-info {
+      min-height: 46px;
+
+      padding:
+        0
+        1rem !important;
+    }
+
+
+  }
+
+  /* Keep the directory aligned with home while retaining each team's identity. */
+  :global(body:has(.teams-page)) {
+    --bg-primary: #090a0c;
+    --bg-secondary: #101114;
+    --bg-card: #16171b;
+    --border: #303137;
+    --text-primary: #f4f3ef;
+    --text-secondary: #c4c3bf;
+    --text-muted: #a4a6ac;
+    --teams-display: 'DIN Condensed', 'Arial Narrow', 'Avenir Next Condensed', sans-serif;
+  }
+  :global(body:has(.teams-page) .site-header) { background: #0c0d0f; backdrop-filter: none; }
+  :global(body:has(.teams-page) .site-header .nav a) { font-family: var(--teams-display); font-size: 17px; font-weight: 500; }
+  .teams-page { font-family: 'Arial Narrow', 'Avenir Next Condensed', sans-serif; }
+  .teams-page > .container { max-width: 1344px; padding-inline: 32px; }
+  .teams-page .teams-header { position: relative; background: none; padding-block: 34px 26px; margin-bottom: 24px; }
+  .teams-page .teams-header h1 { font-family: var(--teams-display); font-size: clamp(44px,6vw,68px); text-transform: uppercase; }
+  .teams-page .teams-header p { font-size: 17px; max-width: 70%; }
+  .teams-standings-link { display: inline-flex; align-items: center; gap: 14px; min-height: 44px; position: absolute; bottom: 24px; right: 0; font-size: 15px; text-transform: uppercase; }
+  .teams-page .teams-toolbar { gap: 12px; padding-bottom: 18px; border-bottom: 1px solid var(--border); }
+  .teams-page :is(.teams-search,.teams-sort) { border-radius: 0; font-size: 16px; }
+  .teams-page :is(.teams-search,.teams-sort):focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .teams-page .club-identity h2 { font-family: var(--teams-display); font-size: 29px; font-weight: 700; }
+  .teams-page .club-identity { min-height: 64px; }
+  .teams-page .team-card-body { min-height: 156px; }
+  .team-record { position: relative; z-index: 2; display: grid; grid-template-columns: repeat(3,1fr); margin: 0 20px 16px; padding-top: 12px; border-top: 1px solid #ffffff20; }
+  .team-record > div { padding-left: 14px; border-left: 1px solid #ffffff18; }
+  .team-record > div:first-child { padding-left: 0; border: 0; }
+  .team-record dt { color: var(--text-secondary); font-size: 12px; text-transform: uppercase; }
+  .team-record dd { font-family: var(--teams-display); font-size: 28px; line-height: 1.25; font-variant-numeric: tabular-nums; }
+  .teams-page .club-info { font-family: var(--teams-display); font-size: 19px; text-transform: uppercase; }
+  @media(max-width:900px) { .teams-page #teamsGrid { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; } }
+  @media(max-width:600px) {
+    .teams-page > .container { padding-inline: 16px; }
+    .teams-page .teams-header { padding-block: 24px 15px; }
+    .teams-page .teams-header p { max-width: 100%; font-size: 16px; }
+    .teams-standings-link { position: static; margin-top: 10px; }
+    .teams-page #teamsGrid { grid-template-columns: minmax(0,1fr); gap: 14px; }
+    .teams-page .club-identity h2 { font-size: 28px; }
+    .teams-page .team-card-body { min-height: 140px; }
+    .team-record { margin-inline: 16px; }
+  }
 </style>

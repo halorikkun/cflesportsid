@@ -1,9 +1,9 @@
 /* Shared interior-page presentation. Page-specific layouts retain their behavior. */
-.interior-page { --radius: 10px; }
+.interior-page { --radius: 2px; }
 .interior-page main { padding-bottom: 24px; }
 .interior-page .page-header {
   text-align: left;
-  background: none;
+  background: linear-gradient(90deg, rgba(29, 32, 30, .96), rgba(29, 32, 30, .98)), url('/images/cfl-hero.webp') center 60% / cover;
   padding: 36px 0 24px;
   margin-bottom: 28px;
   border-bottom: 1px solid var(--border);
@@ -17,12 +17,12 @@
   color: var(--text-muted);
   margin-bottom: 10px;
 }
-.interior-page .page-header h1 { font-size: clamp(28px, 3.2vw, 38px); letter-spacing: -.8px; line-height: 1.2; overflow-wrap: anywhere; }
+.interior-page .page-header h1 { font-size: clamp(28px, 3.2vw, 38px); letter-spacing: .01em; line-height: 1.2; overflow-wrap: anywhere; }
 .interior-page .page-header p { font-size: 15px; color: var(--text-muted); max-width: 760px; margin-top: 12px; }
 .interior-page h2 { letter-spacing: -.4px; }
 .interior-page :is(.card, .team-card, .match-card, .tournament-card, .roster-card, .mvp-card) {
   border-color: var(--border);
-  border-radius: 10px;
+  border-radius: var(--radius);
   background: var(--bg-secondary);
   box-shadow: none;
 }
@@ -36,30 +36,74 @@
   background: var(--bg-secondary);
   color: var(--text-primary);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius);
   min-height: 46px;
   font-size: 15px;
   max-width: 100%;
 }
 .interior-page input::placeholder { color: var(--text-muted); }
-.interior-page .table-wrap { border: 1px solid var(--border); border-radius: 10px; margin-bottom: 24px; }
+.interior-page .table-wrap { border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 24px; }
 .interior-page table { border: 0; font-size: 15px; }
-.interior-page th { background: var(--bg-secondary); color: var(--text-muted); font-size: 12px; border-bottom: 2px solid var(--accent); }
+.interior-page th { background: var(--olive-muted); color: var(--text-secondary); font-size: 12px; border-bottom: 2px solid var(--olive); }
 .interior-page td { padding: 15px 16px; font-variant-numeric: tabular-nums; }
 .interior-page tbody tr:hover td { background: var(--bg-card-hover); }
-.interior-page .stat-box { background: var(--bg-secondary); border: 1px solid var(--border); padding: 20px; border-radius: 10px; }
+.interior-page .stat-box { background: var(--bg-secondary); border: 1px solid var(--border); padding: 20px; border-radius: var(--radius); }
 .interior-page .stat-box .stat-label { font-size: 13px; letter-spacing: .025em; text-transform: none; }
 .interior-page .stat-box .stat-value { font-size: 28px; }
-.interior-page .badge { font-size: 12px; border-radius: 4px; }
+.interior-page .badge { font-size: 12px; border-radius: var(--radius); }
 .interior-page .back-link { font-size: 14px; }
 .interior-page .kda { font-size: 14px; }
 .interior-page .section-title { font-size: 22px; margin-top: 24px; }
-.interior-page :is(.player-header, .team-header-section, .match-detail-scoreboard) { border-radius: 10px; }
+.interior-page :is(.player-header, .team-header-section, .match-detail-scoreboard) { border-radius: var(--radius); }
 .interior-page .match-detail-scoreboard { background: var(--bg-secondary); border: 1px solid var(--border); padding: 24px; }
-.interior-page :is(.overall-mvp, .veto-timer) { background: var(--bg-secondary); border: 1px solid var(--border); border-top: 2px solid var(--accent); border-radius: 10px; }
-.interior-page .veto-map-card { background: var(--bg-secondary); border-radius: 10px; min-height: 110px; }
-.interior-page .bracket-scroll { border: 1px solid var(--border); border-radius: 10px; padding: 20px; background: var(--bg-secondary); }
+.interior-page :is(.overall-mvp, .veto-timer) { background: var(--bg-secondary); border: 1px solid var(--border); border-top: 2px solid var(--accent); border-radius: var(--radius); }
+.interior-page .veto-map-card { background: var(--bg-secondary); border-radius: var(--radius); min-height: 110px; }
+.interior-page .bracket-scroll { border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; background: var(--bg-secondary); }
 .interior-page .coverage { font-size: 14px; }
+
+/* The main ID lets shared finishes override Astro's scoped component styles. */
+.interior-page #main-content :is(.insight-summary, .player-comparison, .comparison-profile, .match-leader, .map-mvp-card, .map-card, .map-detail-hero, .map-hero-stats, .bracket-match, .bracket-scroll, .tournament-hero) {
+  border-color: var(--border);
+  border-radius: var(--radius);
+}
+.interior-page #main-content .match-score-card {
+  background: var(--bg-secondary);
+  border-color: var(--border);
+  border-radius: var(--radius);
+}
+.interior-page #main-content .tournament-hero {
+  background: linear-gradient(115deg, rgba(29,32,30,.96), rgba(37,40,37,.98)), url('/images/cfl-hero.webp') center 60% / cover;
+  border-top-color: var(--accent);
+}
+.interior-page #main-content .tournament-hero::after { content: none; }
+.interior-page #main-content :is(.tournament-hero, .map-hero-heading) h1 {
+  font-family: var(--font-heading);
+  letter-spacing: .01em;
+}
+.interior-page #main-content :is(.map-tabs, .match-tabs) button {
+  border-radius: var(--radius);
+}
+.interior-page #main-content .map-card:hover,
+.interior-page #main-content .map-card:focus-within {
+  background: var(--bg-card-hover);
+  border-color: var(--accent);
+}
+.interior-page #main-content .bracket-match:hover,
+.interior-page #main-content .banned-map-item:hover,
+.interior-page #main-content .veto-maps .veto-map-card:hover:not(.banned):not(.picked):not(.disabled) {
+  transform: none;
+  box-shadow: none;
+}
+.interior-page #main-content .pick-card.filled { box-shadow: none; }
+.interior-page #main-content .player-comparison [data-compare-reset] {
+  color: var(--bg-primary);
+  border-radius: var(--radius);
+  transition: background-color .18s, border-color .18s;
+}
+.interior-page #main-content .player-comparison [data-compare-reset]:hover {
+  transform: none;
+  box-shadow: none;
+}
 @media (max-width: 640px) {
   .interior-page .page-header { padding-top: 24px; margin-bottom: 22px; }
   .interior-page .page-header::before { font-size: 11px; }
@@ -132,27 +176,27 @@
 
 /* Team directory */
 .interior-page #teamsGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
-.interior-page #teamsGrid .club-card { background:#2c2927; color:var(--text-primary); padding:0; overflow:hidden; border:1px solid #65503e; border-top:3px solid var(--accent); }
-.interior-page #teamsGrid .club-card:hover { background:#37302b; border-color:var(--accent); }
+.interior-page #teamsGrid .club-card { background:var(--bg-card); color:var(--text-primary); padding:0; overflow:hidden; border:1px solid var(--border); border-top:2px solid var(--olive); }
+.interior-page #teamsGrid .club-card:hover { background:var(--bg-card-hover); border-color:var(--accent); }
 .club-identity { display:flex; align-items:center; gap:16px; padding:24px 22px 18px; min-height:118px; }
 .club-identity img { flex-shrink:0; object-fit:contain; }
 .club-identity h2 { font-size:20px; line-height:1.3; overflow-wrap:anywhere; }
 .interior-page .club-identity a { color:var(--text-primary); }
 .club-meta { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:0 22px 22px; font-size:14px; }
-.interior-page .club-meta span { border:1px solid #77604d; color:var(--text-secondary); border-radius:20px; padding:4px 12px; }
-.interior-page .club-info { display:flex; justify-content:space-between; padding:16px 22px; border-top:1px solid #65503e; background:#332b25; color:var(--accent); font-size:14px; font-weight:600; }
-.interior-page .club-info:hover { background:#463023; color:#ffb18a; }
+.interior-page .club-meta span { border:1px solid var(--border-hover); color:var(--text-secondary); border-radius:var(--radius); padding:4px 12px; }
+.interior-page .club-info { display:flex; justify-content:space-between; padding:16px 22px; border-top:1px solid var(--border); background:var(--bg-secondary); color:var(--accent); font-size:14px; font-weight:600; }
+.interior-page .club-info:hover { background:var(--olive-muted); color:var(--accent-hover); }
 /* Shared team and player detail banner */
-.profile-banner { display:flex; align-items:center; justify-content:space-between; gap:36px; padding:40px; margin:32px 0 24px; border:1px solid #61412d; border-radius:12px; background:linear-gradient(115deg,#3f2b20,#282323 65%,#252528); }
+.profile-banner { display:flex; align-items:center; justify-content:space-between; gap:36px; padding:40px; margin:32px 0 24px; border:1px solid var(--border); border-radius:var(--radius); background:linear-gradient(115deg,rgba(29,32,30,.96),rgba(37,40,37,.98)),url('/images/cfl-hero.webp') center 60% / cover; }
 .profile-identity { display:flex; align-items:center; gap:28px; flex:1; min-width:0; }
-.profile-image { width:160px; height:160px; flex-shrink:0; object-fit:cover; border-radius:12px; }
+.profile-image { width:160px; height:160px; flex-shrink:0; object-fit:cover; border-radius:var(--radius); }
 .profile-image.team-image { object-fit:contain; }
 .profile-kicker { font-size:15px; color:var(--text-secondary); margin-bottom:10px; }
 .profile-kicker a { color:var(--text-secondary); }
-.profile-identity h1 { font-size:clamp(26px,3vw,40px); line-height:1.2; letter-spacing:-.6px; overflow-wrap:anywhere; margin-bottom:14px; }
+.profile-identity h1 { font-family:var(--font-heading); font-size:clamp(26px,3vw,40px); line-height:1.2; letter-spacing:.01em; overflow-wrap:anywhere; margin-bottom:14px; }
 .profile-subtitle { color:var(--accent); font-size:17px; font-weight:600; }
-.profile-active { display:inline-block; border:1px solid #846244; border-radius:20px; padding:4px 14px; font-size:13px; }
-.profile-metrics { width:300px; flex-shrink:0; background:#ffffff06; border:1px solid #ffffff15; border-radius:10px; padding:8px 20px; }
+.profile-active { display:inline-block; border:1px solid var(--olive); border-radius:var(--radius); padding:4px 14px; font-size:13px; }
+.profile-metrics { width:300px; flex-shrink:0; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:8px 20px; }
 .profile-metrics div { display:flex; justify-content:space-between; align-items:center; gap:18px; padding:12px 0; border-bottom:1px solid #ffffff15; }
 .profile-metrics div:last-child { border:0; }
 .profile-metrics dt { font-size:13px; font-weight:600; }
@@ -175,7 +219,7 @@
   background: var(--bg-secondary);
   color: var(--text-secondary);
   border: 1px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--radius);
   padding: 12px 16px;
   min-height: 48px;
   font: inherit;
@@ -204,17 +248,17 @@
 /* Tournament and match listings share the team card finish. */
 .interior-page .tourney-grid .tourney-card,
 .interior-page #matchesGrid .match-card {
-  background: #2c2927;
-  border: 1px solid #65503e;
-  border-top: 3px solid var(--accent);
-  border-radius: 10px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-top: 2px solid var(--olive);
+  border-radius: var(--radius);
   padding: 24px 22px 0;
   overflow: hidden;
   box-shadow: none;
 }
 .interior-page .tourney-grid .tourney-card:hover,
 .interior-page #matchesGrid .match-card:hover {
-  background: #37302b;
+  background: var(--bg-card-hover);
   border-color: var(--accent);
   transform: none;
 }
@@ -231,8 +275,8 @@
   gap: 12px;
   margin: auto -22px 0;
   padding: 16px 22px;
-  border-top: 1px solid #65503e;
-  background: #332b25;
+  border-top: 1px solid var(--border);
+  background: var(--bg-secondary);
   color: var(--accent);
   font-size: 14px;
   font-weight: 600;
@@ -241,6 +285,6 @@
 .interior-page #matchesGrid .match-card-info { margin-top: 20px; }
 .interior-page .tourney-card:hover .tourney-cta,
 .interior-page #matchesGrid .match-card:hover .match-card-info {
-  background: #463023;
-  color: #ffb18a;
+  background: var(--olive-muted);
+  color: var(--accent-hover);
 }

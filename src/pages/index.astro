@@ -1,1492 +1,864 @@
 ---
 import Thumbnail from '../components/Thumbnail.astro';
-import { getOverallStandings } from '../utils/standings';
 import Layout from '../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
+import { getOverallStandings } from '../utils/standings';
 import { calculateStatistics, emptyStats } from '../utils/statistics';
-import { getMatchRound } from '../utils/tournament';
-import {
-  getMatchTournamentId,
-  getMatchTeam1Id,
-  getMatchTeam2Id,
-  getMatchWinnerId,
-} from '../utils/content';
+import { getMatchTeam1Id, getMatchTeam2Id } from '../utils/content';
+import '../styles/home.css';
 
 const teams = await getCollection('teams');
 const allPlayers = await getCollection('players');
 const matches = await getCollection('matches');
-const allTournaments = await getCollection('tournaments');
+const tournaments = await getCollection('tournaments');
+
 const calculated = calculateStatistics(matches);
-const players = allPlayers.map(player => ({ ...player, data: { ...player.data, stats: calculated.players.get(player.data.uid || player.id) ?? emptyStats() } }));
 
-const totalTeams = teams.length;
-const totalPlayers = players.length;
-const totalMatches = matches.length;
-const completedMatches = matches.filter(m => m.data.status === 'completed');
-const upcomingMatches = matches.filter(m => m.data.status === 'upcoming').sort((a,b) => a.data.date.localeCompare(b.data.date));
-const totalKills = calculated.totals.kills;
-
-// Resolve each tournament and its matches by canonical ID.
-const tournaments = allTournaments.map(tournament => {
-  const tMatches = matches.filter(m => getMatchTournamentId(m) === tournament.id);
-  const finalMatch = tMatches.find(m => getMatchRound(m, tournament)?.placement === 1 && m.data.status === 'completed');
-  const bronzeMatch = tMatches.find(m => getMatchRound(m, tournament)?.placement === 3 && m.data.status === 'completed');
-
-  let winnerTeams = [];
-
-  if (finalMatch) {
-    const winner = teams.find(t => t.id === getMatchWinnerId(finalMatch));
-    const finalWinnerId = getMatchWinnerId(finalMatch);
-    const finalTeam1Id = getMatchTeam1Id(finalMatch);
-    const finalTeam2Id = getMatchTeam2Id(finalMatch);
-    const runnerUpId = finalWinnerId && finalWinnerId === finalTeam1Id
-      ? finalTeam2Id
-      : finalWinnerId && finalWinnerId === finalTeam2Id ? finalTeam1Id : null;
-    const runnerUp = teams.find(t => t.id === runnerUpId);
-    const thirdPlace = bronzeMatch ? teams.find(t => t.id === getMatchWinnerId(bronzeMatch)) : null;
-
-    if (winner) winnerTeams.push({ team: winner, place: 1 });
-    if (runnerUp) winnerTeams.push({ team: runnerUp, place: 2 });
-    if (thirdPlace) winnerTeams.push({ team: thirdPlace, place: 3 });
+const players = allPlayers.map(player => ({
+  ...player,
+  data: {
+    ...player.data,
+    stats:
+      calculated.players.get(player.data.uid || player.id) ??
+      emptyStats()
   }
+}));
 
-  return { id: tournament.id, name: tournament.data.name, winnerTeams, finalMatch, bronzeMatch };
-});
+const standings = getOverallStandings(teams, matches, tournaments);
 
-// Calculate placement points from Final and Bronze Match
-function getPlacementPoints(teamId) {
-  return tournaments.reduce((total, { finalMatch, bronzeMatch }) => {
-    if (finalMatch) {
-      if (getMatchWinnerId(finalMatch) === teamId) return total + 10;
-      if (getMatchTeam1Id(finalMatch) === teamId || getMatchTeam2Id(finalMatch) === teamId) return total + 6;
-    }
-    if (bronzeMatch) {
-      if (getMatchWinnerId(bronzeMatch) === teamId) return total + 4;
-      if (getMatchTeam1Id(bronzeMatch) === teamId || getMatchTeam2Id(bronzeMatch) === teamId) return total + 2;
-    }
-    return total;
-  }, 0);
-}
-
-function getTeamKillPoints(teamId) {
-  return calculated.teams.get(teamId)?.kills ?? 0;
-}
-
-function getTeamRecord(teamId) {
-  let wins = 0, losses = 0;
-  completedMatches.forEach(m => {
-    if (getMatchTeam1Id(m) === teamId) {
-      if (m.data.score1 > m.data.score2) wins++;
-      else if (m.data.score1 < m.data.score2) losses++;
-    } else if (getMatchTeam2Id(m) === teamId) {
-      if (m.data.score2 > m.data.score1) wins++;
-      else if (m.data.score2 < m.data.score1) losses++;
-    }
-  });
-  return { wins, losses };
-}
-
-// Set of team IDs that won a tournament (1st place in any tournament's Final)
-const tournamentWinnerIds = new Set(
-  tournaments
-    .flatMap(t => t.winnerTeams)
-    .filter(wt => wt.place === 1)
-    .map(wt => wt.team.id)
+const teamById = new Map(
+  teams.map(team => [team.id, team])
 );
 
-const standings = getOverallStandings(teams, matches, allTournaments);
+const teamName = (id: string | null) =>
+  teamById.get(id ?? '')?.data.name ??
+  id ??
+  'TBD';
 
-const topFraggers = [...players].sort((a, b) => b.data.stats.kills - a.data.stats.kills).slice(0, 5);
-const topAssistsPlayers = [...players].sort((a, b) => b.data.stats.assists - a.data.stats.assists).slice(0, 5);
+const teamLogo = (id: string | null) => {
+  const team = teamById.get(id ?? '');
 
-const totalMVPs = calculated.totals.mvpCount;
-const topMVPPlayers = players
-  .map(p => ({ player: p, mvpCount: p.data.stats.mvpCount }))
-  .filter(p => p.mvpCount > 0)
-  .sort((a, b) => b.mvpCount - a.mvpCount)
+  return team
+    ? team.data.logo || `/logos/${team.data.tag}.webp`
+    : '/logos/default.webp';
+};
+
+const completedMatches = matches.filter(
+  match => match.data.status === 'completed'
+);
+
+const recentMatches = [...completedMatches]
+  .sort(
+    (a, b) =>
+      b.data.date.localeCompare(a.data.date) ||
+      b.id.localeCompare(a.id, undefined, { numeric: true })
+  )
   .slice(0, 5);
-const leaderboards = [
-  { title: 'Top fraggers', label: 'Kills', entries: topFraggers.map(p => ({ player: p, value: p.data.stats.kills })) },
-  { title: 'Top assists', label: 'Assists', entries: topAssistsPlayers.map(p => ({ player: p, value: p.data.stats.assists })) },
-  { title: 'Top MVPs', label: 'Awards', entries: topMVPPlayers.map(p => ({ player: p.player, value: p.mvpCount })) },
+
+const upcomingMatches = matches
+  .filter(match => match.data.status === 'upcoming')
+  .sort((a, b) => a.data.date.localeCompare(b.data.date));
+
+const nextMatch = upcomingMatches[0];
+
+const formatDate = (date: string) =>
+  new Date(`${date}T00:00:00Z`).toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    timeZone: 'UTC'
+  });
+
+const leaders = [
+  {
+    title: 'Top fraggers',
+    unit: 'Kills',
+    entries: [...players]
+      .sort((a, b) => b.data.stats.kills - a.data.stats.kills)
+      .slice(0, 3)
+      .map(player => ({
+        player,
+        value: player.data.stats.kills
+      }))
+  },
+  {
+    title: 'Top assists',
+    unit: 'Assists',
+    entries: [...players]
+      .sort((a, b) => b.data.stats.assists - a.data.stats.assists)
+      .slice(0, 3)
+      .map(player => ({
+        player,
+        value: player.data.stats.assists
+      }))
+  },
+  {
+    title: 'Top MVPs',
+    unit: 'Awards',
+    entries: [...players]
+      .filter(player => player.data.stats.mvpCount > 0)
+      .sort((a, b) => b.data.stats.mvpCount - a.data.stats.mvpCount)
+      .slice(0, 3)
+      .map(player => ({
+        player,
+        value: player.data.stats.mvpCount
+      }))
+  }
 ];
-const teamName = id => teams.find(t => t.id === id)?.data.name ?? id ?? 'TBD';
+
+const seasons = [
+  'August',
+  'September',
+  'October',
+  'November'
+].map((month, index) => {
+  const number = index + 1;
+
+  const tournament = tournaments.find(item =>
+    new RegExp(`\\bS${number}\\b`, 'i').test(item.data.name)
+  );
+
+  return {
+    number,
+    month,
+    tournament,
+    status: tournament?.data.status ?? null
+  };
+});
+
+const placements = [
+  { label: 'Champion', rank: '01', points: 10 },
+  { label: 'Runner-up', rank: '02', points: 6 },
+  { label: 'Third place', rank: '03', points: 4 },
+  { label: 'Fourth place', rank: '04', points: 2 }
+];
+
+const latestTournament = [...tournaments]
+  .sort((a, b) =>
+    b.data.startDate.localeCompare(a.data.startDate)
+  )[0];
+
+/*
+ * Tournament winners are the teams already guaranteed
+ * an All-Star position.
+ *
+ * The standings utility already determines this through
+ * isTournamentWinner, so we reuse that instead of
+ * hard-coding qualified teams.
+ */
+const qualifiedTeams = standings.filter(
+  team => team.isTournamentWinner
+);
+
+const allStarSpots = 10;
+
+const remainingSpots = Math.max(0, allStarSpots - qualifiedTeams.length);
+
+const qualificationPercent = Math.min(
+  (qualifiedTeams.length / allStarSpots) * 100,
+  100
+);
 ---
 
-<Layout title="CFL Esports ID — Team Standings & Statistics" current="Home">
-  <div class="container dashboard">
-    <section class="home-hero">
-      <div class="hero-overlay"></div>
+<Layout
+  title="Clash for Glory — Road to All-Star"
+  current="Home"
+>
+  <div class="home-page">
 
-      <div class="hero-content">
-        <span class="hero-eyebrow">CFL ESPORTS INDONESIA</span>
+    <!-- HERO -->
+    <section
+      class="home-hero"
+      aria-labelledby="home-title"
+    >
+      <picture class="home-hero-picture">
+        <source
+          media="(max-width: 768px)"
+          srcset="/images/cfl-hero-mobile.webp"
+        />
 
-        <h1>
-          CROSSFIRE
-          <strong>LEGENDS</strong>
+        <img
+          class="home-hero-art"
+          src="/images/cfl-hero.webp"
+          alt=""
+          width="2079"
+          height="756"
+          fetchpriority="high"
+        />
+      </picture>
+
+      <div class="hero-shade" aria-hidden="true"></div>
+
+      <div class="home-shell hero-copy">
+        <p class="home-kicker">
+          Crossfire Legends · Indonesia
+        </p>
+
+        <h1 id="home-title">
+          <span>Clash for Glory</span>
+          <strong>
+            Road to <em>All-Star</em>
+          </strong>
         </h1>
 
-        <p class="hero-subtitle">TOURNAMENT HUB</p>
-
         <p class="hero-description">
-          Teams, players, matches, tournaments. All in one place.
+          Four tournaments. Ten All-Star spots.<br />
+          Indonesia fights for a bigger stage.
         </p>
 
         <div class="hero-actions">
-          <a href="/tournament" class="hero-primary">
-            View tournaments
+          <a
+            class="home-primary"
+            href="#standings"
+          >
+            View standings
+            <span aria-hidden="true">→</span>
           </a>
 
-          <a href="/teams" class="hero-secondary">
-            View Teams
+          <a
+            class="home-secondary"
+            href="#qualification"
+          >
+            All-Star qualification
           </a>
         </div>
       </div>
     </section>
-    <div class="standings-layout">
-      <aside class="season-panel">
-        <span class="eyebrow">COMPETITION DETAILS</span><h2 class="competition-title"><span class="competition-number" style="color: #ff742e;">10</span> <span class="competition-word" style="color: #ffffff;">SPOTS</span><br /><span class="competition-number" style="color: #ff742e;">4</span> <span class="competition-word" style="color: #ffffff;">CHANCES</span></h2>
-        
-        <div class="season-counts" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));"><div style="grid-column:auto;"><strong style="color:#ff742e;">{totalTeams}</strong><span>Teams</span></div><div style="grid-column:auto;"><strong style="color:#ff742e;">{totalPlayers}</strong><span>Players</span></div><div style="grid-column:auto;"><strong style="color:#ff742e;">{completedMatches.length}</strong><span>Matches</span></div><div style="grid-column:auto;"><strong style="color:#ff742e;">{totalKills.toLocaleString('en-US')}</strong><span>Total Kills</span></div></div>
-        <div class="season-schedule"><span class="eyebrow">ROAD TO ALL-STAR</span><div><span>S1 · August</span><span>S2 · September</span><span>S3 · October</span><span>S4 · November</span></div><p>One tournament each month.</p></div>
-        <div class="scoring"><span class="eyebrow">HOW POINTS WORK</span><p>Kill points + placement points = total score.</p><dl><div><dt>Champion</dt><dd>+10</dd></div><div><dt>Runner-up</dt><dd>+6</dd></div><div><dt>Third place</dt><dd>+4</dd></div><div><dt>Fourth place</dt><dd>+2</dd></div></dl></div>
-        <a href="/veto" class="veto-cta">Plan your next match <strong>Open map veto</strong></a>
-      </aside>
-      <section class="standings-panel" aria-labelledby="standings-title">
-        <div class="section-heading"><div><span class="eyebrow">OVERALL RANKINGS</span><h2 id="standings-title">Team standings</h2></div><span class="count-badge">{totalTeams} teams</span></div>
-        <div class="standings-scroll"
-          tabindex="0"
-          role="region"
-          aria-label="Team standings, scroll horizontally on small screens">
-          <table class="standings-table">
-            <thead>
-              <tr>
-                <th scope="col">Rank</th>
-                <th scope="col">Team</th>
-                <th scope="col">Kills</th>
-                <th scope="col">Placement</th>
-                <th scope="col">Total</th>
-              </tr>
-            </thead>
 
-            <tbody>
-              {standings.map((team, index) => (
-                <tr
-                  class:list={[
-                    index < 4
-                      ? 'top-four'
-                      : index < 10
-                        ? 'top-ten'
-                        : ''
-                  ]}
+    <!-- SEASON NUMBERS -->
+    <div class="competition-strip">
+      <div class="home-shell competition-inner">
+
+        <dl class="competition-numbers">
+          <div>
+            <dd>{teams.length}</dd>
+            <dt>Teams</dt>
+          </div>
+
+          <div>
+            <dd>{players.length}</dd>
+            <dt>Players</dt>
+          </div>
+
+          <div>
+            <dd>4</dd>
+            <dt>Tournaments</dt>
+          </div>
+
+          <div>
+            <dd>10</dd>
+            <dt>All-Star spots</dt>
+          </div>
+        </dl>
+
+        <p class="competition-region">
+          Indonesia
+          <span>Road to All-Star</span>
+        </p>
+
+      </div>
+    </div>
+
+    <main class="home-shell home-content">
+
+      <!-- QUALIFICATION -->
+      <section
+        class="home-panel qualification-section"
+        id="qualification"
+        aria-labelledby="qualification-title"
+      >
+        <div class="panel-heading qualification-heading">
+
+          <div>
+            <p class="home-kicker">
+              The destination
+            </p>
+
+            <h2 id="qualification-title">
+              All-Star qualification
+            </h2>
+
+            <p class="panel-description">
+              Tournament winners secure their place.
+              Remaining spots are decided by the final
+              Road to All-Star standings.
+            </p>
+          </div>
+
+          <div class="qualification-count">
+            <strong>{qualifiedTeams.length}</strong>
+            <span>/ {allStarSpots} qualified</span>
+          </div>
+
+        </div>
+
+        <div
+          class="qualification-progress"
+          aria-hidden="true"
+        >
+          <span
+            style={`width:${qualificationPercent}%`}
+          ></span>
+        </div>
+
+        <div class="qualification-summary">
+          {qualifiedTeams.map(team => (
+            <a class="qualification-team" href={`/teams/${team.id}`}>
+              <Thumbnail src={team.logo} width={40} height="40" alt="" />
+              <span><strong>{team.name}</strong><small>Qualified</small></span>
+            </a>
+          ))}
+          <p class="qualification-remaining">
+            <strong>{remainingSpots}</strong>
+            <span>{remainingSpots === 1 ? 'place remaining' : remainingSpots === 0 ? 'All places filled' : 'places remaining'}</span>
+          </p>
+        </div>
+      </section>
+
+      <!-- ROAD + POINTS -->
+      <div class="season-row">
+
+        <section
+          class="home-panel season-road"
+          aria-labelledby="season-title"
+        >
+          <div class="panel-heading">
+            <div>
+              <p class="home-kicker">
+                Four tournaments. One journey.
+              </p>
+
+              <h2 id="season-title">
+                Road to All-Star
+              </h2>
+            </div>
+
+            <a href="/tournament">
+              View tournaments
+              <span aria-hidden="true">↗</span>
+            </a>
+          </div>
+
+          <ol class="season-timeline">
+            {seasons.map(season => (
+              <li
+                class:list={[
+                  season.status === 'completed' &&
+                    'is-complete',
+                  season.status === 'ongoing' &&
+                    'is-live'
+                ]}
+              >
+                <div class="season-number">
+                  S{season.number}
+                </div>
+
+                <span class="season-month">
+                  {season.month}
+                </span>
+
+                <span
+                  class="timeline-point"
+                  aria-hidden="true"
                 >
-                  <td class="position">
-                    {String(index + 1).padStart(2, '0')}
-                  </td>
+                  {season.status === 'completed'
+                    ? '✓'
+                    : ''}
+                </span>
 
-                  <td>
-                    <a class="team-identity" href={`/teams/${team.id}`}>
+                {season.tournament ? (
+                  <a
+                    href={`/tournament/${season.tournament.id}`}
+                  >
+                    {season.status === 'completed'
+                      ? 'Completed'
+                      : season.status === 'ongoing'
+                        ? 'In progress'
+                        : 'Upcoming'}
+
+                    <span aria-hidden="true">↗</span>
+                  </a>
+                ) : (
+                  <span class="season-state">
+                    Planned
+                  </span>
+                )}
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <section
+          class="home-panel scoring-panel"
+          aria-labelledby="points-title"
+        >
+          <h2 id="points-title">
+            How points work
+          </h2>
+
+          <p>
+            Kill points + placement points = total score
+          </p>
+
+          <dl class="points-grid">
+            {placements.map(place => (
+              <div>
+                <dt>
+                  <span>#{place.rank}</span>
+                  {place.label}
+                </dt>
+
+                <dd>+{place.points}</dd>
+              </div>
+            ))}
+          </dl>
+
+          <details class="points-rules">
+            <summary>
+              Qualification rules
+              <span aria-hidden="true">+</span>
+            </summary>
+
+            <p>
+              Tournament winners qualify automatically.
+              All-Star has 10 spots; remaining places are
+              decided by overall standings. Repeat winners
+              count once. Standings remain provisional
+              until all four tournaments are complete.
+            </p>
+          </details>
+        </section>
+
+      </div>
+
+      <!-- STANDINGS -->
+      <section
+        class="home-panel standings-section"
+        id="standings"
+        aria-labelledby="standings-title"
+      >
+        <div class="panel-heading">
+
+          <div class="heading-inline">
+            <h2 id="standings-title">
+              Team standings
+            </h2>
+
+            <span>Road to All-Star</span>
+          </div>
+
+          <a href="/teams">
+            Team directory
+            <span aria-hidden="true">↗</span>
+          </a>
+
+        </div>
+
+        <div class="standings-data">
+          <label class="standings-breakdown-toggle">
+            <input type="checkbox" id="standings-breakdown" />
+            Show point breakdown and qualification
+          </label>
+
+          <div
+            class="home-table-scroll"
+            role="region"
+            aria-label="Overall team standings"
+            tabindex="0"
+          >
+            <table class="home-standings">
+              <thead>
+                <tr>
+                  <th scope="col">#</th>
+                  <th scope="col">Team</th>
+                  <th scope="col">Kill pts</th>
+                  <th scope="col">Place pts</th>
+                  <th scope="col">Total</th>
+                  <th scope="col">Status</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {standings.slice(0, 5).map((team, index) => (
+                  <tr>
+                    <td>
+                      {String(index + 1).padStart(2, '0')}
+                    </td>
+
+                    <th scope="row">
+                      <a href={`/teams/${team.id}`}>
+                        <Thumbnail
+                          src={team.logo}
+                          width={32}
+                          height="32"
+                          alt=""
+                        />
+
+                        <span>{team.name}</span>
+                      </a>
+                    </th>
+
+                    <td>{team.killPoints}</td>
+                    <td>{team.placementPoints}</td>
+
+                    <td class="standing-total">
+                      {team.totalScore}
+                    </td>
+
+                    <td>
+                      {team.isTournamentWinner ? (
+                        <span class="qualified-label">
+                          Qualified
+                        </span>
+                      ) : (
+                        <span
+                          class="pending-status"
+                          aria-label="Not yet qualified"
+                        >
+                          —
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {standings.length > 5 && (
+            <details class="full-standings">
+              <summary>
+                All {standings.length} teams
+                <span aria-hidden="true">+</span>
+              </summary>
+
+              <div
+                class="home-table-scroll"
+                role="region"
+                aria-label="Remaining team standings"
+                tabindex="0"
+              >
+                <table class="home-standings">
+                  <thead>
+                    <tr>
+                      <th scope="col">#</th>
+                      <th scope="col">Team</th>
+                      <th scope="col">Kill pts</th>
+                      <th scope="col">Place pts</th>
+                      <th scope="col">Total</th>
+                      <th scope="col">Status</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {standings
+                      .slice(5)
+                      .map((team, index) => (
+                        <tr>
+                          <td>
+                            {String(index + 6).padStart(2, '0')}
+                          </td>
+
+                          <th scope="row">
+                            <a href={`/teams/${team.id}`}>
+                              <Thumbnail
+                                src={team.logo}
+                                width={32}
+                                height="32"
+                                alt=""
+                                loading="lazy"
+                              />
+
+                              <span>{team.name}</span>
+                            </a>
+                          </th>
+
+                          <td>{team.killPoints}</td>
+                          <td>{team.placementPoints}</td>
+
+                          <td class="standing-total">
+                            {team.totalScore}
+                          </td>
+
+                          <td>
+                            {team.isTournamentWinner ? (
+                              <span class="qualified-label">
+                                Qualified
+                              </span>
+                            ) : (
+                              <span
+                                class="pending-status"
+                                aria-label="Not yet qualified"
+                              >
+                                —
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </details>
+          )}
+
+          {!standings.length && (
+            <p class="home-empty">
+              Standings will appear when teams are registered.
+            </p>
+          )}
+
+        </div>
+      </section>
+
+      <!-- PLAYERS + MATCHES -->
+      <div class="performance-row">
+
+        <section
+          class="home-panel players-section"
+          aria-labelledby="players-title"
+        >
+          <div class="panel-heading">
+
+            <div class="heading-inline">
+              <h2 id="players-title">
+                Top players
+              </h2>
+
+              <span>Overall performance</span>
+            </div>
+
+            <a href="/players">
+              View all players
+              <span aria-hidden="true">↗</span>
+            </a>
+
+          </div>
+
+          <div class="home-leaderboards">
+            {leaders.map(board => (
+              <article class="home-leaderboard">
+
+                <h3>
+                  {board.title}
+                  <span>{board.unit}</span>
+                </h3>
+
+                {board.entries.map(
+                  ({ player, value }, index) => (
+                    <a
+                      class="home-player"
+                      href={`/players/${player.id}`}
+                    >
+                      <span class="player-position">
+                        {index + 1}
+                      </span>
+
                       <Thumbnail
-                        src={team.logo}
-                        width={34}
-                        height="34"
+                        src={
+                          player.data.avatar ||
+                          '/players/default.webp'
+                        }
+                        width={42}
+                        height="48"
                         alt=""
-                        onerror="this.onerror=null; this.src='/logos/default.webp'"
+                        loading="lazy"
                       />
 
-                      <span>
-                        <span class="team-name-line">
-                          {team.name}
-                          {team.isTournamentWinner && (
-                            <span class="winner-crown" title="Tournament winner">👑</span>
-                          )}
-                        </span>
+                      <span class="player-identity">
+                        <strong>
+                          {player.data.ign}
+                        </strong>
 
-                        <small class="mobile-points">
-                          {team.killPoints} kills · {team.placementPoints} placement
+                        <small>
+                          {teamName(player.data.team)}
                         </small>
                       </span>
-                    </a>
-                  </td>
 
-                  <td>{team.killPoints}</td>
-                  <td>{team.placementPoints}</td>
-                  <td class="total-points">{team.totalScore}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                      <span class="player-value">
+                        {value}
+                      </span>
+                    </a>
+                  )
+                )}
+
+                {!board.entries.length && (
+                  <p class="home-empty">
+                    No recorded {board.unit.toLowerCase()} yet.
+                  </p>
+                )}
+
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section
+          class="home-panel latest-section"
+          aria-labelledby="latest-title"
+        >
+          <div class="panel-heading">
+            <h2 id="latest-title">
+              Latest matches
+            </h2>
+
+            <a href="/matches">
+              View all
+              <span aria-hidden="true">↗</span>
+            </a>
+          </div>
+
+          <div class="home-match-list">
+            {recentMatches.map(match => (
+              <a
+                class="home-match"
+                href={`/matches/${match.id}`}
+              >
+                <time datetime={match.data.date}>
+                  {formatDate(match.data.date)}
+                </time>
+
+                <div class="match-team">
+                  <Thumbnail
+                    src={teamLogo(
+                      getMatchTeam1Id(match)
+                    )}
+                    width={24}
+                    height="24"
+                    alt=""
+                    loading="lazy"
+                  />
+
+                  <span>
+                    {teamName(
+                      getMatchTeam1Id(match)
+                    )}
+                  </span>
+
+                  <strong
+                    class:list={[
+                      match.data.score1 >
+                        match.data.score2 &&
+                        'winning-score'
+                    ]}
+                  >
+                    {match.data.score1}
+                  </strong>
+                </div>
+
+                <div class="match-team">
+                  <Thumbnail
+                    src={teamLogo(
+                      getMatchTeam2Id(match)
+                    )}
+                    width={24}
+                    height="24"
+                    alt=""
+                    loading="lazy"
+                  />
+
+                  <span>
+                    {teamName(
+                      getMatchTeam2Id(match)
+                    )}
+                  </span>
+
+                  <strong
+                    class:list={[
+                      match.data.score2 >
+                        match.data.score1 &&
+                        'winning-score'
+                    ]}
+                  >
+                    {match.data.score2}
+                  </strong>
+                </div>
+              </a>
+            ))}
+          </div>
+
+          {!recentMatches.length && (
+            <p class="home-empty">
+              Completed matches will appear here.
+            </p>
+          )}
+        </section>
+
+      </div>
+
+      <!-- NEXT MATCH -->
+      <section
+        class="home-panel next-match"
+        aria-labelledby="next-title"
+      >
+        <h2 id="next-title">
+          Next match
+        </h2>
+
+        <div>
+          {nextMatch ? (
+            <>
+              <p>
+                {teamName(getMatchTeam1Id(nextMatch))}
+
+                <span class="versus">
+                  vs
+                </span>
+
+                {teamName(getMatchTeam2Id(nextMatch))}
+              </p>
+
+              <time datetime={nextMatch.data.date}>
+                {formatDate(nextMatch.data.date)}
+              </time>
+            </>
+          ) : (
+            <>
+              <p>
+                No upcoming match at the moment.
+              </p>
+
+              <span>
+                Stay tuned for the next matchup.
+              </span>
+            </>
+          )}
         </div>
-        <p class="table-note"><Thumbnail src="/icons/crown.webp" width={24} alt="" class="inline-icon" /> Tournament winners qualify automatically. All-Star has 10 spots total; remaining spots are decided by standings placement. Repeat winners count once. Standings places remain provisional until all four monthly tournaments are complete.</p>
-      </section>
-    </div>
-    <div class="section-heading below-heading"><div><span class="eyebrow">INDIVIDUAL PERFORMANCE</span><h2>Players making the difference</h2></div><a href="/players">All players</a></div>
-    <section class="leaderboards" aria-label="Player leaders">
-      {leaderboards.map(board => <article class="leaderboard"><div class="board-heading"><h3>{board.title}</h3><span>{board.label}</span></div>{board.entries.map(({player, value}, index) => <a class:list={['player-row', index < 3 && `medal-${index + 1}`]} href={`/players/${player.id}`}><span class="player-rank">{index + 1}</span><Thumbnail src={player.data.avatar || '/players/default.webp'} alt="" width={42} height="42" loading="lazy" onerror="this.onerror=null; this.src='/players/default.webp'" /><span class="player-name">{player.data.ign}<small>{teamName(player.data.team)}</small></span><strong>{value}</strong></a>)}{board.entries.length === 0 && <p class="empty-copy">No recorded awards yet.</p>}</article>)}
-    </section>
-    <div class="bottom-grid">
-      <section class="bottom-panel"><div class="section-heading"><h2>Tournament winners</h2><a href="/tournament">View all</a></div>
-        {tournaments.filter(t => t.winnerTeams.length).map(t => <article class="winner-event"><a class="event-name" href={`/tournament/${t.id}`}>{t.name}</a>{t.winnerTeams.map(w => <a class:list={['podium-row', `medal-${w.place}`]} href={`/teams/${w.team.id}`}><span class="podium-place"><Thumbnail width={24}
-          src={
-            w.place === 1
-              ? '/icons/gold-medal.webp'
-              : w.place === 2
-              ? '/icons/silver-medal.webp'
-              : '/icons/bronze-medal.webp'
+
+        <a
+          href={
+            nextMatch
+              ? `/matches/${nextMatch.id}`
+              : '/veto'
           }
-          alt=""
-          class="podium-icon"
-        /></span><span>{w.team.data.name}</span><small>{w.place === 1 ? 'Champion' : w.place === 2 ? 'Runner-up' : 'Third place'}</small></a>)}</article>)}
-        {!tournaments.some(t => t.winnerTeams.length) && <p class="empty-copy">The next champion is yet to be decided.</p>}
+        >
+          {nextMatch
+            ? 'Match details'
+            : 'Plan a scrim'}
+
+          <span aria-hidden="true">→</span>
+        </a>
       </section>
-      <section class="bottom-panel"><div class="section-heading"><h2>Upcoming matches</h2><a href="/matches">Schedule</a></div>{upcomingMatches.slice(0,5).map(m => <a class="fixture" href={`/matches/${m.id}`}><time datetime={m.data.date}>{m.data.date}</time><strong>{teamName(m.data.team1Id)} <span>vs</span> {teamName(m.data.team2Id)}</strong></a>)}{!upcomingMatches.length && <div class="empty-fixtures"><span class="eyebrow">YOU'RE ALL CAUGHT UP</span><h3>Waiting for the next matchup</h3><p>Upcoming matches will appear here when the schedule is announced.</p><a href="/matches">Browse match results</a></div>}</section>
-    </div>
+
+      {latestTournament && (
+        <p class="home-record-note">
+          Latest recorded tournament:
+          {' '}
+          <a
+            href={`/tournament/${latestTournament.id}`}
+          >
+            {latestTournament.data.name}
+          </a>
+
+          <span>
+            {completedMatches.length} completed matches
+            {' · '}
+            {calculated.totals.kills.toLocaleString('en-US')}
+            {' '}recorded kills
+          </span>
+        </p>
+      )}
+
+    </main>
+
   </div>
 </Layout>
-<style>
-/* =========================================================
-   HOME HERO
-   ========================================================= */
-
-.home-hero {
-  position: relative;
-  min-height: 390px;
-  display: flex;
-  align-items: center;
-  overflow: hidden;
-  margin-bottom: 28px;
-
-  background-image: url('/images/cfl-hero.webp');
-  background-size: cover;
-  background-position: center;
-
-  border: 1px solid var(--border);
-  border-radius: 12px;
-}
-
-.hero-overlay {
-  position: absolute;
-  inset: 0;
-
-  background:
-    linear-gradient(
-      90deg,
-      rgba(6, 10, 14, 0.12) 0%,
-      rgba(6, 10, 14, 0.38) 25%,
-      rgba(6, 10, 14, 0.72) 43%,
-      rgba(6, 10, 14, 0.50) 58%,
-      rgba(6, 10, 14, 0.08) 78%,
-      transparent 100%
-    ),
-    linear-gradient(
-      0deg,
-      rgba(6, 10, 14, 0.62) 0%,
-      transparent 55%
-    );
-}
-
-.hero-content {
-  position: relative;
-  z-index: 1;
-
-  width: 500px;
-  max-width: 50%;
-
-  margin: 0 auto;
-  padding: 54px 0;
-
-  text-align: center;
-}
-
-.hero-eyebrow {
-  color: var(--accent);
-
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-}
-
-.home-hero h1 {
-  margin: 12px 0 0;
-  font-size: clamp(38px, 4.2vw, 58px);
-  line-height: 0.98;
-  letter-spacing: -0.045em;
-  font-weight: 800;
-}
-
-.home-hero h1 strong {
-  display: block;
-  color: var(--accent);
-}
-
-.hero-subtitle {
-  margin-top: 10px;
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-}
-
-.hero-description {
-  max-width: 430px;
-  margin: 16px auto 0;
-
-  color: rgba(255, 255, 255, 0.82);
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-.hero-actions {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-  margin-top: 25px;
-}
-
-.hero-primary,
-.hero-secondary {
-  width: 190px;
-  min-height: 44px;
-
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  padding: 0 16px;
-
-  border-radius: 6px;
-
-  font-size: 13px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.hero-primary {
-  background: var(--accent);
-  color: #111;
-}
-
-.hero-primary:hover {
-  background: var(--accent-hover);
-  color: #111;
-}
-
-.hero-secondary {
-  background: rgba(8, 12, 16, 0.45);
-  color: var(--text-primary);
-
-  border: 1px solid rgba(255, 255, 255, 0.2);
-
-  backdrop-filter: blur(8px);
-}
-
-.hero-secondary:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-
-/* =========================================================
-   DASHBOARD
-   ========================================================= */
-
-.dashboard {
-  padding-top: 36px;
-  padding-bottom: 28px;
-}
-
-.eyebrow {
-  color: var(--text-muted);
-
-  font-size: 12px;
-  font-weight: 750;
-  letter-spacing: 0.15em;
-}
-
-.mobile-points {
-  display: none !important;
-}
-
-.dashboard a {
-  transition:
-    color 0.18s,
-    background-color 0.18s,
-    border-color 0.18s,
-    box-shadow 0.18s;
-}
-
-.dashboard a:hover {
-  color: var(--accent);
-  text-decoration: none;
-}
-
-
-/* =========================================================
-   OVERALL STANDINGS LAYOUT
-   ========================================================= */
-
-.standings-layout {
-  display: grid;
-  grid-template-columns: 215px minmax(0, 1fr);
-  gap: 32px;
-}
-
-
-/* =========================================================
-   COMPETITION DETAILS
-   ========================================================= */
-
-.season-panel {
-  align-self: start;
-
-  padding: 24px;
-
-  background: var(--bg-secondary);
-
-  border: 1px solid var(--border);
-  border-top: 3px solid var(--accent);
-  border-radius: 10px;
-}
-
-.season-panel h2 {
-  margin: 15px 0;
-
-  font-size: 25px;
-  line-height: 1.2;
-  letter-spacing: -0.8px;
-}
-
-.season-panel h2 span {
-  color: var(--accent);
-}
-
-.season-panel p {
-  color: var(--text-muted);
-  font-size: 15px;
-}
-
-.season-panel .competition-title .competition-number {
-  color: var(--accent);
-  font-size: 25px;
-}
-
-.season-panel .competition-title .competition-word {
-  color: #fff;
-  margin-left: 6px;
-  font-size: 25px;
-}
-
-.season-panel .competition-title br {
-  display: initial;
-}
-
-
-/* Competition stats */
-
-.season-counts {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-
-  margin: 25px 0;
-}
-
-.season-counts div:last-child {
-  grid-column: auto;
-}
-
-.season-counts strong {
-  display: block;
-
-  color: var(--accent);
-
-  font-size: 25px;
-}
-
-.season-counts span {
-  color: var(--text-muted);
-  font-size: 13px;
-}
-
-
-/* Road to All-Star */
-
-.season-schedule {
-  padding: 18px 0;
-
-  border-top: 1px solid var(--border);
-}
-
-.season-schedule > div {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 8px;
-
-  margin: 12px 0;
-
-  font-size: 13px;
-}
-
-.season-schedule > div > span {
-  min-width: 0;
-
-  padding: 8px 10px;
-
-  background: var(--bg-card);
-
-  border-radius: 4px;
-
-  white-space: nowrap;
-  line-height: 1.6;
-}
-
-
-/* Scoring */
-
-.scoring {
-  padding-top: 20px;
-
-  border-top: 1px solid var(--border);
-}
-
-.scoring p {
-  margin: 10px 0;
-}
-
-.scoring dl div {
-  display: flex;
-  justify-content: space-between;
-
-  margin: 10px 0;
-
-  font-size: 14px;
-}
-
-.scoring dd {
-  color: var(--accent);
-  font-weight: 700;
-}
-
-
-/* Veto */
-
-.veto-cta {
-  display: block;
-
-  margin-top: 24px;
-  padding: 14px;
-
-  background: var(--accent-dim);
-  color: var(--text-secondary);
-
-  border-left: 2px solid var(--accent);
-
-  font-size: 13px;
-}
-
-.veto-cta strong {
-  display: block;
-
-  margin-top: 4px;
-
-  color: var(--accent);
-
-  font-size: 15px;
-}
-
-.veto-cta:hover {
-  background: var(--bg-card-hover);
-  box-shadow: inset 3px 0 var(--accent);
-}
-
-
-/* =========================================================
-   SECTION HEADINGS
-   ========================================================= */
-
-.section-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-
-  margin-bottom: 16px;
-}
-
-.section-heading h2 {
-  font-size: 20px;
-  letter-spacing: -0.45px;
-}
-
-.section-heading a {
-  font-size: 14px;
-  white-space: nowrap;
-}
-
-.count-badge {
-  padding: 5px 10px;
-
-  color: var(--text-muted);
-
-  border: 1px solid var(--border);
-  border-radius: 20px;
-
-  font-size: 13px;
-}
-
-
-/* Overall standings heading */
-
-.standings-panel > .section-heading {
-  position: relative;
-
-  margin-bottom: 14px;
-  padding-bottom: 15px;
-
-  border-bottom: 1px solid var(--border);
-}
-
-.standings-panel > .section-heading::after {
-  content: "";
-
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-
-  width: 52px;
-  height: 2px;
-
-  background: var(--accent);
-}
-
-.standings-panel > .section-heading h2 {
-  margin-top: 4px;
-
-  font-size: 24px;
-}
-
-
-/* =========================================================
-   STANDINGS TABLE
-   ========================================================= */
-
-.standings-scroll {
-  overflow-x: auto;
-}
-
-.standings-table {
-  width: 100%;
-
-  border-collapse: separate;
-  border-spacing: 0 6px;
-
-  font-size: 15px;
-}
-
-.standings-table th {
-  padding: 0 14px 6px;
-
-  background: transparent;
-  color: var(--text-muted);
-
-  font-size: 12px;
-  letter-spacing: 0.06em;
-  text-align: right;
-}
-
-.standings-table th:nth-child(-n + 2) {
-  text-align: left;
-}
-
-.standings-table td {
-  padding: 11px 14px;
-
-  background: var(--bg-card);
-
-  border: 0;
-
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-}
-
-.standings-table td:first-child {
-  width: 50px;
-
-  text-align: left;
-
-  border-radius: 6px 0 0 6px;
-}
-
-.standings-table td:nth-child(2) {
-  text-align: left;
-}
-
-.standings-table td:last-child {
-  border-radius: 0 6px 6px 0;
-}
-
-
-/* Qualification zones */
-
-.dashboard .standings-table .top-four td {
-  background: rgba(255, 116, 46, 0.07);
-}
-
-.dashboard .standings-table .top-ten td {
-  background: rgba(255, 255, 255, 0.035);
-}
-
-.dashboard .standings-table .top-four td:first-child {
-  border-left: 3px solid var(--accent);
-}
-
-.dashboard .standings-table .top-ten td:first-child {
-  border-left: 3px solid #9696a8;
-}
-
-.dashboard .standings-table tr:hover td {
-  background: #45454a;
-}
-
-
-/* Table data */
-
-.position {
-  color: var(--text-muted);
-
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.total-points {
-  color: var(--accent);
-  font-weight: 800;
-}
-
-
-/* Team */
-
-.team-identity {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-
-  color: var(--text-primary);
-
-  font-weight: 650;
-  line-height: 1.3;
-}
-
-.team-identity img {
-  flex-shrink: 0;
-  object-fit: contain;
-}
-
-.team-identity small {
-  display: block;
-
-  margin-top: 3px;
-
-  color: var(--accent);
-
-  font-size: 12px;
-  font-weight: 500;
-}
-
-
-/* Qualification */
-
-.table-note {
-  margin-top: 10px;
-  font-size: 11px;
-  line-height: 1.5;
-  color: var(--text-muted);
-}
-
-.team-name-line {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.winner-crown {
-  display: inline-block;
-  flex-shrink: 0;
-
-  font-size: 12px;
-  line-height: 1;
-
-  transform: translateY(-1px);
-}
-
-/* =========================================================
-   SMALL ICONS
-   ========================================================= */
-
-.inline-icon {
-  width: 14px;
-  height: 14px;
-
-  margin-right: 4px;
-
-  object-fit: contain;
-
-  vertical-align: -2px;
-}
-
-.table-note .inline-icon {
-  margin-right: 5px;
-}
-
-
-/* =========================================================
-   PLAYER LEADERBOARDS
-   ========================================================= */
-
-.below-heading {
-  position: relative;
-
-  margin-top: 44px;
-  padding-bottom: 14px;
-
-  border-bottom: 1px solid var(--border);
-}
-
-.below-heading::after {
-  content: "";
-
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-
-  width: 52px;
-  height: 2px;
-
-  background: var(--accent);
-}
-
-.below-heading h2 {
-  font-size: 24px;
-}
-
-.leaderboards {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 16px;
-
-  margin-top: 18px;
-}
-
-.leaderboard {
-  padding: 18px;
-
-  background:
-    linear-gradient(
-      180deg,
-      rgba(255, 116, 46, 0.04),
-      transparent 90px
-    ),
-    var(--bg-secondary);
-
-  border: 1px solid var(--border);
-  border-radius: 10px;
-}
-
-.board-heading {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
-
-  margin-bottom: 6px;
-  padding-bottom: 14px;
-
-  border-bottom: 1px solid var(--border);
-}
-
-.board-heading h3 {
-  font-size: 17px;
-  letter-spacing: -0.25px;
-}
-
-.board-heading > span {
-  color: var(--accent);
-
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-/* Player row */
-
-.player-row {
-  min-height: 64px;
-
-  display: flex;
-  align-items: center;
-  gap: 11px;
-
-  margin: 3px 0;
-  padding: 10px 8px;
-
-  color: var(--text-primary);
-
-  border: 0;
-  border-left: 3px solid transparent;
-  border-radius: 6px;
-
-  transition:
-    background-color 0.18s,
-    border-color 0.18s,
-    box-shadow 0.18s;
-}
-
-.player-row:hover {
-  background: rgba(255, 255, 255, 0.035);
-}
-
-.player-rank {
-  flex-shrink: 0;
-
-  width: 20px;
-
-  color: var(--text-muted);
-
-  font-size: 12px;
-  font-weight: 700;
-  text-align: center;
-}
-
-.player-row img {
-  flex-shrink: 0;
-
-  width: 42px;
-  height: 42px;
-
-  object-fit: cover;
-
-  background: var(--bg-card);
-
-  border-radius: 6px;
-}
-
-.player-name {
-  flex: 1;
-  min-width: 0;
-
-  font-size: 14px;
-  font-weight: 650;
-
-  overflow-wrap: anywhere;
-}
-
-.player-name small {
-  display: block;
-
-  margin-top: 1px;
-
-  color: var(--text-muted);
-
-  font-size: 11px;
-  font-weight: 500;
-}
-
-.player-row > strong {
-  font-size: 18px;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-}
-
-
-/* =========================================================
-   MEDALS
-   ========================================================= */
-
-.dashboard .medal-1 {
-  --medal-color: #e7bf59;
-  --medal-bg: rgba(231, 191, 89, 0.08);
-}
-
-.dashboard .medal-2 {
-  --medal-color: #c6cbd4;
-  --medal-bg: rgba(198, 203, 212, 0.06);
-}
-
-.dashboard .medal-3 {
-  --medal-color: #d79b70;
-  --medal-bg: rgba(215, 155, 112, 0.07);
-}
-
-
-/* Leaderboard medals */
-
-.dashboard .player-row[class*="medal-"] {
-  background: var(--medal-bg);
-  border-left-color: var(--medal-color);
-}
-
-.dashboard .player-row[class*="medal-"] .player-rank,
-.dashboard .player-row[class*="medal-"] > strong {
-  color: var(--medal-color);
-}
-
-.dashboard .player-row[class*="medal-"]:hover {
-  background: var(--medal-bg);
-  box-shadow: inset 0 0 0 1px var(--medal-color);
-}
-
-
-/* =========================================================
-   BOTTOM GRID
-   ========================================================= */
-
-.bottom-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
-  margin-top: 32px;
-}
-
-.bottom-panel {
-  padding: 20px;
-  background:
-    linear-gradient(
-      180deg,
-      rgba(255, 116, 46, 0.025),
-      transparent 110px
-    ),
-    var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-}
-
-.bottom-panel > .section-heading {
-  padding-bottom: 12px;
-  margin-bottom: 8px;
-  border-bottom: 1px solid var(--border);
-}
-
-
-/* =========================================================
-   TOURNAMENT WINNERS
-   ========================================================= */
-
-.event-name {
-  display: block;
-  margin: 16px 0 8px;
-  color: var(--text-muted);
-  font-size: 13px;
-}
-
-.podium-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-
-  min-height: 48px;
-  margin: 5px 0;
-  padding: 11px 10px;
-
-  color: var(--text-primary);
-
-  border-left: 3px solid transparent;
-  border-radius: 6px;
-
-  font-size: 14px;
-}
-
-.podium-row[class*="medal-"] {
-  background: var(--medal-bg);
-  border-left-color: var(--medal-color);
-}
-
-.podium-row[class*="medal-"]:hover {
-  background: var(--medal-bg);
-  box-shadow: inset 0 0 0 1px var(--medal-color);
-}
-
-.podium-place {
-  flex-shrink: 0;
-  width: 28px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  color: var(--medal-color, var(--accent));
-  font-weight: 700;
-}
-
-.podium-icon {
-  display: block;
-  width: 22px;
-  height: 22px;
-  object-fit: contain;
-}
-
-.podium-row small {
-  margin-left: auto;
-  color: var(--text-muted);
-  font-size: 11px;
-}
-
-
-/* =========================================================
-   UPCOMING MATCHES
-   ========================================================= */
-
-.fixture {
-  display: block;
-  padding: 13px 8px;
-  margin: 4px 0;
-  border-top: 0;
-  border-left: 3px solid transparent;
-  border-radius: 6px;
-}
-
-.fixture:hover {
-  padding-left: 10px;
-  background: var(--bg-card-hover);
-  border-left-color: var(--accent);
-  box-shadow: none;
-}
-
-.fixture time {
-  display: block;
-
-  color: var(--text-muted);
-
-  font-size: 13px;
-}
-
-.fixture strong {
-  color: var(--text-primary);
-  font-size: 14px;
-}
-
-.fixture span {
-  margin: 0 6px;
-  color: var(--accent);
-}
-
-
-/* Empty states */
-
-.empty-fixtures {
-  padding: 24px 4px;
-}
-
-.empty-fixtures h3 {
-  margin: 10px 0 6px;
-  font-size: 18px;
-}
-
-.empty-fixtures p,
-.empty-copy {
-  margin-bottom: 18px;
-  color: var(--text-muted);
-  font-size: 15px;
-}
-
-.empty-fixtures p {
-  max-width: 420px;
-}
-
-.empty-fixtures a {
-  font-size: 14px;
-}
-
-
-/* =========================================================
-   TABLET
-   ========================================================= */
-
-@media (max-width: 900px) {
-  .standings-layout {
-    grid-template-columns: 185px minmax(0, 1fr);
-    gap: 20px;
-  }
-
-  .season-panel {
-    padding: 18px;
-  }
-
-  .season-panel h2 {
-    font-size: 23px;
-  }
-
-  .leaderboards {
-    gap: 12px;
-  }
-
-  .leaderboard {
-    padding: 14px;
-  }
-
-  .standings-table th,
-  .standings-table td {
-    padding-left: 10px;
-    padding-right: 10px;
-  }
-}
-
-
-/* =========================================================
-   MOBILE
-   ========================================================= */
-
-@media (max-width: 640px) {
-  .dashboard {
-    padding-top: 22px;
-  }
-
-
-  /* Hero */
-
-  /* Hero */
-
-.home-hero {
-  min-height: 470px;
-  margin-bottom: 36px;
-  background-image: url('/images/cfl-hero-mobile.webp');
-  background-size: cover;
-  background-position: center top;
-}
-
-.hero-content {
-  align-self: stretch;
-
-  width: 100%;
-  max-width: none;
-
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-
-  margin: 0;
-  padding: 36px 22px 52px;
-
-  text-align: center;
-}
-
-.hero-overlay {
-  background:
-    linear-gradient(
-      180deg,
-      rgba(6, 10, 14, 0.10) 0%,
-      rgba(6, 10, 14, 0.22) 30%,
-      rgba(6, 10, 14, 0.68) 64%,
-      rgba(6, 10, 14, 0.94) 100%
-    );
-}
-
-.hero-eyebrow {
-  font-size: 10px;
-  letter-spacing: 0.18em;
-}
-
-.home-hero h1 {
-  margin-top: 10px;
-
-  font-size: 38px;
-  line-height: 0.98;
-}
-
-.hero-subtitle {
-  margin-top: 10px;
-
-  font-size: 16px;
-}
-
-.hero-description {
-  max-width: 310px;
-
-  margin: 14px auto 0;
-
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-@media (max-width: 640px) {
-  .hero-actions {
-    width: 100%;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-    margin-top: 20px;
-  }
-
-  .hero-primary,
-  .hero-secondary {
-    flex: none;
-    width: 100%;
-    max-width: 260px;
-    min-height: 44px;
-    padding: 0 16px;
-    font-size: 12px;
-    white-space: nowrap;
-  }
-}
-
-  /* Overall standings */
-
-  .standings-layout {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .standings-panel {
-    order: 0;
-  }
-
-  .season-panel {
-    order: 1;
-
-    width: 100%;
-
-    margin-top: 8px;
-  }
-
-  .season-panel h2 {
-    font-size: 22px;
-  }
-
-  .season-panel h2 br {
-    display: none;
-  }
-
-
-  /* Competition details */
-
-  .season-counts {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-
-    margin: 18px 0;
-  }
-
-  .scoring dl {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0 24px;
-  }
-
-  .veto-cta {
-    margin-top: 14px;
-  }
-
-
-  /* Standings table */
-
-  .standings-table {
-    width: 100%;
-    min-width: 0;
-
-    table-layout: fixed;
-
-    font-size: 14px;
-  }
-
-  .standings-table th:nth-child(3),
-  .standings-table th:nth-child(4),
-  .standings-table td:nth-child(3),
-  .standings-table td:nth-child(4) {
-    display: none;
-  }
-
-  .standings-table th,
-  .standings-table td {
-    padding-left: 8px;
-    padding-right: 8px;
-  }
-
-  .standings-table th:first-child {
-    width: 48px;
-  }
-
-  .standings-table th:last-child {
-    width: 58px;
-  }
-
-  /*
-   * Disable global sticky table columns on the compact
-   * homepage standings table.
-   */
-  .dashboard .standings-table th:first-child,
-  .dashboard .standings-table td:first-child,
-  .dashboard .standings-table th:nth-child(2),
-  .dashboard .standings-table td:nth-child(2) {
-    position: static;
-
-    left: auto;
-    z-index: auto;
-
-    border-right: 0;
-  }
-
-  .team-identity {
-    gap: 8px;
-  }
-
-  .team-identity img {
-    width: 28px;
-    height: 28px;
-  }
-
-  .team-identity .mobile-points {
-    display: block !important;
-
-    color: var(--text-muted);
-  }
-
-
-  /* Section headings */
-
-  .section-heading h2 {
-    font-size: 18px;
-  }
-
-  .standings-panel > .section-heading h2,
-  .below-heading h2 {
-    font-size: 20px;
-  }
-
-
-  /* Leaderboards */
-
-  .leaderboards {
-    grid-template-columns: 1fr;
-  }
-
-  .leaderboard {
-    padding: 18px;
-  }
-
-  .below-heading {
-    margin-top: 28px;
-  }
-
-  .below-heading .eyebrow {
-    font-size: 12px;
-  }
-
-  .player-row {
-    padding: 10px 8px;
-  }
-
-
-  /* Bottom panels */
-
-  .bottom-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .bottom-panel {
-    padding: 18px;
-  }
-
-  .podium-row {
-    gap: 8px;
-  }
-}
-</style>
