@@ -81,7 +81,19 @@ const sortedMatches = [...teamMatches].sort((a, b) => {
     <div class="roster-detail-grid section-spacing">
       {teamPlayers.map(player => (
         <a href={`/players/${player.id}`} class="roster-card">
-          <img class="avatar" src={player.data.avatar || '/players/default.webp'} alt={`${player.data.ign} photo`} loading="lazy" onerror="this.onerror=null; this.src='/players/default.webp'" style="object-fit:cover;" />
+          <img
+            class="avatar"
+            src={
+              player.data.avatar ||
+              (player.data.uid
+                ? `/players/${player.data.uid}.webp`
+                : '/players/default.webp')
+            }
+            alt={`${player.data.ign} photo`}
+            loading="lazy"
+            onerror="this.onerror=null; this.src='/players/default.webp'"
+            style="object-fit:cover;"
+          />
           <div class="roster-card-info">
             <strong>{player.data.ign}</strong>
             <span>{player.data.role || 'Player'}</span>

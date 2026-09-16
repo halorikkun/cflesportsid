@@ -61,6 +61,7 @@ const teams = defineCollection({
     name: z.string(),
     tag: z.string(),
     logo: z.string().optional(),
+    color: z.string().optional(),
     region: z.string(),
     founded: z.string().optional(),
     description: z.string().optional(),

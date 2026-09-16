@@ -114,7 +114,9 @@ const playerStats = (m.data.playerStats || [])
       uid: ps.uid,
       avatar:
         player?.data.avatar ||
-        '/players/default.webp',
+        (ps.uid
+          ? `/players/${ps.uid}.webp`
+          : '/players/default.webp'),
 
       ign:
         player
@@ -469,10 +471,10 @@ const roundMVPs =
                                     <img
                                       class="map-mvp-avatar"
                                       src={
-                                        playersMap.get(
-                                          mvp.uid
-                                        )?.data.avatar ||
-                                        '/players/default.webp'
+                                        playersMap.get(mvp.uid)?.data.avatar ||
+                                        (mvp.uid
+                                          ? `/players/${mvp.uid}.webp`
+                                          : '/players/default.webp')
                                       }
                                       alt=""
                                       width="100"

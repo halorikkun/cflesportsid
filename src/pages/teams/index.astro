@@ -4,27 +4,31 @@ import { getCollection } from 'astro:content';
 import { calculateStatistics, emptyStats } from '../../utils/statistics';
 
 const allMatches = await getCollection('matches');
-
 const calculated = calculateStatistics(allMatches);
 
 const allPlayers = await getCollection('players');
 const playersByUid = {};
+
 allPlayers.forEach(p => {
   if (p.data.uid) playersByUid[p.data.uid] = p;
 });
 
 const teams = (await getCollection('teams')).map(team => {
   const record = calculated.teams.get(team.id) ?? emptyStats();
+
   let teamPlayers = team.data.players
     .map(uid => playersByUid[uid])
     .filter(Boolean);
-    
+
   if (teamPlayers.length === 0) {
     teamPlayers = allPlayers.filter(p => p.data.team === team.id);
   }
-  
-  const { kills: totalKills, deaths: totalDeaths, assists: totalAssists } =
-    record;
+
+  const {
+    kills: totalKills,
+    deaths: totalDeaths,
+    assists: totalAssists
+  } = record;
 
   return {
     id: team.id,
@@ -32,17 +36,24 @@ const teams = (await getCollection('teams')).map(team => {
     tag: team.data.tag,
     logo: team.data.logo,
     region: team.data.region,
+
+    // Team identity color from team JSON.
+    // Neutral gray is used when no color is defined.
+    color: team.data.color || '#777B82',
+
     wins: record.wins,
     losses: record.losses,
     totalKills,
     totalDeaths,
     totalAssists,
+
     players: teamPlayers.map(p => ({
       id: p.id,
       ign: p.data.ign,
       uid: p.data.uid,
       status: p.data.status || 'active',
     })),
+
     playerCount: teamPlayers.length,
   };
 });
@@ -50,14 +61,26 @@ const teams = (await getCollection('teams')).map(team => {
 
 <Layout title="Teams - CFL Esports ID Tournament Hub" current="Teams">
   <div class="container">
+
     <div class="page-header">
       <h1>Teams</h1>
       <p>Search, sort, and filter all competing teams</p>
     </div>
 
     <div class="teams-toolbar">
-      <input type="text" id="searchInput" aria-label="Search teams" placeholder="Search team name or tag..." class="teams-search" />
-      <select id="sortSelect" aria-label="Sort teams" class="teams-sort">
+      <input
+        type="text"
+        id="searchInput"
+        aria-label="Search teams"
+        placeholder="Search team name or tag..."
+        class="teams-search"
+      />
+
+      <select
+        id="sortSelect"
+        aria-label="Sort teams"
+        class="teams-sort"
+      >
         <option value="name-asc">Name (A–Z)</option>
         <option value="name-desc">Name (Z–A)</option>
         <option value="wins-desc">Wins (High–Low)</option>
@@ -70,279 +93,361 @@ const teams = (await getCollection('teams')).map(team => {
     </div>
 
     <div class="teams-grid" id="teamsGrid">
+
       {teams.map(team => (
-        <div class="team-card club-card"
+        <div
+          class="team-card club-card"
+          style={`--team-color: ${team.color};`}
           data-name={team.name.toLowerCase()}
           data-tag={team.tag.toLowerCase()}
           data-wins={team.wins}
           data-losses={team.losses}
           data-kills={team.totalKills}
         >
+
           <div class="club-identity">
-            <img src={team.logo || `/logos/${team.tag}.webp`} alt="" width="64" height="64" onerror="this.onerror=null; this.src='/logos/default.webp'" />
+            <img
+              src={team.logo || `/logos/${team.tag}.webp`}
+              alt=""
+              width="64"
+              height="64"
+              onerror="this.onerror=null; this.src='/logos/default.webp'"
+            />
+
             <h2>{team.name}</h2>
           </div>
-          <div class="club-meta"><strong>{team.tag}</strong><span>{team.region === 'ID' ? 'Indonesia' : team.region}</span></div>
-          <a class="club-info" href={`/teams/${team.id}`}>Team info <span aria-hidden="true">→</span></a>
+
+          <div class="club-meta">
+            <strong>{team.tag}</strong>
+
+            <span>
+              {team.region === 'ID'
+                ? 'Indonesia'
+                : team.region}
+            </span>
+          </div>
+
+          <a
+            class="club-info"
+            href={`/teams/${team.id}`}
+          >
+            Team info
+            <span aria-hidden="true">→</span>
+          </a>
+
         </div>
       ))}
+
     </div>
 
-    <p id="noResults" class="no-results">No teams found.</p>
-    <div class="pagination" id="pagination" role="navigation" aria-label="Team pages"></div>
+    <p id="noResults" class="no-results">
+      No teams found.
+    </p>
+
   </div>
 
   <script>
-    // ... (Your existing JS remains exactly the same, it's perfect!) ...
     const searchInput = document.getElementById('searchInput');
     const sortSelect = document.getElementById('sortSelect');
     const grid = document.getElementById('teamsGrid');
     const noResults = document.getElementById('noResults');
-    const pagination = document.getElementById('pagination');
-    const cards = Array.from(grid.querySelectorAll('.team-card'));
-    const perPage = 10;
-    let currentPage = 1;
+
+    const cards = Array.from(
+      grid.querySelectorAll('.team-card')
+    );
 
     function getVisibleCards() {
-      const search = searchInput.value.toLowerCase();
+      const search = searchInput.value
+        .toLowerCase()
+        .trim();
+
       return cards.filter(card => {
-        const matchesSearch = !search || card.dataset.name.includes(search) || card.dataset.tag.includes(search);
-        return matchesSearch;
+        return (
+          !search ||
+          card.dataset.name.includes(search) ||
+          card.dataset.tag.includes(search)
+        );
       });
     }
 
     function sortCards(visible) {
-      const sortValue = sortSelect.value;
-      const [key, dir] = sortValue.split('-');
-      const isNumeric = ['wins', 'losses', 'kills'].includes(key);
+      const [key, dir] =
+        sortSelect.value.split('-');
+
+      const isNumeric =
+        ['wins', 'losses', 'kills'].includes(key);
+
       const asc = dir === 'asc';
+
       visible.sort((a, b) => {
-        let valA, valB;
+        let valA = a.dataset[key] ?? '';
+        let valB = b.dataset[key] ?? '';
+
         if (isNumeric) {
-          valA = parseFloat(a.dataset[key]);
-          valB = parseFloat(b.dataset[key]);
-          return asc ? valA - valB : valB - valA;
-        } else {
-          valA = a.dataset[key];
-          valB = b.dataset[key];
-          return asc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+          valA = Number(valA);
+          valB = Number(valB);
+
+          return asc
+            ? valA - valB
+            : valB - valA;
         }
+
+        return asc
+          ? valA.localeCompare(valB)
+          : valB.localeCompare(valA);
       });
     }
 
     function render() {
       const visible = getVisibleCards();
+
       sortCards(visible);
 
-      cards.forEach(card => { card.style.display = 'none'; grid.appendChild(card); });
+      cards.forEach(card => {
+        card.style.display = 'none';
+      });
 
-      const totalPages = Math.ceil(visible.length / perPage);
-      if (currentPage > totalPages) currentPage = 1;
+      visible.forEach(card => {
+        card.style.display = '';
+        grid.appendChild(card);
+      });
 
-      const start = (currentPage - 1) * perPage;
-      const end = start + perPage;
-      visible.slice(start, end).forEach(card => { card.style.display = ''; grid.appendChild(card); });
-
-      noResults.style.display = visible.length === 0 ? 'block' : 'none';
-      
-      const focusedLabel = pagination.contains(document.activeElement)
-        ? document.activeElement?.getAttribute('aria-label') : null;
-      pagination.innerHTML = '';
-      if (totalPages > 1) {
-        const prev = document.createElement('button');
-        prev.className = 'page-btn';
-        prev.textContent = '‹';
-        prev.setAttribute('aria-label', 'Previous page');
-        prev.disabled = currentPage === 1;
-        prev.addEventListener('click', () => { currentPage--; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
-        pagination.appendChild(prev);
-
-        for (let i = 1; i <= totalPages; i++) {
-          const btn = document.createElement('button');
-          btn.className = `page-btn ${i === currentPage ? 'active' : ''}`;
-          btn.textContent = i;
-          btn.setAttribute('aria-label', `Page ${i}`);
-          if (i === currentPage) btn.setAttribute('aria-current', 'page');
-          btn.addEventListener('click', () => { currentPage = i; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
-          pagination.appendChild(btn);
-        }
-
-        const next = document.createElement('button');
-        next.className = 'page-btn';
-        next.textContent = '›';
-        next.setAttribute('aria-label', 'Next page');
-        next.disabled = currentPage === totalPages;
-        next.addEventListener('click', () => { currentPage++; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
-        pagination.appendChild(next);
-        if (focusedLabel) {
-          const target = Array.from(pagination.querySelectorAll('button'))
-            .find(button => button.getAttribute('aria-label') === focusedLabel && !button.disabled)
-            || pagination.querySelector<HTMLButtonElement>('[aria-current="page"]');
-          target?.focus({ preventScroll: true });
-        }
-      }
+      noResults.style.display =
+        visible.length === 0
+          ? 'block'
+          : 'none';
     }
 
-    searchInput.addEventListener('input', () => { currentPage = 1; render(); });
-    sortSelect.addEventListener('change', () => { currentPage = 1; render(); });
+    searchInput.addEventListener('input', render);
+    sortSelect.addEventListener('change', render);
+
     render();
   </script>
+
 </Layout>
 
 <style>
-  /* NEW: Responsive grid instead of single column */
+
+  /* =========================
+     GRID
+     ========================= */
+
   .teams-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr); 
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
     gap: 1.5rem;
   }
+
+
+  /* =========================
+     TOOLBAR
+     ========================= */
 
   .teams-toolbar {
     display: flex;
     gap: 0.75rem;
     margin-bottom: 1.25rem;
   }
-  
-  /* NEW: Stack toolbar on very small screens */
-  @media (max-width: 480px) {
-    .teams-toolbar { flex-direction: column; }
-    .teams-search { width: 100%; }
-    .teams-grid { 
-      grid-template-columns: 1fr; 
-    }
-  }
 
-  .teams-search, .teams-sort {
+  .teams-search,
+  .teams-sort {
     padding: 0.6rem 0.75rem;
+
     background: var(--bg-card);
+    color: var(--text-primary);
+
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    color: var(--text-primary);
+
     font-size: 0.9rem;
   }
-  .teams-search { flex: 1; min-width: 200px; }
-  .teams-sort { cursor: pointer; }
-  .teams-sort:focus, .teams-search:focus {
+
+  .teams-search {
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .teams-sort {
+    cursor: pointer;
+  }
+
+  .teams-search:focus,
+  .teams-sort:focus {
     outline: none;
     border-color: var(--accent);
   }
 
+
+  /* =========================
+     TEAM CARD
+     ========================= */
+
   .team-card {
-    /* Inherits global .card styles, ensuring equal height in grid */
+    position: relative;
+
     height: 100%;
+
     display: flex;
     flex-direction: column;
-  }
 
-  .team-card-header {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-    margin-bottom: 1rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid var(--border);
-  }
-  .team-name-link { font-size: 1.1rem; }
-  .team-tag { color: var(--text-muted); font-size: 0.85rem; font-weight: 600; }
-  .team-region {
-    margin-left: auto;
-    font-size: 0.8rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-muted);
-    background: var(--accent-dim);
-    padding: 0.15rem 0.5rem;
-    border-radius: 4px;
-  }
-
-  .team-card-stats {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 1rem;
-  }
-  .team-stat-group { display: flex; gap: 1.5rem; }
-  .team-stat-wl { flex-direction: row; }
-  .team-stat-item { display: flex; flex-direction: column; gap: 0.15rem; text-align: center; }
-  .team-stat-label {
-    font-size: 0.8rem;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    font-weight: 600;
-  }
-
-  /* NEW: Utility classes to replace inline styles */
-  .text-win { color: var(--win); font-weight: 700; }
-  .text-loss { color: var(--loss); font-weight: 700; }
-  .text-assist { color: var(--assist); font-weight: 700; }
-
-  .team-players {
-    border-top: 1px solid var(--border);
-    padding-top: 0.75rem;
-    margin-top: auto; /* Pushes to bottom of card */
-  }
-  .team-players-label {
-    font-size: 0.75rem;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 0.5rem;
-    font-weight: 600;
-  }
-
-  /* NEW: Scrollable roster container */
-  .roster-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-    max-height: 180px; /* Prevents card from getting too tall */
-    overflow-y: auto;
-    padding-right: 0.5rem;
-  }
-  .roster-list::-webkit-scrollbar { width: 4px; }
-  .roster-list::-webkit-scrollbar-track { background: transparent; }
-  .roster-list::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 4px; }
-
-  .player-row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.4rem 0;
-    border-bottom: 1px solid var(--border);
-  }
-  .player-row:last-child { border-bottom: none; }
-  .player-ign {
-    font-weight: 600;
-    font-size: 0.85rem;
-    color: var(--text-primary);
-    text-decoration: none;
-    white-space: nowrap;
     overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 120px; /* Prevents long names from breaking layout */
+
+    /*
+     * TEAM COLOR
+     *
+     * The color comes from:
+     * team.data.color
+     *
+     * NOT from the logo.
+     */
+
+    border-color:
+      color-mix(
+        in srgb,
+        var(--team-color) 35%,
+        var(--border)
+      );
+
+    border-top:
+      3px solid var(--team-color);
+
+    transition:
+      border-color 150ms ease;
   }
-  .player-ign:hover { color: var(--accent); }
-  .player-uid {
-    font-family: monospace;
-    font-size: 0.75rem;
+
+  .team-card:hover {
+    border-color:
+      color-mix(
+        in srgb,
+        var(--team-color) 65%,
+        var(--border)
+      );
+
+    border-top-color:
+      var(--team-color);
+  }
+
+
+  /* =========================
+     CLUB IDENTITY
+     ========================= */
+
+  .club-identity {
+    position: relative;
+    z-index: 1;
+  }
+
+  .club-identity img {
+    object-fit: contain;
+  }
+
+
+  /* =========================
+     CLUB META
+     ========================= */
+
+  .club-meta {
+    position: relative;
+    z-index: 1;
+  }
+
+
+  /* =========================
+     TEAM INFO
+     ========================= */
+
+  /*
+   * Deliberately stays CFL orange.
+   * Team color = identity.
+   * Orange = interaction/action.
+   */
+
+  .club-info {
+    position: relative;
+    z-index: 2;
+
+    color: var(--accent);
+  }
+
+  .club-info:hover {
+    color: var(--accent-hover);
+  }
+
+
+  /* =========================
+     NO RESULTS
+     ========================= */
+
+  .no-results {
+    display: none;
+
+    padding: 2rem;
+
     color: var(--text-muted);
+
+    text-align: center;
   }
-  .player-status {
-    margin-left: auto;
-    font-size: 0.8rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    padding: 0.15rem 0.5rem;
-    border-radius: 4px;
-    flex-shrink: 0;
+
+
+  /* =========================
+     RESPONSIVE
+     ========================= */
+
+  @media (max-width: 480px) {
+
+    .teams-toolbar {
+      flex-direction: column;
+    }
+
+    .teams-search {
+      width: 100%;
+    }
+
+    .teams-grid {
+      grid-template-columns: 1fr;
+    }
+
   }
-  
-  .status-active { background: rgba(34, 197, 94, 0.15); color: var(--win); }
-  .status-inactive { background: rgba(156, 163, 175, 0.15); color: var(--text-muted); }
-  
-  .no-results { text-align: center; color: var(--text-muted); display: none; padding: 2rem; }
+
+  .team-card.club-card {
+    background:
+      color-mix(
+        in srgb,
+        var(--team-color) 14%,
+        #272624
+      ) !important;
+
+    border: 1px solid
+      color-mix(
+        in srgb,
+        var(--team-color) 32%,
+        #45423e
+      ) !important;
+
+    border-top: 3px solid var(--team-color) !important;
+  }
+
+  .team-card.club-card .club-info {
+    background:
+      color-mix(
+        in srgb,
+        var(--team-color) 10%,
+        #211f1d
+      ) !important;
+
+    border-top: 1px solid
+      color-mix(
+        in srgb,
+        var(--team-color) 25%,
+        #45423e
+      ) !important;
+
+    color: var(--accent) !important;
+  }
+
+  .team-card.club-card .club-info span {
+    color: var(--accent) !important;
+  }
+
 </style>

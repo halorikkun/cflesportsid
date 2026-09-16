@@ -136,7 +136,9 @@ playerMatches.forEach(m => {
           class="profile-image"
           src={
             player.data.avatar ||
-            '/players/default.webp'
+            (player.data.uid
+              ? `/players/${player.data.uid}.webp`
+              : '/players/default.webp')
           }
           alt={`${player.data.ign} photo`}
           width="160"
@@ -593,7 +595,9 @@ playerMatches.forEach(m => {
                 class="avatar"
                 src={
                   p.data.avatar ||
-                  '/players/default.webp'
+                  (p.data.uid
+                    ? `/players/${p.data.uid}.webp`
+                    : '/players/default.webp')
                 }
                 alt={`${p.data.ign} photo`}
                 width="40"
