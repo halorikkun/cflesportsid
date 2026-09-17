@@ -120,7 +120,6 @@
   .interior-page .match-detail-scoreboard { padding: 18px 10px; gap: 10px; }
   .interior-page .bracket-scroll { padding: 12px; }
   .interior-page .matches-grid { grid-template-columns: minmax(0, 1fr); }
-  .interior-page .match-card { min-width: 0; padding: 16px; }
 }
 /* Shared roster and teammates cards. */
 .roster-detail-grid {
@@ -244,47 +243,3 @@
 .interior-page .mvp-card .mvp-kda .death { color:var(--loss); }
 .interior-page .mvp-card .mvp-kda .assist { color:var(--assist); }
 .interior-page .mvp-card a:hover { color:var(--accent-hover); text-decoration:none; }
-
-/* Tournament and match listings share the team card finish. */
-.interior-page .tourney-grid .tourney-card,
-.interior-page #matchesGrid .match-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-top: 2px solid var(--olive);
-  border-radius: var(--radius);
-  padding: 24px 22px 0;
-  overflow: hidden;
-  box-shadow: none;
-}
-.interior-page .tourney-grid .tourney-card:hover,
-.interior-page #matchesGrid .match-card:hover {
-  background: var(--bg-card-hover);
-  border-color: var(--accent);
-  transform: none;
-}
-.interior-page .tourney-card { text-align: center; }
-.interior-page .tourney-header,
-.interior-page .tourney-meta,
-.interior-page .tourney-winner { justify-content: center; }
-.interior-page .tourney-header h3 { min-width: 0; }
-.interior-page .tourney-cta,
-.interior-page #matchesGrid .match-card-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  margin: auto -22px 0;
-  padding: 16px 22px;
-  border-top: 1px solid var(--border);
-  background: var(--bg-secondary);
-  color: var(--accent);
-  font-size: 14px;
-  font-weight: 600;
-}
-.interior-page .tourney-cta { margin-top: 12px; }
-.interior-page #matchesGrid .match-card-info { margin-top: 20px; }
-.interior-page .tourney-card:hover .tourney-cta,
-.interior-page #matchesGrid .match-card:hover .match-card-info {
-  background: var(--olive-muted);
-  color: var(--accent-hover);
-}

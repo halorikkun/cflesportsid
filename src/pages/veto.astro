@@ -79,7 +79,7 @@ const matchData = matches
 ---
 
 <Layout title="CFL Esports ID - Map Veto Tool" current="Veto">
-  <div class="container">
+  <div class="container veto-page">
     <div class="page-header">
       <h1>Map Veto Tool</h1>
       <p>Choose an upcoming match or enter teams for a scrim</p>
@@ -2784,3 +2784,45 @@ const matchData = matches
     init();
   })();
 </script>
+
+<style is:global>
+  body:has(.veto-page) {
+    --bg-primary: #090a0c; --bg-secondary: #101114; --bg-card: #16171b; --border: #303137;
+    --text-primary: #f4f3ef; --text-secondary: #c4c3bf; --text-muted: #a4a6ac;
+    --veto-display: 'DIN Condensed', 'Arial Narrow', 'Avenir Next Condensed', sans-serif;
+  }
+  body:has(.veto-page) .site-header { background: #0c0d0f; backdrop-filter: none; }
+  body:has(.veto-page) .site-header .nav a { font-family: var(--veto-display); font-size: 17px; font-weight: 500; }
+  #main-content .veto-page { max-width: 1344px; padding: 0 32px 32px; font-family: 'Arial Narrow', 'Avenir Next Condensed', sans-serif; }
+  #main-content .veto-page .page-header { background: none; padding: 34px 0 26px; margin-bottom: 24px; }
+  #main-content .veto-page .page-header h1 { font-family: var(--veto-display); font-size: clamp(44px,6vw,68px); text-transform: uppercase; }
+  #main-content .veto-page .page-header p { font-size: 17px; }
+  .veto-page .veto-empty-state { padding: 24px; border: 1px solid var(--border); background: #111215; }
+  .veto-page .veto-empty-copy strong { font-family: var(--veto-display); font-size: 28px; text-transform: uppercase; }
+  .veto-page .veto-empty-copy p { font-size: 16px; }
+  .veto-page :is(.veto-select,.veto-btn,.veto-team,.pick-card,.veto-step,.veto-timer,.veto-map,.result-map-card,.banned-map-item) { border-radius: 0; box-shadow: none; }
+  .veto-page .veto-select { font: inherit; font-size: 16px; min-height: 48px; }
+  .veto-page .veto-btn { font-family: var(--veto-display); font-size: 21px; text-transform: uppercase; min-height: 48px; }
+  .veto-page .veto-btn:hover { transform: none; box-shadow: none; }
+  .veto-page .veto-team { flex: 1; min-width: 0; }
+  .veto-page .veto-team-tag { font-family: var(--veto-display); font-size: 30px; }
+  .veto-page .veto-team-name { font-size: 16px; overflow-wrap: anywhere; }
+  .veto-page .pick-map-name { font-family: var(--veto-display); font-size: 30px; }
+  .veto-page .veto-action-prompt { font-family: var(--veto-display); font-size: 28px; }
+  .veto-page .veto-timer { background: #111215; border-color: var(--border); }
+  .veto-page #veto-wheel-section { overflow: clip; }
+  .veto-page .veto-map { border-color: var(--border); }
+  .veto-page .veto-map:hover { transform: none; box-shadow: none; }
+  .veto-page .veto-map-name { font-family: var(--veto-display); font-size: 24px; text-transform: uppercase; }
+  .veto-page :is(.wheel-title,.results-title) { font-family: var(--veto-display); font-size: 36px; text-transform: uppercase; }
+  .veto-page :is(button,input,select):focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  @media(max-width:640px) {
+    #main-content .veto-page { padding: 0 16px 24px; }
+    .veto-page .veto-empty-state { padding: 20px; flex-direction: column; align-items: stretch; gap: 20px; }
+    .veto-page .veto-empty-state .veto-btn { white-space: normal; }
+    .veto-page .veto-teams { flex-wrap: nowrap; gap: 10px; }
+    .veto-page .veto-team { padding: 14px 8px; }
+    .veto-page .veto-team-tag { font-size: 24px; overflow-wrap: anywhere; }
+    .veto-page .veto-action-prompt { font-size: 24px; }
+  }
+</style>

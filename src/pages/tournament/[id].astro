@@ -60,7 +60,8 @@ function formatDate(value: string) {
 ---
 
 <Layout title={`CFL Esports ID - ${tournamentName}`} current="Tournaments" canonicalPath={`/tournament/${tournament.id}`}>
-  <div class="container">
+  <div class="container tournament-detail">
+    <a class="back-to-tournaments" href="/tournament"><span aria-hidden="true">←</span> All tournaments</a>
     <section class="tournament-hero">
       <div class="tournament-hero-top">
         <span class="tournament-kicker">
@@ -108,7 +109,7 @@ function formatDate(value: string) {
           {winner ? (
             <a href={`/teams/${winner.id}`}>
               <strong class="winner-name">
-                <span class="winner-crown" aria-hidden="true">👑</span>
+                <img class="winner-medal" src="/icons/gold-medal.webp" alt="" width="22" height="22" />
                 <span class="winner-team-name">{winner.data.name}</span>
               </strong>
             </a>
@@ -170,9 +171,16 @@ function formatDate(value: string) {
                               const win1 = complete && Boolean(m.data.winnerId) && m.data.winnerId === team1Id;
                               const win2 = complete && Boolean(m.data.winnerId) && m.data.winnerId === team2Id;
                               return (
-                                <a href={`/matches/${m.id}`} class={`bracket-match ${complete ? '' : 'upcoming'}`}
-                                  data-node={m.id} data-source1={getSourceNode(m, 1)} data-source2={getSourceNode(m, 2)}
-                                  data-source-kind1={m.data.team1Source?.type} data-source-kind2={m.data.team2Source?.type}>
+                                <a
+                                  href={`/matches/${m.id}`}
+                                  class={`bracket-match ${complete ? '' : 'upcoming'}`}
+                                  data-node={m.id}
+                                  data-placement={section.placement ?? ''}
+                                  data-source1={getSourceNode(m, 1)}
+                                  data-source2={getSourceNode(m, 2)}
+                                  data-source-kind1={m.data.team1Source?.type}
+                                  data-source-kind2={m.data.team2Source?.type}
+                                >
                                   <div class={`bracket-team-row ${win1 ? 'winner' : win2 ? 'loser' : ''}`}>
                                     <div class="bracket-team-info">
                                       <span class="bracket-team-tag">{team1?.data.tag ?? 'TBD'}</span>
@@ -535,7 +543,6 @@ function formatDate(value: string) {
     display: flex;
     flex: 1;
     flex-direction: column;
-    justify-content: space-around;
     gap: 24px;
   }
 
@@ -739,37 +746,102 @@ function formatDate(value: string) {
 
 <script is:inline>
   (() => {
+    function layoutBracket(wrapper) {
+      const nodes = new Map(
+        Array.from(wrapper.querySelectorAll('[data-node]'))
+          .map(node => [node.dataset.node, node])
+      );
+
+      nodes.forEach(node => {
+        if (node.dataset.placement !== '3') node.style.transform = '';
+      });
+
+      // DOM order follows round order. Earlier-round transforms therefore
+      // feed the midpoint calculation for later rounds, including Final.
+      nodes.forEach(target => {
+        if (target.dataset.placement === '3') return;
+
+        const source1 = nodes.get(target.dataset.source1);
+        const source2 = nodes.get(target.dataset.source2);
+        if (!source1 || !source2) return;
+
+        const a = source1.getBoundingClientRect();
+        const b = source2.getBoundingClientRect();
+        const t = target.getBoundingClientRect();
+        const sourceMid = ((a.top + a.height / 2) + (b.top + b.height / 2)) / 2;
+        const targetMid = t.top + t.height / 2;
+
+        // Transform moves the card visually without taking it out of its
+        // round column or changing its width.
+        target.style.transform = `translateY(${sourceMid - targetMid}px)`;
+      });
+
+      return nodes;
+    }
+
     function drawConnectors() {
       document.querySelectorAll('.bracket-wrapper').forEach(wrapper => {
         const svg = wrapper.querySelector('.bracket-connectors');
+        if (!svg) return;
+
+        const nodes = layoutBracket(wrapper);
         svg.replaceChildren();
+
         const bounds = wrapper.getBoundingClientRect();
         svg.setAttribute('viewBox', `0 0 ${bounds.width} ${bounds.height}`);
-        const nodes = new Map(Array.from(wrapper.querySelectorAll('[data-node]')).map(node => [node.dataset.node, node]));
+
+        const makePath = d => {
+          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          path.setAttribute('d', d);
+          path.setAttribute('stroke', '#3a4258');
+          path.setAttribute('stroke-width', '2');
+          path.setAttribute('fill', 'none');
+          path.setAttribute('vector-effect', 'non-scaling-stroke');
+          svg.appendChild(path);
+        };
+
         nodes.forEach(target => {
-          for (const side of [1, 2]) {
-            const source = nodes.get(target.dataset[`source${side}`]);
-            if (!source) continue;
+          // Bronze Match stays independent and intentionally has no line.
+          if (target.dataset.placement === '3') return;
+
+          const source1 = nodes.get(target.dataset.source1);
+          const source2 = nodes.get(target.dataset.source2);
+          if (!source1 && !source2) return;
+
+          const targetRect = target.getBoundingClientRect();
+          const x2 = targetRect.left - bounds.left;
+          const y2 = targetRect.top + targetRect.height / 2 - bounds.top;
+
+          if (source1 && source2) {
+            const a = source1.getBoundingClientRect();
+            const b = source2.getBoundingClientRect();
+            const x1a = a.right - bounds.left;
+            const y1a = a.top + a.height / 2 - bounds.top;
+            const x1b = b.right - bounds.left;
+            const y1b = b.top + b.height / 2 - bounds.top;
+            const middle = (Math.max(x1a, x1b) + x2) / 2;
+            const joinY = (y1a + y1b) / 2;
+
+            makePath(`M ${x1a} ${y1a} H ${middle}`);
+            makePath(`M ${x1b} ${y1b} H ${middle}`);
+            makePath(`M ${middle} ${Math.min(y1a, y1b)} V ${Math.max(y1a, y1b)}`);
+            makePath(`M ${middle} ${joinY} H ${x2}`);
+          } else {
+            const source = source1 || source2;
             const from = source.getBoundingClientRect();
-            const row = target.querySelectorAll('.bracket-team-row')[side - 1].getBoundingClientRect();
             const x1 = from.right - bounds.left;
             const y1 = from.top + from.height / 2 - bounds.top;
-            const x2 = row.left - bounds.left;
-            const y2 = row.top + row.height / 2 - bounds.top;
             const middle = (x1 + x2) / 2;
-            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            path.setAttribute('d', `M ${x1} ${y1} H ${middle} V ${y2} H ${x2}`);
-            path.setAttribute('stroke', '#3a4258');
-            path.setAttribute('stroke-width', '2');
-            path.setAttribute('fill', 'none');
-            if (target.dataset[`sourceKind${side}`] === 'loser') path.setAttribute('stroke-dasharray', '5 4');
-            svg.appendChild(path);
+
+            makePath(`M ${x1} ${y1} H ${middle} V ${y2} H ${x2}`);
           }
         });
       });
     }
+
     document.addEventListener('DOMContentLoaded', drawConnectors);
     document.fonts.ready.then(drawConnectors);
+
     let resizeTimer;
     window.addEventListener('resize', () => {
       clearTimeout(resizeTimer);
@@ -777,3 +849,42 @@ function formatDate(value: string) {
     });
   })();
 </script>
+
+<style>
+  :global(body:has(.tournament-detail)) {
+    --bg-primary: #090a0c; --bg-secondary: #101114; --bg-card: #16171b; --border: #303137;
+    --text-primary: #f4f3ef; --text-secondary: #c4c3bf; --text-muted: #a4a6ac;
+    --tournament-display: 'DIN Condensed', 'Arial Narrow', 'Avenir Next Condensed', sans-serif;
+  }
+  :global(body:has(.tournament-detail) .site-header) { background: #0c0d0f; backdrop-filter: none; }
+  :global(body:has(.tournament-detail) .site-header .nav a) { font-family: var(--tournament-display); font-size: 17px; font-weight: 500; }
+  .tournament-detail { max-width: 1344px; padding: 20px 32px 32px; font-family: 'Arial Narrow', 'Avenir Next Condensed', sans-serif; }
+  .back-to-tournaments { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; color: var(--text-secondary); font-size: 14px; text-transform: uppercase; }
+  :global(#main-content) .tournament-detail .tournament-hero { margin: 10px 0 30px; background: #141518; border-radius: 0; border-top-width: 2px; }
+  :global(#main-content) .tournament-detail .tournament-hero::after { display: none; }
+  :global(#main-content) .tournament-detail .tournament-kicker { font-size: 14px; font-weight: 500; }
+  :global(#main-content) .tournament-detail .tournament-status { border-radius: 0; font-size: 11px; font-weight: 500; }
+  :global(#main-content) .tournament-detail .tournament-status.completed { color: #a7ad8a; border-color: #515644; background: #a7ad8a0c; }
+  :global(#main-content) .tournament-detail .tournament-hero-main { padding: 28px 0 30px; }
+  :global(#main-content) .tournament-detail .tournament-hero h1 { font-family: var(--tournament-display); font-size: clamp(36px,5vw,64px); line-height: 1.05; letter-spacing: 0; text-transform: uppercase; }
+  :global(#main-content) .tournament-detail .tournament-date { font-size: 15px; font-weight: 400; }
+  :global(#main-content) .tournament-detail .tournament-metric strong { font-family: var(--tournament-display); font-size: 34px; font-weight: 700; }
+  :global(#main-content) .tournament-detail .tournament-metric > span { font-size: 12px; font-weight: 400; letter-spacing: .04em; }
+  .winner-medal { flex-shrink: 0; object-fit: contain; }
+  :global(#main-content) .tournament-detail .tournament-stage > h2 { font-family: var(--tournament-display); font-size: 32px; text-transform: uppercase; letter-spacing: 0; }
+  :global(#main-content) .tournament-detail .bracket-round-title { font-family: var(--tournament-display); font-size: 22px; text-transform: uppercase; }
+  :global(#main-content) .tournament-detail .bracket-match { border-radius: 0; background: #111215; box-shadow: none; }
+  :global(#main-content) .tournament-detail .bracket-match:hover { transform: none; box-shadow: none; border-color: var(--accent); }
+  :global(#main-content) .tournament-detail .bracket-team-name { font-size: 15px; }
+  :global(#main-content) .tournament-detail .bracket-team-score { font-family: var(--tournament-display); font-size: 24px; }
+  :global(#main-content) .tournament-detail .bracket-team-tag { border-radius: 0; font-size: 11px; }
+  .tournament-detail a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  @media(max-width:640px) {
+    .tournament-detail { padding: 14px 16px 24px; }
+    :global(#main-content) .tournament-detail .tournament-hero { padding: 20px 18px 0; }
+    :global(#main-content) .tournament-detail .tournament-metrics { margin-inline: -18px; grid-template-columns: 1fr 1fr; }
+    :global(#main-content) .tournament-detail .tournament-metric { padding: 16px 18px; }
+    :global(#main-content) .tournament-detail .winner-metric { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--border); }
+    :global(#main-content) .tournament-detail .tournament-metric strong { font-size: 30px; }
+  }
+</style>

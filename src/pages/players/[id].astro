@@ -122,7 +122,8 @@ playerMatches.forEach(m => {
   title={`${player.data.ign} - CFL Tournament Hub`}
   current="Players"
 >
-  <div class="container">
+  <div class="container player-detail" style={`--team-color: ${team?.data.color ?? '#777B82'};`}>
+    <a class="back-to-players" href="/players"><span aria-hidden="true">←</span> All players</a>
 
     <!-- PLAYER HERO -->
 
@@ -136,12 +137,14 @@ playerMatches.forEach(m => {
           class="profile-image"
           src={
             player.data.avatar ||
-            '/players/default.webp'
+            (player.data.uid
+              ? `/players/${player.data.uid}.webp`
+              : '/players/default.webp')
           }
           alt={`${player.data.ign} photo`}
           width="160"
           height="160"
-          onerror="this.onerror=null; this.src='/players/default.webp'"
+          onerror="this.onerror=null;this.src='/players/default.webp'"
         />
 
         <div class="profile-info">
@@ -393,6 +396,13 @@ playerMatches.forEach(m => {
     )}
 
 
+    {playerMatches.length === 0 && (
+      <section class="section-spacing">
+        <h2 class="section-title">Recent matches</h2>
+        <p class="player-empty">No recorded matches yet.</p>
+      </section>
+    )}
+
     <!-- RECENT MATCHES -->
 
     {playerMatches.length > 0 && (
@@ -593,13 +603,15 @@ playerMatches.forEach(m => {
                 class="avatar"
                 src={
                   p.data.avatar ||
-                  '/players/default.webp'
+                  (p.data.uid
+                    ? `/players/${p.data.uid}.webp`
+                    : '/players/default.webp')
                 }
                 alt={`${p.data.ign} photo`}
                 width="40"
                 height="40"
                 loading="lazy"
-                onerror="this.onerror=null; this.src='/players/default.webp'"
+                onerror="this.onerror=null;this.src='/players/default.webp'"
               />
 
               <div class="roster-card-info">
@@ -879,4 +891,73 @@ playerMatches.forEach(m => {
       min-width: 150px;
     }
   }
+
+  :global(body:has(.player-detail)) {
+    --bg-primary: #090a0c;
+    --bg-secondary: #101114;
+    --bg-card: #16171b;
+    --bg-card-hover: #202126;
+    --border: #303137;
+    --text-primary: #f4f3ef;
+    --text-secondary: #c4c3bf;
+    --text-muted: #a4a6ac;
+    --player-display: 'DIN Condensed', 'Arial Narrow', 'Avenir Next Condensed', sans-serif;
+  }
+  :global(body:has(.player-detail) .site-header) { background: #0c0d0f; backdrop-filter: none; }
+  :global(body:has(.player-detail) .site-header .nav a) { font-family: var(--player-display); font-size: 17px; font-weight: 500; }
+  .player-detail { max-width: 1344px; padding: 20px 32px 32px; font-family: 'Arial Narrow', 'Avenir Next Condensed', sans-serif; }
+  .back-to-players { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; color: var(--text-secondary); text-transform: uppercase; font-size: 14px; }
+  .player-detail .profile-banner { position: relative; isolation: isolate; margin: 10px 0 28px; padding: 32px; background: #141518; border: 1px solid var(--border); border-radius: 0; gap: 28px; }
+  .player-detail .profile-banner::before { content: ''; position: absolute; inset: 0; z-index: -1; background: var(--team-color); mask: url('/patterns/team-card.svg') center / 100% 100% no-repeat; -webkit-mask: url('/patterns/team-card.svg') center / 100% 100% no-repeat; opacity: .23; pointer-events: none; }
+  .player-detail .profile-identity { gap: 24px; }
+  .player-detail .profile-image { width: 120px; height: 140px; object-fit: contain; border-radius: 0; background: transparent; }
+  .player-detail .profile-identity h1 { font-family: var(--player-display); font-size: clamp(36px,4.5vw,60px); letter-spacing: .01em; margin-bottom: 12px; }
+  .player-detail .profile-kicker { font-size: 14px; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 10px; }
+  .player-detail .profile-metrics { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 18px 24px; width: 310px; padding: 20px 24px; border-radius: 0; background: #101114e8; }
+  .player-detail .profile-metrics div { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 0; border: 0; }
+  .player-detail .profile-metrics dt { font-size: 12px; font-weight: 400; text-transform: uppercase; color: var(--text-secondary); }
+  .player-detail .profile-metrics dd { font-family: var(--player-display); font-size: 34px; line-height: 1; color: var(--text-primary); }
+  .player-detail .profile-metrics div:last-child dd { color: var(--accent); }
+  .player-detail .player-status { border-radius: 0; font-weight: 600; }
+  .player-detail .section-spacing { margin-bottom: 28px; }
+  .player-detail .section-title { font-family: var(--player-display); font-size: 30px; line-height: 1.1; text-transform: uppercase; padding-bottom: 12px; border-bottom: 1px solid var(--border); margin-bottom: 14px; }
+  .player-detail .player-table-wrap { border-radius: 0; overflow-x: auto; margin-bottom: 0; }
+  .player-detail table { min-width: 800px; font-size: 16px; font-variant-numeric: tabular-nums; }
+  .player-detail table th { background: #1b1c20; color: var(--text-secondary); font-size: 12px; border-bottom: 1px solid var(--border); }
+  .player-detail table td { padding: 16px; background: #101114; }
+  .player-detail table tr:nth-child(even) td { background: #141518; }
+  .player-detail table td:first-child { white-space: nowrap; }
+  .player-detail .match-link { font-weight: 400; }
+  .player-detail .badge { border-radius: 0; }
+  .player-detail .roster-detail-grid { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; }
+  .player-detail .roster-card { border-radius: 0; background: #141518; padding: 14px; gap: 12px; }
+  .player-detail .roster-card .avatar { width: 42px; height: 50px; border-radius: 0; background: transparent; object-fit: contain; }
+  .player-detail .roster-card-info strong { font-size: 18px; }
+  .player-detail .roster-card-info span { font-size: 13px; }
+  .player-detail .roster-card .badge { font-size: 10px; padding: 3px 6px; }
+  .player-detail .socials-list .badge { background: #16171b; border: 1px solid var(--border); color: var(--text-primary); min-height: 44px; display: inline-flex; align-items: center; padding: 8px 14px; overflow-wrap: anywhere; }
+  .player-empty { color: var(--text-secondary); padding: 16px 0; }
+  .player-detail a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  @media(max-width:1000px) {
+    .player-detail .profile-banner { padding: 24px; gap: 20px; }
+    .player-detail .profile-image { width: 90px; height: 110px; }
+    .player-detail .profile-metrics { width: 240px; padding: 18px; gap: 16px; }
+    .player-detail .roster-detail-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .player-detail .table-scroll-hint { display: block !important; color: var(--text-muted); text-align: right; font-size: 12px; margin-bottom: 10px; }
+  }
+  @media(max-width:700px) {
+    .player-detail { padding: 14px 16px 24px; }
+    .player-detail .profile-banner { flex-direction: column; align-items: stretch; padding: 22px 18px; }
+    .player-detail .profile-identity { gap: 16px; }
+    .player-detail .profile-identity h1 { font-size: 34px; }
+    .player-detail .profile-metrics { width: 100%; grid-template-columns: repeat(4,minmax(0,1fr)); padding: 14px 10px; gap: 10px; }
+    .player-detail .profile-metrics dt { font-size: 10px; }
+    .player-detail .profile-metrics dd { font-size: 29px; }
+    .player-detail table :is(th,td) { position: static; left: auto; }
+  }
+  @media(max-width:480px) {
+    .player-detail .roster-detail-grid { grid-template-columns: minmax(0,1fr); }
+    .player-detail .profile-identity { flex-direction: column; align-items: flex-start; }
+  }
+
 </style>
