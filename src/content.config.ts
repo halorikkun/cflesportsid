@@ -60,6 +60,7 @@ const teams = defineCollection({
   schema: z.object({
     name: z.string(),
     tag: z.string(),
+    color: z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Use a six-digit hex team color, e.g. #FF5A1F').optional(),
     logo: z.string().optional(),
     color: z.string().optional(),
     region: z.string(),

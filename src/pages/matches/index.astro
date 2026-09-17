@@ -3,13 +3,9 @@ import Layout from '../../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
 import { getRoundName, getRoundOrder, getParticipantLabel } from '../../utils/tournament';
 import {
-  getTeamMap,
-  getTeamMatchStats,
-  getTournamentMap,
-  getMatchTournamentId,
-  getMatchWinnerId,
-  getMatchTeam1Id,
-  getMatchTeam2Id,
+  getTeamMap, getTeamMatchStats, getTournamentMap,
+  getMatchTournamentId, getMatchWinnerId,
+  getMatchTeam1Id, getMatchTeam2Id,
 } from '../../utils/content';
 
 const teamsMap = await getTeamMap();
@@ -22,51 +18,50 @@ const matches = (await getCollection('matches')).sort((a, b) => {
     if (a.data.status === 'live') return -1;
     if (b.data.status === 'live') return 1;
   }
-  const dateA = new Date(a.data.date).getTime();
-  const dateB = new Date(b.data.date).getTime();
-  if (dateA !== dateB) return dateB - dateA;
-  const rA = getRoundOrder(a, tournamentsMap);
-  const rB = getRoundOrder(b, tournamentsMap);
-  return rB - rA;
+  const dateDiff = new Date(b.data.date).getTime() - new Date(a.data.date).getTime();
+  return dateDiff || getRoundOrder(b, tournamentsMap) - getRoundOrder(a, tournamentsMap);
 });
 
 const rounds = [...new Set(matches.map(m => getRoundName(m, tournamentsMap)))];
 ---
 
 <Layout title="Matches - CFL Esports ID Tournament Hub" current="Matches">
-  <div class="container">
+  <div class="container matches-page">
     <div class="page-header">
       <h1>Matches</h1>
-      <p>Search, sort, and filter all matches</p>
+      <p>{matches.length} matches · Fixtures and results across all tournaments</p>
     </div>
 
     <div class="matches-toolbar">
-      <input type="text" id="searchInput" aria-label="Search matches" placeholder="Search tournament or team..." class="matches-search" />
+      <div class="match-search-wrap">
+        <span class="match-search-icon" aria-hidden="true">⌕</span>
+        <input type="text" id="searchInput" aria-label="Search matches" placeholder="Search tournament or team..." class="matches-search" />
+      </div>
+
       <select id="statusFilter" aria-label="Filter by status" class="matches-select">
         <option value="">All Status</option>
         <option value="upcoming">Upcoming</option>
+        <option value="live">Live</option>
         <option value="completed">Completed</option>
       </select>
+
       <select id="roundFilter" aria-label="Filter by round" class="matches-select">
         <option value="">All Rounds</option>
-        {rounds.map(r => <option value={r}>{r}</option>)}
+        {rounds.map(round => <option value={round}>{round}</option>)}
       </select>
-    </div>
 
-    <div class="matches-sortbar">
-      <label for="sortSelect" class="sort-label">Sort by</label>
-
-      <select
-        id="sortSelect"
-        class="matches-select sort-select"
-        aria-label="Sort matches"
-      >
+      <select id="sortSelect" aria-label="Sort matches" class="matches-select sort-select">
         <option value="default">Default</option>
         <option value="date">Date</option>
         <option value="tournament">Tournament</option>
         <option value="round">Round</option>
         <option value="status">Status</option>
       </select>
+    </div>
+
+    <div class="matches-context">
+      <p id="matchCount" role="status" aria-live="polite"></p>
+      <p id="sortContext">Sorted by default</p>
     </div>
 
     <div id="matchesGrid" class="matches-grid">
@@ -77,89 +72,133 @@ const rounds = [...new Set(matches.map(m => getRoundName(m, tournamentsMap)))];
         const tournamentId = getMatchTournamentId(m);
         const tournament = tournamentId ? tournamentsMap.get(tournamentId) : undefined;
         const tournamentName = tournament?.data.name ?? tournamentId ?? 'TBD';
-
         const t1 = team1Id ? teamsMap.get(team1Id) : undefined;
         const t2 = team2Id ? teamsMap.get(team2Id) : undefined;
 
         const team1Name = t1?.data.name ?? team1Id ?? getParticipantLabel(m, 1);
         const team2Name = t2?.data.name ?? team2Id ?? getParticipantLabel(m, 2);
-
         const team1Tag = t1?.data.tag ?? team1Id ?? 'TBD';
         const team2Tag = t2?.data.tag ?? team2Id ?? 'TBD';
-        const scoreText = m.data.status === 'completed' ? `${m.data.score1} - ${m.data.score2}` : 'VS';
-        const t1Won = Boolean(winnerId && winnerId === team1Id);
-        const t2Won = Boolean(winnerId && winnerId === team2Id);
-        
-        // Use CSS variables instead of inline color styles
-        const t1Color = m.data.status === 'completed' ? (t1Won ? 'var(--win)' : 'var(--text-muted)') : 'var(--text-primary)';
-        const t2Color = m.data.status === 'completed' ? (t2Won ? 'var(--win)' : 'var(--text-muted)') : 'var(--text-primary)';
-        
+        const team1Color = t1?.data.color || '#777B82';
+        const team2Color = t2?.data.color || '#777B82';
+
+        const team1Won = Boolean(winnerId && winnerId === team1Id);
+        const team2Won = Boolean(winnerId && winnerId === team2Id);
+        const completed = m.data.status === 'completed';
+        const roundName = getRoundName(m, tournamentsMap);
         const stats1 = getTeamMatchStats([m], team1Id ?? '');
         const stats2 = getTeamMatchStats([m], team2Id ?? '');
-        const searchText = [tournamentName, tournamentId, team1Name, team2Name, team1Tag, team2Tag, team1Id, team2Id].filter(Boolean).join(' ').toLowerCase();
-        
+        const hasStats = stats1.kills > 0 || stats2.kills > 0;
+
+        const searchText = [
+          tournamentName, tournamentId,
+          team1Name, team2Name,
+          team1Tag, team2Tag,
+          team1Id, team2Id
+        ].filter(Boolean).join(' ').toLowerCase();
+
         return (
-          <a href={`/matches/${m.id}`} class="match-card"
+          <a
+            href={`/matches/${m.id}`}
+            class={`match-card status-card-${m.data.status}`}
             data-search={searchText}
             data-status={m.data.status}
-            data-round={getRoundName(m, tournamentsMap)}
+            data-round={roundName}
             data-date={m.data.date}
             data-round-order={getRoundOrder(m, tournamentsMap)}
             data-tournament={tournamentName}
-            data-tournament-id={tournamentId}
-            style={`--t1-color: ${t1Color}; --t2-color: ${t2Color};`}
+            style={`--team1-color:${team1Color};--team2-color:${team2Color};`}
           >
-            <div class="match-card-header">
-              <div class="match-card-tournament">{tournamentName}</div>
-              <div class="match-card-date">{m.data.date}</div>
-              <div class="match-card-round">
-                <span class="badge match-round-badge">
-                  {getRoundName(m, tournamentsMap)}
-                </span>
+            <div class="match-card-head">
+              <div class="match-event">
+                <strong>{tournamentName}</strong>
+                <time datetime={m.data.date}>{m.data.date}</time>
+              </div>
+
+              <div class="match-meta">
+                <strong>{roundName}</strong>
+                <span class={`match-status status-${m.data.status}`}>{m.data.status}</span>
               </div>
             </div>
 
-            <div class="match-card-score">
-              <div class="match-card-team team-a">
-                <img 
-                  src={t1?.data.logo || `/logos/${team1Tag}.webp`} 
-                  alt={team1Name} 
-                  class="team-logo"
-                  onerror="this.onerror=null; this.src='/logos/default.webp'"
-                />
-                <span style={`color: ${t1Color};`}>{team1Name}</span>
-              </div>
-              <span class="vs">{scoreText}</span>
-              <div class="match-card-team team-b">
-                <img 
-                  src={t2?.data.logo || `/logos/${team2Tag}.webp`} 
-                  alt={team2Name} 
-                  class="team-logo"
-                  onerror="this.onerror=null; this.src='/logos/default.webp'"
-                />
-                <span style={`color: ${t2Color};`}>{team2Name}</span>
-              </div>
-            </div>
-
-            {m.data.status === 'completed' && (stats1.kills > 0 || stats2.kills > 0) && (
-              <div class="match-card-kda">
-                <div>
-                  <span class="match-card-kda-team1">{team1Tag}</span>: 
-                  <span class="kda"><span class="kill">{stats1.kills}</span>/<span class="death">{stats1.deaths}</span>/<span class="assist">{stats1.assists}</span></span>
+            <div class="match-versus">
+              <div class="match-team">
+                <div class="team-logo-wrap">
+                  <img
+                    src={t1?.data.logo || `/logos/${team1Tag}.webp`}
+                    alt={team1Name}
+                    loading="lazy"
+                    onerror="this.onerror=null;this.src='/logos/default.webp'"
+                  />
                 </div>
-                <div>
-                  <span class="match-card-kda-team2">{team2Tag}</span>: 
-                  <span class="kda"><span class="kill">{stats2.kills}</span>/<span class="death">{stats2.deaths}</span>/<span class="assist">{stats2.assists}</span></span>
+                <strong>{team1Name}</strong>
+              </div>
+
+              <div class="match-score">
+                {completed ? (
+                  <>
+                    <div class="score-line">
+                      <strong class:list={{ 'score-winner': team1Won }}>{m.data.score1}</strong>
+                      <span>—</span>
+                      <strong class:list={{ 'score-winner': team2Won }}>{m.data.score2}</strong>
+                    </div>
+                    <small>Completed</small>
+                  </>
+                ) : (
+                  <>
+                    <div class="versus-label">VS</div>
+                    <small class={`status-${m.data.status}`}>{m.data.status}</small>
+                  </>
+                )}
+              </div>
+
+              <div class="match-team">
+                <div class="team-logo-wrap">
+                  <img
+                    src={t2?.data.logo || `/logos/${team2Tag}.webp`}
+                    alt={team2Name}
+                    loading="lazy"
+                    onerror="this.onerror=null;this.src='/logos/default.webp'"
+                  />
+                </div>
+                <strong>{team2Name}</strong>
+              </div>
+            </div>
+
+            {completed && hasStats && (
+              <div class="match-stats">
+                <div class="team-kda team-kda-left">
+                  <strong class="kda-team">{team1Tag}</strong>
+                  <div class="kda-values">
+                    <span>{stats1.kills}</span>
+                    <span>{stats1.deaths}</span>
+                    <span>{stats1.assists}</span>
+                  </div>
+                  <div class="kda-labels"><span>K</span><span>D</span><span>A</span></div>
+                </div>
+
+                <div class="team-kda team-kda-right">
+                  <strong class="kda-team">{team2Tag}</strong>
+                  <div class="kda-values">
+                    <span>{stats2.kills}</span>
+                    <span>{stats2.deaths}</span>
+                    <span>{stats2.assists}</span>
+                  </div>
+                  <div class="kda-labels"><span>K</span><span>D</span><span>A</span></div>
                 </div>
               </div>
             )}
-            <div class="match-card-info">Match info <span aria-hidden="true">→</span></div>
+
+            <div class="match-info">
+              <span>Match info</span>
+              <span aria-hidden="true">→</span>
+            </div>
           </a>
         );
       })}
     </div>
 
-    <p id="noResults" class="no-results">No matches found.</p>
+    <p id="noResults" class="no-results" role="status">No matches found.</p>
     <div class="pagination" id="pagination" role="navigation" aria-label="Match pages"></div>
   </div>
 
@@ -168,309 +207,704 @@ const rounds = [...new Set(matches.map(m => getRoundName(m, tournamentsMap)))];
       const searchInput = document.getElementById('searchInput');
       const statusFilter = document.getElementById('statusFilter');
       const roundFilter = document.getElementById('roundFilter');
+      const sortSelect = document.getElementById('sortSelect');
+      const sortContext = document.getElementById('sortContext');
+      const matchCount = document.getElementById('matchCount');
       const grid = document.getElementById('matchesGrid');
       const noResults = document.getElementById('noResults');
-      const cards = Array.from(grid.querySelectorAll('.match-card'));
-      const sortSelect = document.getElementById('sortSelect');
       const pagination = document.getElementById('pagination');
+      const cards = Array.from(grid.querySelectorAll('.match-card'));
+
       const perPage = 10;
-      
+      const sortLabels = {
+        default: 'DEFAULT',
+        date: 'DATE',
+        tournament: 'TOURNAMENT',
+        round: 'ROUND',
+        status: 'STATUS'
+      };
+
       let currentPage = 1;
       let sortColumn = 'default';
-      let sortDirection = 'desc';
 
       function getVisibleCards() {
-        const search = searchInput.value.toLowerCase();
+        const search = searchInput.value.toLowerCase().trim();
         const status = statusFilter.value;
         const round = roundFilter.value;
-        return cards.filter(card => {
-          const matchesSearch = !search || card.dataset.search.includes(search);
-          const matchesStatus = !status || card.dataset.status === status;
-          const matchesRound = !round || card.dataset.round === round;
-          return matchesSearch && matchesStatus && matchesRound;
-        });
+
+        return cards.filter(card =>
+          (!search || card.dataset.search.includes(search)) &&
+          (!status || card.dataset.status === status) &&
+          (!round || card.dataset.round === round)
+        );
       }
 
       function sortCards(visible) {
         visible.sort((a, b) => {
-          let result = 0;
-          switch(sortColumn) {
-            case 'tournament':
-              result = a.dataset.tournament.localeCompare(b.dataset.tournament);
-              break;
-            case 'date':
-              result = new Date(a.dataset.date).getTime() - new Date(b.dataset.date).getTime();
-              break;
-            case 'round':
-              result = parseInt(a.dataset.roundOrder) - parseInt(b.dataset.roundOrder);
-              break;
-            case 'status':
-              const statusOrder = { 'upcoming': 0, 'live': 1, 'completed': 2 };
-              result = (statusOrder[a.dataset.status] || 0) - (statusOrder[b.dataset.status] || 0);
-              break;
-            default:
-              const aUpcoming = a.dataset.status === 'upcoming' ? 0 : 1;
-              const bUpcoming = b.dataset.status === 'upcoming' ? 0 : 1;
-              if (aUpcoming !== bUpcoming) result = aUpcoming - bUpcoming;
-              else {
-                const dateDiff = new Date(b.dataset.date).getTime() - new Date(a.dataset.date).getTime();
-                if (dateDiff !== 0) result = dateDiff;
-                else result = parseInt(b.dataset.roundOrder) - parseInt(a.dataset.roundOrder);
-              }
-              break;
+          if (sortColumn === 'tournament')
+            return a.dataset.tournament.localeCompare(b.dataset.tournament);
+
+          if (sortColumn === 'date')
+            return new Date(b.dataset.date).getTime() - new Date(a.dataset.date).getTime();
+
+          if (sortColumn === 'round')
+            return Number(b.dataset.roundOrder) - Number(a.dataset.roundOrder);
+
+          if (sortColumn === 'status') {
+            const order = { live: 0, upcoming: 1, completed: 2 };
+            return (order[a.dataset.status] ?? 9) - (order[b.dataset.status] ?? 9);
           }
-          return sortDirection === 'desc' ? result : -result;
+
+          const statusOrder = { upcoming: 0, live: 1, completed: 2 };
+          const statusDiff =
+            (statusOrder[a.dataset.status] ?? 9) -
+            (statusOrder[b.dataset.status] ?? 9);
+
+          if (statusDiff) return statusDiff;
+
+          const dateDiff =
+            new Date(b.dataset.date).getTime() -
+            new Date(a.dataset.date).getTime();
+
+          return dateDiff ||
+            Number(b.dataset.roundOrder) -
+            Number(a.dataset.roundOrder);
         });
+      }
+
+      function pageButton(label, ariaLabel, disabled, callback) {
+        const btn = document.createElement('button');
+        btn.className = 'page-btn';
+        btn.textContent = label;
+        btn.disabled = disabled;
+        btn.setAttribute('aria-label', ariaLabel);
+        btn.addEventListener('click', callback);
+        return btn;
+      }
+
+      function renderPagination(totalPages) {
+        pagination.innerHTML = '';
+        if (totalPages <= 1) return;
+
+        pagination.appendChild(
+          pageButton('‹', 'Previous page', currentPage === 1, () => {
+            currentPage--;
+            render();
+            scrollToMatches();
+          })
+        );
+
+        for (let i = 1; i <= totalPages; i++) {
+          const btn = pageButton(String(i), `Page ${i}`, false, () => {
+            currentPage = i;
+            render();
+            scrollToMatches();
+          });
+
+          if (i === currentPage) {
+            btn.classList.add('active');
+            btn.setAttribute('aria-current', 'page');
+          }
+
+          pagination.appendChild(btn);
+        }
+
+        pagination.appendChild(
+          pageButton('›', 'Next page', currentPage === totalPages, () => {
+            currentPage++;
+            render();
+            scrollToMatches();
+          })
+        );
+      }
+
+      function scrollToMatches() {
+        const toolbar = document.querySelector('.matches-toolbar');
+        if (!toolbar) return;
+        const top = toolbar.getBoundingClientRect().top + window.scrollY - 90;
+        window.scrollTo({ top, behavior: 'smooth' });
       }
 
       function render() {
         const visible = getVisibleCards();
         sortCards(visible);
 
-        cards.forEach(card => { card.style.display = 'none'; grid.appendChild(card); });
+        cards.forEach(card => {
+          card.style.display = 'none';
+          grid.appendChild(card);
+        });
 
         const totalPages = Math.ceil(visible.length / perPage);
-        if (currentPage > totalPages) currentPage = 1;
+        if (totalPages && currentPage > totalPages) currentPage = 1;
 
         const start = (currentPage - 1) * perPage;
         const end = start + perPage;
-        visible.slice(start, end).forEach(card => { card.style.display = ''; grid.appendChild(card); });
 
-        noResults.style.display = visible.length === 0 ? 'block' : 'none';
+        visible.slice(start, end).forEach(card => {
+          card.style.display = '';
+          grid.appendChild(card);
+        });
+
+        noResults.style.display = visible.length ? 'none' : 'block';
+
+        matchCount.textContent = visible.length
+          ? `SHOWING ${start + 1}–${Math.min(end, visible.length)} OF ${visible.length} ${visible.length === 1 ? 'MATCH' : 'MATCHES'}`
+          : 'SHOWING 0 MATCHES';
+
+        sortContext.textContent = `SORTED BY ${sortLabels[sortColumn]}`;
         renderPagination(totalPages);
       }
-
-      function renderPagination(totalPages) {
-        const focusedLabel = pagination.contains(document.activeElement)
-          ? document.activeElement.getAttribute('aria-label') : null;
-        pagination.innerHTML = '';
-        if (totalPages <= 1) return;
-
-        const prev = document.createElement('button');
-        prev.className = 'page-btn';
-        prev.textContent = '‹';
-        prev.setAttribute('aria-label', 'Previous page');
-        prev.disabled = currentPage === 1;
-        prev.addEventListener('click', () => { currentPage--; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
-        pagination.appendChild(prev);
-
-        for (let i = 1; i <= totalPages; i++) {
-          const btn = document.createElement('button');
-          btn.className = `page-btn ${i === currentPage ? 'active' : ''}`;
-          btn.textContent = i;
-          btn.setAttribute('aria-label', `Page ${i}`);
-          if (i === currentPage) btn.setAttribute('aria-current', 'page');
-          btn.addEventListener('click', () => { currentPage = i; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
-          pagination.appendChild(btn);
-        }
-
-        const next = document.createElement('button');
-        next.className = 'page-btn';
-        next.textContent = '›';
-        next.setAttribute('aria-label', 'Next page');
-        next.disabled = currentPage === totalPages;
-        next.addEventListener('click', () => { currentPage++; render(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
-        pagination.appendChild(next);
-        if (focusedLabel) {
-          const target = Array.from(pagination.querySelectorAll('button'))
-            .find(button => button.getAttribute('aria-label') === focusedLabel && !button.disabled)
-            || pagination.querySelector('[aria-current="page"]');
-          target?.focus({ preventScroll: true });
-        }
-      }
-
-      sortSelect.addEventListener('change', () => {
-        sortColumn = sortSelect.value;
-        sortDirection = 'desc';
-        currentPage = 1;
-        render();
-      });
 
       searchInput.addEventListener('input', () => { currentPage = 1; render(); });
       statusFilter.addEventListener('change', () => { currentPage = 1; render(); });
       roundFilter.addEventListener('change', () => { currentPage = 1; render(); });
+      sortSelect.addEventListener('change', () => {
+        sortColumn = sortSelect.value;
+        currentPage = 1;
+        render();
+      });
+
       render();
     });
   </script>
 </Layout>
 
 <style>
+
+  :global(body:has(.matches-page)) {
+    --bg-primary: #090a0c;
+    --bg-secondary: #101114;
+    --bg-card: #16171b;
+    --bg-card-hover: #202126;
+    --border: #303137;
+    --text-primary: #f4f3ef;
+    --text-secondary: #c4c3bf;
+    --text-muted: #a4a6ac;
+    --matches-display: 'DIN Condensed', 'Arial Narrow', 'Avenir Next Condensed', sans-serif;
+  }
+
+  :global(body:has(.matches-page) .site-header) {
+    background: #0c0d0f;
+    backdrop-filter: none;
+  }
+
+  :global(body:has(.matches-page) .site-header .nav a) {
+    font-family: var(--matches-display);
+    font-size: 17px;
+    font-weight: 500;
+  }
+
+  body:has(.matches-page) {
+    --bg-primary: #090a0c;
+    --bg-secondary: #101114;
+    --bg-card: #16171b;
+    --bg-card-hover: #202126;
+    --border: #303137;
+    --text-primary: #f4f3ef;
+    --text-secondary: #c4c3bf;
+    --text-muted: #a4a6ac;
+    --matches-display: 'DIN Condensed', 'Arial Narrow', 'Avenir Next Condensed', sans-serif;
+  }
+
+  body:has(.matches-page) .site-header {
+    background: #0c0d0f;
+    backdrop-filter: none;
+  }
+
+  body:has(.matches-page) .site-header .nav a {
+    font-family: var(--matches-display);
+    font-size: 17px;
+    font-weight: 500;
+  }
+
+  .matches-page {
+    max-width: 1344px;
+    padding: 0 32px 32px;
+    font-family: 'Arial Narrow', 'Avenir Next Condensed', sans-serif;
+  }
+
+  .matches-page .page-header {
+    background: none;
+    padding: 34px 0 26px;
+    margin-bottom: 24px;
+  }
+
+  .matches-page .page-header h1 {
+    font-family: var(--matches-display);
+    font-size: clamp(44px, 6vw, 68px);
+    text-transform: uppercase;
+  }
+
+  .matches-page .page-header p { font-size: 17px; }
+
+  /* Toolbar */
   .matches-toolbar {
-    display: flex;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-  }
-  @media (max-width: 600px) {
-    .matches-toolbar { flex-direction: column; }
-    .matches-search { width: 100%; }
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 150px 160px 150px;
+    gap: 12px;
+    padding-top: 0px;
+    margin-bottom: 18px;
   }
 
-  .matches-search, .matches-select {
-    padding: 0.6rem 0.75rem;
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    color: var(--text-primary);
-    font-size: 0.9rem;
-  }
-  .matches-search { flex: 1; min-width: 200px; }
-  .matches-select { cursor: pointer; }
-  .matches-search:focus, .matches-select:focus { outline: none; border-color: var(--accent); }
-
-  .matches-sortbar {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 1.5rem;
-    flex-wrap: wrap;
-    align-items: center;
-  }
-  .sort-label { color: var(--text-muted); font-size: 0.85rem; margin-right: 0.25rem; }
-  
-  .matches-sortbar {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    margin-bottom: 1.5rem;
+  .match-search-wrap {
+    position: relative;
+    min-width: 0;
   }
 
-  .sort-label {
-    flex-shrink: 0;
+  .match-search-icon {
+    position: absolute;
+    top: 50%;
+    left: 15px;
+    transform: translateY(-50%);
     color: var(--text-muted);
-    font-size: 0.85rem;
+    pointer-events: none;
   }
 
-  .sort-select {
-    width: auto;
-    min-width: 150px;
+  .matches-search,
+  .matches-select {
+    width: 100%;
+    height: 48px;
+    padding: 0 14px;
+    border: 1px solid var(--border);
+    border-radius: 0;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font: inherit;
+    font-size: 16px;
   }
 
-  /* NEW: 2-Column Grid on Desktop */
+  .matches-search { padding-left: 44px; }
+  .matches-select { cursor: pointer; }
+
+  .matches-search:focus,
+  .matches-select:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .matches-page :is(input, select, a, button):focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+
+  /* Context */
+  .matches-context {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 14px;
+    color: var(--text-muted);
+    font-family: var(--matches-display);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+  }
+
+  .matches-context p { margin: 0; }
+  #sortContext { color: var(--accent); }
+
+  /* Cards */
   .matches-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr));
-    gap: 1.5rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
   }
 
-  /* NEW: Premium Match Card Styling */
   .match-card {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 1.5rem;
-    text-decoration: none;
-    color: inherit;
-    transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
     display: flex;
     flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-top: 2px solid var(--accent);
+    border-radius: 0;
+    background: #111215;
+    color: var(--text-primary);
+    text-decoration: none;
   }
+
   .match-card:hover {
-    transform: translateY(-4px);
-    border-color: var(--accent);
-    box-shadow: 0 8px 24px rgba(255, 77, 46, 0.15);
+    background: #15161a;
+    border-color: #47484e;
+    border-top-color: var(--accent);
   }
 
-  .match-card-header { text-align: center; margin-bottom: 1rem; }
-  .match-card-tournament { font-size: 0.85rem; color: var(--text-secondary); font-weight: 600; }
-  .match-card-date { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.25rem; }
-  .match-card-round { margin-top: 0.5rem; }
-
-  .match-card-score {
+  /* Card header */
+  .match-card-head {
     display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 1rem;
-    padding: 1rem 0;
-    font-size: 1.15rem;
-    font-weight: 700;
-  }
-  .match-card-team1 { color: var(--t1-color); text-align: right; flex: 1; }
-  .match-card-team2 { color: var(--t2-color); text-align: left; flex: 1; }
-  .vs { color: var(--text-muted); font-weight: 400; font-size: 0.9rem; }
-
-  .match-card-team {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    flex: 1;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 18px 20px 15px;
+    border-bottom: 1px solid var(--border);
   }
 
-  .match-card-team.team-b {
-    flex-direction: row-reverse;
+  .match-event { min-width: 0; }
+
+  .match-event > strong {
+    display: block;
+    overflow: hidden;
+    color: var(--text-primary);
+    font-size: 15px;
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .match-event time {
+    display: block;
+    margin-top: 5px;
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+
+  .match-meta {
+    flex-shrink: 0;
     text-align: right;
   }
 
-  .match-card-kda {
-    display: flex;
-    justify-content: space-around;
-    margin-top: 1rem;
-    font-size: 0.8rem;
+  .match-meta > strong {
+    display: block;
+    color: var(--text-secondary);
+    font-family: var(--matches-display);
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .match-status {
+    display: block;
+    margin-top: 4px;
     color: var(--text-muted);
+    font-family: var(--matches-display);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+  }
+
+  .status-live { color: var(--accent); }
+  .status-upcoming { color: #a7ad8a; }
+
+  /* Matchup */
+  .match-versus {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 110px minmax(0, 1fr);
+    align-items: center;
+    gap: 14px;
+    min-height: 178px;
+    padding: 24px 22px;
+  }
+
+  .match-versus::before,
+  .match-versus::after {
+    content: '';
+    position: absolute;
+    top: 24px;
+    bottom: 24px;
+    width: 3px;
+  }
+
+  .match-versus::before {
+    left: 0;
+    background: var(--team1-color);
+  }
+
+  .match-versus::after {
+    right: 0;
+    background: var(--team2-color);
+  }
+
+  .match-team {
+    min-width: 0;
+    text-align: center;
+  }
+
+  .team-logo-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 68px;
+    height: 68px;
+    margin: 0 auto 10px;
+  }
+
+  .team-logo-wrap img {
+    display: block;
+    width: 58px;
+    height: 58px;
+    object-fit: contain;
+  }
+
+  .match-team > strong {
+    display: block;
+    color: var(--text-primary);
+    font-family: var(--matches-display);
+    font-size: 19px;
+    font-weight: 600;
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+  }
+
+  /* Score */
+  .match-score { text-align: center; }
+
+  .score-line {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: var(--text-primary);
+    font-family: var(--matches-display);
+    font-size: 38px;
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .score-line strong {
+    min-width: 22px;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  .score-line strong.score-winner {
+    color: var(--text-primary);
+    font-weight: 700;
+  }
+
+  .score-line > span {
+    color: #777a80;
+    font-weight: 400;
+  }
+
+  .versus-label {
+    color: var(--text-primary);
+    font-family: var(--matches-display);
+    font-size: 30px;
+    font-weight: 600;
+  }
+
+  .match-score small {
+    display: block;
+    margin-top: 9px;
+    color: var(--text-muted);
+    font-family: var(--matches-display);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+  }
+
+  /* KDA */
+  .match-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     border-top: 1px solid var(--border);
-    padding-top: 1rem;
   }
-  .match-card-kda-team1 { color: var(--t1-color); font-weight: 600; margin-right: 0.25rem; }
-  .match-card-kda-team2 { color: var(--t2-color); font-weight: 600; margin-right: 0.25rem; }
 
-  .match-round-badge {
+  .team-kda { padding: 14px 20px; }
+  .team-kda-left { border-right: 0px solid var(--border); }
+  .team-kda-right { text-align: right; }
+
+  .kda-team {
+    display: block;
+    margin-bottom: 7px;
+    font-family: var(--matches-display);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .team-kda-left .kda-team { color: var(--team1-color); }
+  .team-kda-right .kda-team { color: var(--team2-color); }
+
+  .kda-values,
+  .kda-labels {
+    display: grid;
+    grid-template-columns: repeat(3, 38px);
+    gap: 3px;
+  }
+
+  .team-kda-right .kda-values,
+  .team-kda-right .kda-labels {
+    justify-content: end;
+  }
+
+  .kda-values span {
+    color: var(--text-primary);
+    font-size: 15px;
+    font-weight: 600;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .kda-labels { margin-top: 2px; }
+
+  .kda-labels span {
+    color: var(--text-muted);
+    font-family: var(--matches-display);
+    font-size: 10px;
+    text-align: center;
+  }
+
+  /* Footer */
+  .match-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: auto;
+    padding: 13px 20px;
+    border-top: 1px solid var(--border);
     color: var(--accent);
-    background: var(--accent-dim);
-    border: 1px solid rgba(255, 116, 46, .28);
+    font-family: var(--matches-display);
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
   }
 
-  .no-results { text-align: center; color: var(--text-muted); display: none; padding: 2rem; }
+  .match-info span:last-child { transition: transform .15s ease; }
+  .match-card:hover .match-info span:last-child { transform: translateX(3px); }
 
+  /* Empty / Pagination */
+  .no-results {
+    display: none;
+    padding: 32px 16px;
+    color: var(--text-muted);
+    text-align: center;
+  }
+
+  .pagination {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 24px;
+  }
+
+  .pagination :global(.page-btn) {
+    min-width: 44px;
+    height: 44px;
+    padding: 0 10px;
+    border-radius: 0;
+    font: inherit;
+  }
+
+  .pagination :global(.page-btn.active) {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #101114;
+  }
+
+  /* Tablet */
+  @media (max-width: 900px) {
+    .matches-toolbar { grid-template-columns: 1fr 1fr 1fr; }
+    .match-search-wrap { grid-column: 1 / -1; }
+    .matches-grid { grid-template-columns: 1fr; }
+  }
+
+  /* Mobile */
   @media (max-width: 600px) {
-    .match-card {
-      padding: 1.25rem 1rem;
-    }
-
-    .match-card-score {
+    .matches-page {
       width: 100%;
-      gap: 0.75rem;
-      padding: 1rem 0;
-    }
-
-    .match-card-team {
+      max-width: 100%;
       min-width: 0;
-      flex: 1;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      gap: 0.45rem;
-      text-align: center;
+      padding: 0 16px 24px;
+      box-sizing: border-box;
+      overflow-x: hidden;
     }
 
-    .match-card-team.team-b {
-      flex-direction: column;
-      text-align: center;
-    }
-
-    .match-card-team .team-logo {
-      flex-shrink: 0;
-    }
-
-    .match-card-team > span {
+    .matches-toolbar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
       width: 100%;
       min-width: 0;
-      font-size: 0.95rem;
-      line-height: 1.2;
-      text-align: center;
-      overflow-wrap: anywhere;
+      gap: 10px;
     }
 
-    .vs {
-      flex: 0 0 auto;
-      min-width: 32px;
-      text-align: center;
+    .match-search-wrap {
+      grid-column: 1 / -1;
+      min-width: 0;
     }
 
-    .matches-sortbar {
-      align-items: center;
+    .matches-select,
+    .matches-search {
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+      box-sizing: border-box;
     }
 
     .sort-select {
-      width: 160px;
+      grid-column: 1 / -1;
+    }
+
+    .matches-page .matches-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .match-card {
+      width: 100%;
       min-width: 0;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+  }
+
+  @media (max-width: 420px) {
+    .matches-page { padding-inline:14px; }
+
+    .matches-context {
+      align-items:flex-start;
+      flex-direction:column;
+      gap:4px;
+    }
+
+    .match-card-head {
+      padding:13px 14px;
+    }
+
+    .match-versus {
+      grid-template-columns:minmax(0,1fr) 58px minmax(0,1fr);
+      gap:5px;
+      padding:16px 12px;
+    }
+
+    .team-logo-wrap {
+      width:46px;
+      height:46px;
+    }
+
+    .team-logo-wrap img {
+      width:42px;
+      height:42px;
+    }
+
+    .match-team > strong {
+      font-size:14px;
+    }
+
+    .score-line {
+      gap:3px;
+      font-size:28px;
+    }
+
+    .score-line > span {
+      font-size:22px;
+    }
+
+    .match-score small {
+      font-size:8px;
+    }
+
+    .team-kda {
+      padding:11px 10px;
+    }
+
+    .kda-values,
+    .kda-labels {
+      grid-template-columns:repeat(3,27px);
     }
   }
 

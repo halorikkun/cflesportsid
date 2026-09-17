@@ -28,10 +28,10 @@ const maps = (await getCollection('maps'))
   title="Map Statistics - CFL Esports ID"
   current="Maps"
 >
-  <div class="container">
+  <div class="container maps-page">
     <div class="page-header">
       <h1>Map Statistics</h1>
-      <p>Calculated from completed matches</p>
+      <p>{maps.length} maps · Statistics from completed matches</p>
     </div>
 
     <div class="map-directory">
@@ -267,5 +267,37 @@ const maps = (await getCollection('maps'))
     .map-directory {
       grid-template-columns: 1fr;
     }
+  }
+
+  :global(body:has(.maps-page)) {
+    --bg-primary: #090a0c; --bg-secondary: #101114; --bg-card: #16171b; --border: #303137;
+    --text-primary: #f4f3ef; --text-secondary: #c4c3bf; --text-muted: #a4a6ac;
+    --maps-display: 'DIN Condensed', 'Arial Narrow', 'Avenir Next Condensed', sans-serif;
+  }
+  :global(body:has(.maps-page) .site-header) { background: #0c0d0f; backdrop-filter: none; }
+  :global(body:has(.maps-page) .site-header .nav a) { font-family: var(--maps-display); font-size: 17px; font-weight: 500; }
+  .maps-page { max-width: 1344px; padding: 0 32px 32px; font-family: 'Arial Narrow', 'Avenir Next Condensed', sans-serif; }
+  .maps-page .page-header { background: none; padding: 34px 0 26px; margin-bottom: 24px; }
+  .maps-page .page-header h1 { font-family: var(--maps-display); font-size: clamp(44px,6vw,68px); text-transform: uppercase; }
+  .maps-page .page-header p { font-size: 17px; }
+  .maps-page .map-directory { gap: 18px; }
+  :global(#main-content) .maps-page .map-card { border-radius: 0; border-color: var(--border); background: #111215; box-shadow: none; }
+  :global(#main-content) .maps-page .map-card:hover, :global(#main-content) .maps-page .map-card:focus-within { border-color: var(--accent); background: #17181c; }
+  .maps-page .map-thumbnail { height: auto; aspect-ratio: 16 / 9; background: #17181c; }
+  .maps-page .map-thumbnail::after { background: linear-gradient(transparent 35%,#000b); }
+  .maps-page .map-card .map-thumbnail h2 { font-family: var(--maps-display); font-size: 32px; text-transform: uppercase; justify-content: flex-start; align-items: flex-end; text-align: left; line-height: 1.1; padding: 18px; text-shadow: none; }
+  .maps-page .map-card-body { padding: 18px; }
+  .maps-page .map-card dl { gap: 16px 20px; }
+  .maps-page .map-card dt { font-size: 12px; text-transform: uppercase; letter-spacing: .03em; }
+  .maps-page .map-card dd { font-family: var(--maps-display); font-size: 32px; line-height: 1.2; color: var(--text-primary); }
+  .maps-page .map-card dl > div:first-child dd { color: var(--accent); }
+  .maps-page .map-info, .maps-page .map-card:hover .map-info, .maps-page .map-card:focus-within .map-info { background: transparent; border-top-color: var(--border); color: var(--accent); font-family: var(--maps-display); font-size: 19px; text-transform: uppercase; min-height: 50px; padding: 14px 18px; }
+  .maps-page .map-info:focus-visible { outline: 2px solid var(--accent); outline-offset: -4px; }
+  .maps-page .map-empty-state { min-height: 122px; align-items: flex-start; text-align: left; }
+  .maps-page .map-empty-state strong { font-size: 18px; font-weight: 500; }
+  .maps-page .map-empty-state span { font-size: 14px; }
+  @media(max-width:640px) {
+    .maps-page { padding: 0 16px 24px; }
+    .maps-page .page-header p { font-size: 16px; }
   }
 </style>

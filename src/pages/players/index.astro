@@ -1,11 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { getCollection } from 'astro:content';
-import {
-  calculateStatistics,
-  emptyStats,
-  kdRatio
-} from '../../utils/statistics';
+import { calculateStatistics, emptyStats, kdRatio } from '../../utils/statistics';
 
 const allTeams = await getCollection('teams');
 const teamsMap = new Map(allTeams.map(t => [t.id, t]));
@@ -14,21 +10,19 @@ const allMatches = await getCollection('matches');
 const calculated = calculateStatistics(allMatches);
 
 const players = (await getCollection('players')).map(p => {
-  const team = p.data.team
-    ? teamsMap.get(p.data.team)
-    : undefined;
-
-  const stats =
-    calculated.players.get(p.data.uid || p.id) ??
-    emptyStats();
-
+  const team = p.data.team ? teamsMap.get(p.data.team) : undefined;
+  const stats = calculated.players.get(p.data.uid || p.id) ?? emptyStats();
   const kd = kdRatio(stats);
 
   return {
     id: p.id,
+    uid: p.data.uid,
     ign: p.data.ign,
-    teamName: team ? team.data.name : '—',
-    teamId: team ? team.id : '',
+    avatar: p.data.avatar || (p.data.uid ? `/players/${p.data.uid}.webp` : '/players/default.webp'),
+    teamName: team?.data.name || '—',
+    teamId: team?.id || '',
+    teamLogo: team?.data.logo || (team?.data.tag ? `/logos/${team.data.tag}.webp` : ''),
+    teamColor: team?.data.color || '#777B82',
     kills: stats.kills,
     deaths: stats.deaths,
     assists: stats.assists,
@@ -38,119 +32,119 @@ const players = (await getCollection('players')).map(p => {
   };
 });
 
+const killLeader = [...players].sort((a, b) => b.kills - a.kills)[0];
+const kdLeader = [...players].filter(p => p.matches > 0).sort((a, b) => b.kd - a.kd)[0];
+const assistLeader = [...players].sort((a, b) => b.assists - a.assists)[0];
+
 const teamNames = [
-  ...new Set(
-    players
-      .map(p => p.teamName)
-      .filter(t => t !== '—')
-  )
+  ...new Set(players.map(p => p.teamName).filter(t => t !== '—'))
 ].sort();
 ---
 
-<Layout
-  title="Players - CFL Esports ID Tournament Hub"
-  current="Players"
->
-  <div class="container">
+<Layout title="Players - CFL Esports ID Tournament Hub" current="Players">
+  <div class="container players-page">
 
     <div class="page-header">
-      <h1>Players</h1>
-      <p>Search, sort, and filter all players</p>
+      <h1>The players</h1>
+      <p>{players.length} players · Match statistics across all tournaments</p>
     </div>
 
+    <section class="players-summary" aria-label="Player statistics leaders">
+      <div class="summary-stat summary-total">
+        <strong>{players.length}</strong>
+        <span>Players</span>
+        <small>Competing across all tournaments</small>
+      </div>
+
+      <div class="summary-stat" style={`--leader-color: ${killLeader?.teamColor || '#777B82'};`}>
+        <strong>{killLeader?.kills ?? 0}</strong>
+        <span>Most Kills</span>
+        <small>
+          {killLeader ? (
+            <>
+              <a href={`/players/${killLeader.id}`}>{killLeader.ign}</a>
+              {killLeader.teamName !== '—' && <> · <a href={`/teams/${killLeader.teamId}`}>{killLeader.teamName}</a></>}
+            </>
+          ) : '—'}
+        </small>
+      </div>
+
+      <div class="summary-stat" style={`--leader-color: ${kdLeader?.teamColor || '#777B82'};`}>
+        <strong>{kdLeader?.kdDisplay ?? '0.00'}</strong>
+        <span>Best K/D</span>
+        <small>
+          {kdLeader ? (
+            <>
+              <a href={`/players/${kdLeader.id}`}>{kdLeader.ign}</a>
+              {kdLeader.teamName !== '—' && <> · <a href={`/teams/${kdLeader.teamId}`}>{kdLeader.teamName}</a></>}
+            </>
+          ) : '—'}
+        </small>
+      </div>
+
+      <div class="summary-stat" style={`--leader-color: ${assistLeader?.teamColor || '#777B82'};`}>
+        <strong>{assistLeader?.assists ?? 0}</strong>
+        <span>Most Assists</span>
+        <small>
+          {assistLeader ? (
+            <>
+              <a href={`/players/${assistLeader.id}`}>{assistLeader.ign}</a>
+              {assistLeader.teamName !== '—' && <> · <a href={`/teams/${assistLeader.teamId}`}>{assistLeader.teamName}</a></>}
+            </>
+          ) : '—'}
+        </small>
+      </div>
+    </section>
+
     <div class="players-toolbar">
-      <input
-        type="text"
-        id="searchInput"
-        aria-label="Search players"
-        placeholder="Search player or team..."
-        class="players-search"
-      />
+      <div class="search-wrap">
+        <span class="search-icon" aria-hidden="true">⌕</span>
+        <input type="text" id="searchInput" aria-label="Search players" placeholder="Search player or team..." class="players-search" />
+      </div>
 
-      <select
-        id="teamFilter"
-        aria-label="Filter by team"
-        class="players-filter"
-      >
+      <select id="teamFilter" aria-label="Filter by team" class="players-filter">
         <option value="">All Teams</option>
-
-        {teamNames.map(name => (
-          <option value={name.toLowerCase()}>
-            {name}
-          </option>
-        ))}
+        {teamNames.map(name => <option value={name.toLowerCase()}>{name}</option>)}
       </select>
     </div>
 
-    <p class="table-scroll-hint">
-      Swipe to view full stats →
-    </p>
+    <div class="table-context">
+      <p id="playerCount" role="status" aria-live="polite"></p>
+      <p id="sortContext" class="sort-context">Sorted by kills ↓</p>
+      <p class="table-scroll-hint">Swipe to view full stats →</p>
+    </div>
 
-    <div
-      class="table-wrap players-table-wrap"
-      tabindex="0"
-      role="region"
-      aria-label="Player statistics table"
-    >
-      <table
-        id="playersTable"
-        class="players-table"
-      >
+    <div class="table-wrap players-table-wrap" tabindex="0" role="region" aria-label="Player statistics table">
+      <table id="playersTable" class="players-table">
         <thead>
           <tr>
-            <th
-              class="sortable"
-              data-key="ign"
-              data-numeric="false"
-            >
+            <th class="rank-heading" aria-label="Rank">#</th>
+
+            <th class="sortable" data-key="ign" data-numeric="false">
               <button type="button">Player<span class="arrow" aria-hidden="true"></span></button>
             </th>
 
-            <th
-              class="sortable"
-              data-key="team"
-              data-numeric="false"
-            >
+            <th class="sortable" data-key="team" data-numeric="false">
               <button type="button">Team<span class="arrow" aria-hidden="true"></span></button>
             </th>
 
-            <th
-              class="sortable"
-              data-key="kills"
-              data-numeric="true"
-            >
+            <th class="sortable" data-key="kills" data-numeric="true">
               <button type="button">Kills<span class="arrow" aria-hidden="true"></span></button>
             </th>
 
-            <th
-              class="sortable"
-              data-key="deaths"
-              data-numeric="true"
-            >
+            <th class="sortable" data-key="deaths" data-numeric="true">
               <button type="button">Deaths<span class="arrow" aria-hidden="true"></span></button>
             </th>
 
-            <th
-              class="sortable"
-              data-key="assists"
-              data-numeric="true"
-            >
+            <th class="sortable" data-key="assists" data-numeric="true">
               <button type="button">Assists<span class="arrow" aria-hidden="true"></span></button>
             </th>
 
-            <th
-              class="sortable"
-              data-key="kd"
-              data-numeric="true"
-            >
+            <th class="sortable" data-key="kd" data-numeric="true">
               <button type="button">K/D Ratio<span class="arrow" aria-hidden="true"></span></button>
             </th>
 
-            <th
-              class="sortable"
-              data-key="matches"
-              data-numeric="true"
-            >
+            <th class="sortable" data-key="matches" data-numeric="true">
               <button type="button">Matches<span class="arrow" aria-hidden="true"></span></button>
             </th>
           </tr>
@@ -166,103 +160,85 @@ const teamNames = [
               data-assists={p.assists}
               data-kd={p.kd}
               data-matches={p.matches}
+              style={`--team-color: ${p.teamColor};`}
             >
-              <td>
-                <a href={`/players/${p.id}`}>
+              <td class="rank-cell"><span class="rank-number"></span></td>
+
+              <td class="player-column">
+                <a href={`/players/${p.id}`} class="player-cell">
+                  <span class="player-avatar-wrap">
+                    <img
+                      src={p.avatar}
+                      alt=""
+                      width="42"
+                      height="42"
+                      class="player-avatar"
+                      loading="lazy"
+                      onerror="this.onerror=null; this.src='/players/default.webp'"
+                    />
+                  </span>
                   <strong>{p.ign}</strong>
                 </a>
               </td>
 
               <td>
                 {p.teamId ? (
-                  <a
-                    href={`/teams/${p.teamId}`}
-                    class="team-link"
-                  >
-                    {p.teamName}
+                  <a href={`/teams/${p.teamId}`} class="team-link">
+                    {p.teamLogo && (
+                      <img
+                        src={p.teamLogo}
+                        alt=""
+                        width="24"
+                        height="24"
+                        loading="lazy"
+                        onerror="this.style.display='none'"
+                      />
+                    )}
+                    <span>{p.teamName}</span>
                   </a>
                 ) : '—'}
               </td>
 
-              <td class="kda">
-                <span class="kill">
-                  {p.kills}
-                </span>
-              </td>
-
-              <td class="kda">
-                <span class="death">
-                  {p.deaths}
-                </span>
-              </td>
-
-              <td class="kda">
-                <span class="assist">
-                  {p.assists}
-                </span>
-              </td>
-
-              <td
-                class={
-                  p.kd >= 1
-                    ? 'kd-positive'
-                    : 'kd-negative'
-                }
-              >
-                {p.kdDisplay}
-              </td>
-
-              <td>
-                {p.matches}
-              </td>
+              <td class="kda"><span>{p.kills}</span></td>
+              <td class="kda"><span>{p.deaths}</span></td>
+              <td class="kda"><span>{p.assists}</span></td>
+              <td class={p.kd >= 1 ? 'kd-positive' : 'kd-negative'}>{p.kdDisplay}</td>
+              <td>{p.matches}</td>
             </tr>
           ))}
         </tbody>
       </table>
     </div>
 
-    <p
-      id="noResults"
-      class="no-results"
-    >
-      No players found.
+    <p id="noResults" role="status" class="no-results">
+      No players match your search and team filter.
     </p>
 
-    <div
-      class="pagination"
-      id="pagination"
-      role="navigation"
-      aria-label="Player pages"
-    ></div>
-
+    <div class="pagination" id="pagination" role="navigation" aria-label="Player pages"></div>
   </div>
 
   <script is:inline>
     document.addEventListener('DOMContentLoaded', () => {
-      const searchInput =
-        document.getElementById('searchInput');
-
-      const teamFilter =
-        document.getElementById('teamFilter');
-
-      const tbody =
-        document.getElementById('playersBody');
-
-      const noResults =
-        document.getElementById('noResults');
-
-      const pagination =
-        document.getElementById('pagination');
-
-      const rows =
-        Array.from(
-          tbody.querySelectorAll('tr')
-        );
-
-      const headers =
-        document.querySelectorAll('.sortable');
+      const searchInput = document.getElementById('searchInput');
+      const teamFilter = document.getElementById('teamFilter');
+      const tbody = document.getElementById('playersBody');
+      const noResults = document.getElementById('noResults');
+      const pagination = document.getElementById('pagination');
+      const playerCount = document.getElementById('playerCount');
+      const sortContext = document.getElementById('sortContext');
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+      const headers = document.querySelectorAll('.sortable');
 
       const perPage = 10;
+      const sortLabels = {
+        ign: 'player',
+        team: 'team',
+        kills: 'kills',
+        deaths: 'deaths',
+        assists: 'assists',
+        kd: 'K/D',
+        matches: 'matches'
+      };
 
       let currentPage = 1;
       let sortKey = 'kills';
@@ -270,19 +246,12 @@ const teamNames = [
       let isNumeric = true;
 
       function isMobile() {
-        return window.matchMedia(
-          '(max-width: 640px)'
-        ).matches;
+        return window.matchMedia('(max-width: 640px)').matches;
       }
 
       function getVisibleRows() {
-        const search =
-          searchInput.value
-            .trim()
-            .toLowerCase();
-
-        const team =
-          teamFilter.value;
+        const search = searchInput.value.trim().toLowerCase();
+        const team = teamFilter.value;
 
         return rows.filter(row => {
           const matchesSearch =
@@ -290,40 +259,21 @@ const teamNames = [
             row.dataset.ign.includes(search) ||
             row.dataset.team.includes(search);
 
-          const matchesTeam =
-            !team ||
-            row.dataset.team === team;
-
+          const matchesTeam = !team || row.dataset.team === team;
           return matchesSearch && matchesTeam;
         });
       }
 
       function sortRows(visible) {
         visible.sort((a, b) => {
-          let valA;
-          let valB;
+          let valA = a.dataset[sortKey] || '';
+          let valB = b.dataset[sortKey] || '';
 
           if (isNumeric) {
-            valA =
-              parseFloat(
-                a.dataset[sortKey]
-              ) || 0;
-
-            valB =
-              parseFloat(
-                b.dataset[sortKey]
-              ) || 0;
-
-            return sortDir === 'asc'
-              ? valA - valB
-              : valB - valA;
+            valA = parseFloat(valA) || 0;
+            valB = parseFloat(valB) || 0;
+            return sortDir === 'asc' ? valA - valB : valB - valA;
           }
-
-          valA =
-            a.dataset[sortKey] || '';
-
-          valB =
-            b.dataset[sortKey] || '';
 
           return sortDir === 'asc'
             ? valA.localeCompare(valB)
@@ -334,72 +284,37 @@ const teamNames = [
       function updateSortHeader() {
         headers.forEach(header => {
           header.removeAttribute('aria-sort');
-          header.classList.remove(
-            'active-sort'
-          );
+          header.classList.remove('active-sort');
 
-          const arrow =
-            header.querySelector('.arrow');
-
-          if (arrow) {
-            arrow.textContent = '';
-          }
+          const arrow = header.querySelector('.arrow');
+          if (arrow) arrow.textContent = '';
         });
 
-        const activeHeader =
-          document.querySelector(
-            `[data-key="${sortKey}"]`
-          );
-
+        const activeHeader = document.querySelector(`[data-key="${sortKey}"]`);
         if (!activeHeader) return;
-        activeHeader.setAttribute('aria-sort', sortDir === 'asc' ? 'ascending' : 'descending');
 
-        activeHeader.classList.add(
-          'active-sort'
+        activeHeader.setAttribute(
+          'aria-sort',
+          sortDir === 'asc' ? 'ascending' : 'descending'
         );
 
-        const arrow =
-          activeHeader.querySelector(
-            '.arrow'
-          );
+        activeHeader.classList.add('active-sort');
 
-        if (arrow) {
-          arrow.textContent =
-            sortDir === 'asc'
-              ? ' ↑'
-              : ' ↓';
-        }
+        const arrow = activeHeader.querySelector('.arrow');
+        if (arrow) arrow.textContent = sortDir === 'asc' ? ' ↑' : ' ↓';
       }
 
-      /*
-       * Desktop:
-       * ‹ 1 2 3 4 5 … 9 ›
-       *
-       * Middle:
-       * ‹ 1 … 4 5 6 … 9 ›
-       */
-      function getDesktopPageItems(
-        totalPages,
-        page
-      ) {
+      function updateSortContext() {
+        const label = sortLabels[sortKey] || sortKey;
+        sortContext.textContent = `Sorted by ${label} ${sortDir === 'asc' ? '↑' : '↓'}`;
+      }
+
+      function getDesktopPageItems(totalPages, page) {
         if (totalPages <= 7) {
-          return Array.from(
-            { length: totalPages },
-            (_, i) => i + 1
-          );
+          return Array.from({ length: totalPages }, (_, i) => i + 1);
         }
 
-        if (page <= 4) {
-          return [
-            1,
-            2,
-            3,
-            4,
-            5,
-            'ellipsis',
-            totalPages
-          ];
-        }
+        if (page <= 4) return [1, 2, 3, 4, 5, 'ellipsis', totalPages];
 
         if (page >= totalPages - 3) {
           return [
@@ -413,251 +328,110 @@ const teamNames = [
           ];
         }
 
-        return [
-          1,
-          'ellipsis',
-          page - 1,
-          page,
-          page + 1,
-          'ellipsis',
-          totalPages
-        ];
+        return [1, 'ellipsis', page - 1, page, page + 1, 'ellipsis', totalPages];
       }
 
-      /*
-       * Mobile:
-       *
-       * Beginning:
-       * ‹ 1 2 … 9 ›
-       *
-       * Middle:
-       * ‹ 1 … 5 … 9 ›
-       *
-       * End:
-       * ‹ 1 … 8 9 ›
-       */
-      function getMobilePageItems(
-        totalPages,
-        page
-      ) {
+      function getMobilePageItems(totalPages, page) {
         if (totalPages <= 4) {
-          return Array.from(
-            { length: totalPages },
-            (_, i) => i + 1
-          );
+          return Array.from({ length: totalPages }, (_, i) => i + 1);
         }
 
-        if (page <= 2) {
-          return [
-            1,
-            2,
-            'ellipsis',
-            totalPages
-          ];
-        }
+        if (page <= 2) return [1, 2, 'ellipsis', totalPages];
+        if (page >= totalPages - 1) return [1, 'ellipsis', totalPages - 1, totalPages];
 
-        if (page >= totalPages - 1) {
-          return [
-            1,
-            'ellipsis',
-            totalPages - 1,
-            totalPages
-          ];
-        }
-
-        return [
-          1,
-          'ellipsis',
-          page,
-          'ellipsis',
-          totalPages
-        ];
+        return [1, 'ellipsis', page, 'ellipsis', totalPages];
       }
 
-      function getPageItems(
-        totalPages,
-        page
-      ) {
+      function getPageItems(totalPages, page) {
         return isMobile()
-          ? getMobilePageItems(
-              totalPages,
-              page
-            )
-          : getDesktopPageItems(
-              totalPages,
-              page
-            );
+          ? getMobilePageItems(totalPages, page)
+          : getDesktopPageItems(totalPages, page);
       }
 
       function scrollToPlayers() {
-        const toolbar =
-          document.querySelector(
-            '.players-toolbar'
-          );
-
+        const toolbar = document.querySelector('.players-toolbar');
         if (!toolbar) return;
 
-        const top =
-          toolbar
-            .getBoundingClientRect()
-            .top +
-          window.scrollY -
-          90;
-
-        window.scrollTo({
-          top,
-          behavior: 'smooth'
-        });
+        const top = toolbar.getBoundingClientRect().top + window.scrollY - 90;
+        window.scrollTo({ top, behavior: 'smooth' });
       }
 
-      function createPageButton(
-        label,
-        ariaLabel,
-        disabled,
-        onClick
-      ) {
-        const button =
-          document.createElement('button');
-
+      function createPageButton(label, ariaLabel, disabled, onClick) {
+        const button = document.createElement('button');
         button.className = 'page-btn';
         button.textContent = label;
         button.disabled = disabled;
-
-        button.setAttribute(
-          'aria-label',
-          ariaLabel
-        );
-
-        button.addEventListener(
-          'click',
-          onClick
-        );
-
+        button.setAttribute('aria-label', ariaLabel);
+        button.addEventListener('click', onClick);
         return button;
       }
 
-      function renderPagination(
-        totalPages
-      ) {
+      function renderPagination(totalPages) {
         const focusedLabel = pagination.contains(document.activeElement)
-          ? document.activeElement.getAttribute('aria-label') : null;
-        pagination.innerHTML = '';
+          ? document.activeElement.getAttribute('aria-label')
+          : null;
 
+        pagination.innerHTML = '';
         if (totalPages <= 1) return;
 
-        const prev =
-          createPageButton(
-            '‹',
-            'Previous page',
-            currentPage === 1,
-            () => {
-              if (currentPage <= 1) return;
-
-              currentPage--;
-              render();
-              scrollToPlayers();
-            }
-          );
+        const prev = createPageButton('‹', 'Previous page', currentPage === 1, () => {
+          if (currentPage <= 1) return;
+          currentPage--;
+          render();
+          scrollToPlayers();
+        });
 
         pagination.appendChild(prev);
 
-        const pageItems =
-          getPageItems(
-            totalPages,
-            currentPage
-          );
-
-        pageItems.forEach(item => {
+        getPageItems(totalPages, currentPage).forEach(item => {
           if (item === 'ellipsis') {
-            const ellipsis =
-              document.createElement(
-                'span'
-              );
-
-            ellipsis.className =
-              'page-ellipsis';
-
+            const ellipsis = document.createElement('span');
+            ellipsis.className = 'page-ellipsis';
             ellipsis.textContent = '…';
-
-            pagination.appendChild(
-              ellipsis
-            );
-
+            pagination.appendChild(ellipsis);
             return;
           }
 
-          const button =
-            document.createElement(
-              'button'
-            );
+          const button = document.createElement('button');
+          button.className = `page-btn ${item === currentPage ? 'active' : ''}`;
+          button.textContent = String(item);
+          button.setAttribute('aria-label', `Page ${item}`);
 
-          button.className =
-            `page-btn ${
-              item === currentPage
-                ? 'active'
-                : ''
-            }`;
+          if (item === currentPage) button.setAttribute('aria-current', 'page');
 
-          button.textContent =
-            String(item);
+          button.addEventListener('click', () => {
+            currentPage = item;
+            render();
+            scrollToPlayers();
+          });
 
-          button.setAttribute(
-            'aria-label',
-            `Page ${item}`
-          );
-
-          if (item === currentPage) {
-            button.setAttribute(
-              'aria-current',
-              'page'
-            );
-          }
-
-          button.addEventListener(
-            'click',
-            () => {
-              currentPage = item;
-              render();
-              scrollToPlayers();
-            }
-          );
-
-          pagination.appendChild(
-            button
-          );
+          pagination.appendChild(button);
         });
 
-        const next =
-          createPageButton(
-            '›',
-            'Next page',
-            currentPage === totalPages,
-            () => {
-              if (
-                currentPage >= totalPages
-              ) {
-                return;
-              }
-
-              currentPage++;
-              render();
-              scrollToPlayers();
-            }
-          );
+        const next = createPageButton('›', 'Next page', currentPage === totalPages, () => {
+          if (currentPage >= totalPages) return;
+          currentPage++;
+          render();
+          scrollToPlayers();
+        });
 
         pagination.appendChild(next);
+
         if (focusedLabel) {
-          const target = Array.from(pagination.querySelectorAll('button'))
-            .find(button => button.getAttribute('aria-label') === focusedLabel && !button.disabled)
-            || pagination.querySelector('[aria-current="page"]');
+          const target =
+            Array.from(pagination.querySelectorAll('button'))
+              .find(button =>
+                button.getAttribute('aria-label') === focusedLabel &&
+                !button.disabled
+              ) ||
+            pagination.querySelector('[aria-current="page"]');
+
           target?.focus({ preventScroll: true });
         }
       }
 
       function render() {
-        const visible =
-          getVisibleRows();
-
+        const visible = getVisibleRows();
         sortRows(visible);
 
         rows.forEach(row => {
@@ -665,104 +439,65 @@ const teamNames = [
           tbody.appendChild(row);
         });
 
-        const totalPages =
-          Math.ceil(
-            visible.length / perPage
-          );
+        const totalPages = Math.ceil(visible.length / perPage);
 
-        if (
-          totalPages > 0 &&
-          currentPage > totalPages
-        ) {
+        if (totalPages > 0 && currentPage > totalPages) {
           currentPage = 1;
         }
 
-        const start =
-          (currentPage - 1) *
-          perPage;
+        const start = (currentPage - 1) * perPage;
+        const end = start + perPage;
 
-        const end =
-          start + perPage;
+        visible.slice(start, end).forEach((row, index) => {
+          row.style.display = '';
 
-        visible
-          .slice(start, end)
-          .forEach(row => {
-            row.style.display = '';
-            tbody.appendChild(row);
-          });
+          const rank = row.querySelector('.rank-number');
+          if (rank) {
+            rank.textContent = String(start + index + 1).padStart(2, '0');
+          }
 
-        noResults.style.display =
-          visible.length === 0
-            ? 'block'
-            : 'none';
+          tbody.appendChild(row);
+        });
 
+        noResults.style.display = visible.length === 0 ? 'block' : 'none';
+
+        playerCount.textContent = visible.length
+          ? `SHOWING ${start + 1}–${Math.min(end, visible.length)} OF ${visible.length} ${visible.length === 1 ? 'PLAYER' : 'PLAYERS'}`
+          : '0 PLAYERS';
+
+        updateSortContext();
         renderPagination(totalPages);
       }
 
       headers.forEach(header => {
-        header.querySelector('button').addEventListener(
-          'click',
-          () => {
-            const key =
-              header.dataset.key;
+        header.querySelector('button').addEventListener('click', () => {
+          const key = header.dataset.key;
+          isNumeric = header.dataset.numeric === 'true';
 
-            isNumeric =
-              header.dataset.numeric ===
-              'true';
-
-            if (sortKey === key) {
-              sortDir =
-                sortDir === 'asc'
-                  ? 'desc'
-                  : 'asc';
-            } else {
-              sortKey = key;
-
-              sortDir =
-                isNumeric
-                  ? 'desc'
-                  : 'asc';
-            }
-
-            currentPage = 1;
-
-            updateSortHeader();
-            render();
+          if (sortKey === key) {
+            sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+          } else {
+            sortKey = key;
+            sortDir = isNumeric ? 'desc' : 'asc';
           }
-        );
+
+          currentPage = 1;
+          updateSortHeader();
+          render();
+        });
       });
 
-      searchInput.addEventListener(
-        'input',
-        () => {
-          currentPage = 1;
-          render();
-        }
-      );
+      searchInput.addEventListener('input', () => {
+        currentPage = 1;
+        render();
+      });
 
-      teamFilter.addEventListener(
-        'change',
-        () => {
-          currentPage = 1;
-          render();
-        }
-      );
+      teamFilter.addEventListener('change', () => {
+        currentPage = 1;
+        render();
+      });
 
-      /*
-       * Rebuild pagination whenever the
-       * viewport crosses the mobile breakpoint.
-       */
-      const mobileQuery =
-        window.matchMedia(
-          '(max-width: 640px)'
-        );
-
-      mobileQuery.addEventListener(
-        'change',
-        () => {
-          render();
-        }
-      );
+      window.matchMedia('(max-width: 640px)').addEventListener('change', render);
 
       updateSortHeader();
       render();
@@ -771,238 +506,561 @@ const teamNames = [
 </Layout>
 
 <style>
-  .players-toolbar {
-    display: flex;
-    gap: 0.75rem;
-    margin-bottom: 1.25rem;
+  :global(body:has(.players-page)) {
+    --bg-primary: #090a0c;
+    --bg-secondary: #101114;
+    --bg-card: #16171b;
+    --bg-card-hover: #202126;
+    --border: #303137;
+    --text-primary: #f4f3ef;
+    --text-secondary: #c4c3bf;
+    --text-muted: #a4a6ac;
+    --players-display: 'DIN Condensed', 'Arial Narrow', 'Avenir Next Condensed', sans-serif;
   }
 
-  .players-search,
-  .players-filter {
-    padding: 0.6rem 0.75rem;
-    background: var(--bg-card);
+  :global(body:has(.players-page) .site-header) {
+    background: #0c0d0f;
+    backdrop-filter: none;
+  }
+
+  :global(body:has(.players-page) .site-header .nav a) {
+    font-family: var(--players-display);
+    font-size: 17px;
+    font-weight: 500;
+  }
+
+  .players-page {
+    max-width: 1344px;
+    padding: 0 32px 32px;
+    font-family: 'Arial Narrow', 'Avenir Next Condensed', sans-serif;
+  }
+
+  .players-page .page-header {
+    background: none;
+    padding: 34px 0 18px;
+    margin-bottom: 0px;
+  }
+
+  .players-page .page-header h1 {
+    font-family: var(--players-display);
+    font-size: clamp(44px, 6vw, 68px);
+    text-transform: uppercase;
+  }
+
+  .players-page .page-header p {
+    font-size: 17px;
+  }
+
+  /* Summary */
+
+  .players-summary {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    margin-bottom: 24px;
     border: 1px solid var(--border);
-    border-radius: var(--radius);
+    background: var(--bg-secondary);
+  }
+
+  .summary-stat {
+    position: relative;
+    min-width: 0;
+    padding: 19px 26px 18px;
+    border-right: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .summary-stat:last-child {
+    border-right: 0;
+  }
+
+  .summary-stat::before {
+    content: '';
+    position: absolute;
+    inset: 0 0 auto;
+    height: 2px;
+    background: var(--leader-color, var(--accent));
+    opacity: .8;
+  }
+
+  .summary-total::before {
+    background: var(--accent);
+  }
+
+  .summary-stat strong {
+    display: block;
+    margin-bottom: 7px;
     color: var(--text-primary);
-    font-size: 0.9rem;
+    font-family: var(--players-display);
+    font-size: 42px;
+    font-weight: 700;
+    line-height: .95;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .summary-stat:not(.summary-total) strong {
+    color: var(--accent);
+  }
+
+  .summary-stat span {
+    display: block;
+    color: var(--text-secondary);
+    font-family: var(--players-display);
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: .035em;
+    text-transform: uppercase;
+  }
+
+  .summary-stat small {
+    display: block;
+    margin-top: 4px;
+    overflow: hidden;
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .summary-stat small a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .summary-stat small a:hover {
+    color: var(--leader-color, var(--accent));
+  }
+
+  /* Toolbar */
+
+  .players-toolbar {
+    display: flex;
+    gap: 12px;
+  }
+
+  .search-wrap {
+    position: relative;
+    display: flex;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .search-icon {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 20px;
+    pointer-events: none;
+  }
+
+  .players-page :is(.players-search, .players-filter) {
+    min-height: 48px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 0;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font: inherit;
+    font-size: 16px;
   }
 
   .players-search {
-    flex: 1;
-    min-width: 200px;
+    width: 100%;
+    padding-left: 44px !important;
   }
 
   .players-filter {
+    width: 250px;
     cursor: pointer;
   }
 
-  .players-search:focus,
-  .players-filter:focus {
-    outline: none;
-    border-color: var(--accent);
+  .players-page :is(input, select, a, button):focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
   }
 
-  /* Sortable table */
+  /* Context */
+
+  .table-context {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 20px 0 12px;
+    color: var(--text-muted);
+    font-family: var(--players-display);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+  }
+
+  .table-context p {
+    margin: 0;
+  }
+
+  .sort-context {
+    margin-left: auto !important;
+    color: var(--accent);
+  }
+
+  .table-scroll-hint {
+    display: none;
+  }
+
+  /* Table */
+
+  .players-page .players-table-wrap {
+    border: 1px solid var(--border);
+    border-radius: 0;
+    overflow-x: auto;
+    margin-bottom: 20px;
+  }
+
+  .players-table {
+    width: 100%;
+    min-width: 900px;
+    border-collapse: collapse;
+    font-size: 17px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .players-page .players-table th {
+    padding: 4px 16px;
+    background: #1b1c20;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-secondary);
+    font-size: 13px;
+  }
+
+  .players-page .players-table td {
+    padding: 11px 16px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid #25262b;
+    vertical-align: middle;
+  }
+
+  .players-page .players-table tr:nth-child(even) td {
+    background: #141518;
+  }
+
+  .players-page .players-table tr:hover td {
+    background: var(--bg-card-hover);
+  }
+
+  .players-page .players-table tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .players-table :is(th, td):nth-child(n+4) {
+    text-align: right;
+  }
+
+  .players-table td:nth-child(4) {
+    font-weight: 700;
+  }
+
+  /* Rank */
+
+  .rank-heading {
+    width: 60px;
+    text-align: center !important;
+  }
+
+  .rank-cell {
+    position: relative;
+    width: 60px;
+    padding-inline: 12px !important;
+    text-align: center !important;
+  }
+
+  .rank-cell::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 3px;
+    background: var(--team-color);
+  }
+
+  .rank-number {
+    color: var(--text-primary);
+    font-family: var(--players-display);
+    font-size: 20px;
+    font-weight: 600;
+  }
+
+  /* Player */
+
+  .player-column {
+    min-width: 210px;
+  }
+
+  .player-cell {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 42px;
+    color: var(--text-primary);
+    text-decoration: none;
+  }
+
+  .player-avatar-wrap {
+    flex: 0 0 42px;
+    width: 42px;
+    height: 42px;
+    overflow: hidden;
+    background: #202126;
+  }
+
+  .player-avatar {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .player-cell strong {
+    font-weight: 700;
+  }
+
+  .player-cell:hover {
+    color: var(--accent);
+  }
+
+  /* Team + stats */
+
+  .team-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    color: var(--text-secondary);
+    text-decoration: none;
+  }
+
+  .team-link img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+  }
+
+  .team-link:hover {
+    color: var(--accent);
+    text-decoration: underline;
+  }
+
+  .players-page .players-table .kda span {
+    color: var(--text-primary);
+  }
+
+  .players-page .players-table .kd-positive {
+    color: #83b596;
+    font-weight: 700;
+  }
+
+  .players-page .players-table .kd-negative {
+    color: var(--text-secondary);
+  }
+
+  /* Sorting */
 
   .sortable {
-    cursor: pointer;
     user-select: none;
-    transition: color 0.2s;
   }
 
   .sortable button {
-    background: none;
+    min-width: 44px;
+    min-height: 44px;
     border: 0;
+    background: none;
     color: inherit;
     font: inherit;
     letter-spacing: inherit;
-    text-transform: inherit;
-    text-align: left;
-    min-width: 44px;
-    min-height: 44px;
+    text-align: inherit;
+    text-transform: uppercase;
     cursor: pointer;
   }
 
-  .sortable:hover {
-    color: var(--accent-hover);
-  }
-
-  .sortable.active-sort {
+  .players-page .players-table .sortable.active-sort,
+  .sortable button:hover {
     color: var(--accent);
   }
 
   .arrow {
-    margin-left: 0.25rem;
-    font-size: 0.8rem;
+    margin-left: 4px;
   }
 
-  /* Team links */
-
-  .team-link {
-    color: var(--accent);
-    font-weight: 600;
-    text-decoration: none;
-  }
-
-  .team-link:hover {
-    color: var(--accent-hover);
-    text-decoration: underline;
-  }
-
-  /*
-   * Hidden on desktop/tablet.
-   * Only displayed inside the mobile media query.
-   */
-  .table-scroll-hint {
-    display: none !important;
-  }
-
-  /* Empty state */
+  /* Empty + pagination */
 
   .no-results {
     display: none;
-    padding: 2rem;
-    color: var(--text-muted);
+    padding: 28px 16px;
     text-align: center;
+    color: var(--text-secondary);
   }
-
-  /* Pagination */
 
   .pagination {
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 8px;
   }
 
-  .page-ellipsis {
+  .pagination :global(.page-btn) {
+    min-width: 44px;
+    height: 44px;
+    padding: 0 10px;
+    border-radius: 0;
+    font: inherit;
+  }
+
+  .pagination :global(.page-btn.active) {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #101114;
+  }
+
+  .pagination :global(.page-ellipsis) {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 24px;
+    min-width: 16px;
     color: var(--text-muted);
-    font-weight: 700;
+  }
+
+  @media (max-width: 900px) {
+    .players-summary {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .summary-stat:nth-child(2) {
+      border-right: 0;
+    }
+
+    .summary-stat:nth-child(-n+2) {
+      border-bottom: 1px solid var(--border);
+    }
+
+    .table-scroll-hint {
+      display: block;
+    }
+
+    .sort-context {
+      display: none;
+    }
   }
 
   @media (max-width: 640px) {
+    .players-page {
+      padding: 0 16px 24px;
+    }
+
+    .players-page .page-header {
+      padding-top: 26px;
+    }
+
+    .players-page .page-header p {
+      font-size: 15px;
+    }
+
+    .players-summary {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      margin-bottom: 18px;
+    }
+
+    .summary-stat {
+      padding: 16px 14px;
+    }
+
+    .summary-stat strong {
+      font-size: 34px;
+    }
+
+    .summary-stat span {
+      font-size: 14px;
+    }
+
+    .summary-stat small {
+      font-size: 11px;
+    }
+
     .players-toolbar {
       flex-direction: column;
-      margin-bottom: 1rem;
     }
 
-    .players-search,
     .players-filter {
       width: 100%;
-      min-width: 0;
     }
 
-    /* Mobile-only swipe instruction */
-
-    .table-scroll-hint {
-      display: block !important;
-      margin: 0 0 10px;
-      color: var(--text-muted);
-      font-size: 11px;
-      font-weight: 600;
-      text-align: right;
+    .table-context {
+      align-items: flex-end;
+      font-size: 12px;
     }
 
-    /*
-     * The viewport remains phone width.
-     * The table itself is intentionally wider
-     * and scrolls horizontally.
-     */
-    .players-table-wrap {
-      width: 100%;
-      max-width: 100%;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-    }
-
-    /*
-     * Give all seven columns enough room.
-     * Do not squeeze them into the phone width.
-     */
-    .players-table {
-      width: 850px;
-      min-width: 850px;
-      table-layout: auto;
-    }
-
-    .players-table th,
-    .players-table td {
-      padding: 14px 16px;
+    .players-page .players-table :is(th, td) {
+      position: static;
+      left: auto;
+      padding-inline: 12px;
       white-space: nowrap;
     }
 
-    /*
-     * Player
-     */
-    .players-table th:nth-child(1),
-    .players-table td:nth-child(1) {
-      width: 170px;
-      min-width: 170px;
+    .players-page .players-table :is(th, td):first-child {
+      width: 50px;
+      min-width: 50px;
+      padding-inline: 8px;
     }
 
-    /*
-     * Team
-     */
-    .players-table th:nth-child(2),
-    .players-table td:nth-child(2) {
-      width: 150px;
-      min-width: 150px;
+    .players-page .players-table :is(th, td):nth-child(2) {
+      position: sticky;
+      left: 50px;
+      z-index: 2;
+      width: 180px;
+      min-width: 180px;
+      max-width: 200px;
+      border-right: 1px solid var(--border);
     }
 
-    /*
-     * Kills / Deaths / Assists
-     */
-    .players-table th:nth-child(3),
-    .players-table td:nth-child(3),
-    .players-table th:nth-child(4),
-    .players-table td:nth-child(4),
-    .players-table th:nth-child(5),
-    .players-table td:nth-child(5) {
-      width: 90px;
-      min-width: 90px;
+    .players-page .players-table th:nth-child(2) {
+      z-index: 4;
+      background: #1b1c20;
     }
 
-    /*
-     * K/D Ratio
-     */
-    .players-table th:nth-child(6),
-    .players-table td:nth-child(6) {
-      width: 110px;
-      min-width: 110px;
+    .players-page .players-table tr:nth-child(odd) td:nth-child(2) {
+      background: var(--bg-secondary);
     }
 
-    /*
-     * Matches
-     */
-    .players-table th:nth-child(7),
-    .players-table td:nth-child(7) {
-      width: 90px;
-      min-width: 90px;
+    .players-page .players-table tr:nth-child(even) td:nth-child(2) {
+      background: #141518;
+    }
+
+    .players-page .players-table tr:hover td:nth-child(2) {
+      background: var(--bg-card-hover);
+    }
+
+    .player-column {
+      min-width: 180px;
+    }
+
+    .player-cell {
+      gap: 9px;
+    }
+
+    .player-avatar-wrap {
+      flex-basis: 36px;
+      width: 36px;
+      height: 36px;
+    }
+
+    .rank-number {
+      font-size: 17px;
     }
 
     .pagination {
-      width: 100%;
-      flex-wrap: wrap;
       gap: 6px;
-    }
-
-    .pagination :global(.page-btn) {
-      width: 44px;
-      min-width: 44px;
-      height: 44px;
-      padding: 0;
-      flex: 0 0 44px;
-    }
-
-    .pagination :global(.page-ellipsis) {
-      width: 16px;
-      min-width: 16px;
-      flex: 0 0 16px;
     }
   }
 </style>

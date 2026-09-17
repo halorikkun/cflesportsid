@@ -15,6 +15,17 @@ const tournamentPosters: Record<string, string> = {
   'clash-for-glory-s1': '/tournaments/clash-for-glory-s1.webp',
 };
 
+const formatDate = (date: string | null) => {
+  if (!date) return null;
+
+  return new Date(date).toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).toUpperCase();
+};
+
 const tournaments = allTournaments.map((tournament) => {
   const tMatches = matches.filter(
     (match) => getMatchTournamentId(match) === tournament.id
@@ -78,7 +89,7 @@ const tournaments = allTournaments.map((tournament) => {
           month: 'long',
           timeZone: 'UTC',
         }
-      )
+      ).toUpperCase()
     : null;
 
   return {
@@ -92,6 +103,7 @@ const tournaments = allTournaments.map((tournament) => {
     month,
     winner,
     poster: tournamentPosters[tournament.id] ?? null,
+    matchCount: tMatches.length,
   };
 });
 
@@ -129,352 +141,622 @@ tournaments.sort((a, b) => {
   title="CFL Esports ID Tournament Hub - Tournaments"
   current="Tournaments"
 >
-  <div class="container">
+  <div class="container tournaments-page">
     <div class="page-header">
       <h1>Tournaments</h1>
       <p>Choose a tournament to view its bracket and results</p>
     </div>
 
-    <div class="tourney-grid">
-      {tournaments.map((tournament) => (
-        <a
-          href={`/tournament/${tournament.id}`}
-          class="tourney-card"
-        >
-          <div class="poster-meta">
-            <span class="poster-season">
-              {[
-                tournament.season,
-                tournament.month,
-              ]
-                .filter(Boolean)
-                .join(' · ')}
-            </span>
+    <div class="tourney-list">
+      {tournaments.map((tournament) => {
+        const startLabel = formatDate(tournament.startDate);
+        const endLabel = formatDate(tournament.endDate);
 
-            <span
-              class:list={[
-                'status-badge',
-                `status-${tournament.status}`,
-              ]}
-            >
-              {tournament.statusLabel}
-            </span>
-          </div>
+        const dateLabel =
+          startLabel && endLabel && startLabel !== endLabel
+            ? `${startLabel} — ${endLabel}`
+            : startLabel || endLabel;
 
-          {tournament.poster ? (
-            <img
-              class="tourney-poster-image"
-              src={tournament.poster}
-              alt={`${tournament.name} tournament poster`}
-              loading="lazy"
-              width="768"
-              height="1024"
-            />
-          ) : (
-            <div class="poster-placeholder">
-              <span>{tournament.name}</span>
-            </div>
-          )}
+        const winnerColor =
+          tournament.winner?.data.color || '#e7bf59';
 
-          <div class="tourney-content">
-            <h2>{tournament.name}</h2>
-
-            {tournament.winner && (
-              <div class="tourney-champion">
-                <div class="champion-name">
-                  <img
-                    src="/icons/gold-medal.webp"
-                    alt=""
-                    width="18"
-                    height="18"
-                  />
-
-                  <strong>
-                    {tournament.winner.data.name}
-                  </strong>
+        return (
+          <a
+            href={`/tournament/${tournament.id}`}
+            class={`tourney-card status-card-${tournament.status}`}
+            style={`--winner-color:${winnerColor};`}
+          >
+            <div class="tourney-poster">
+              {tournament.poster ? (
+                <img
+                  src={tournament.poster}
+                  alt={`${tournament.name} tournament poster`}
+                  loading="lazy"
+                  width="768"
+                  height="1024"
+                />
+              ) : (
+                <div class="poster-placeholder">
+                  <span>{tournament.name}</span>
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
 
-          <div class="tourney-cta">
-            <span>View Bracket & Results</span>
-            <span
-              class="tourney-arrow"
-              aria-hidden="true"
-            >
-              →
-            </span>
-          </div>
-        </a>
-      ))}
+            <div class="tourney-body">
+              <div class="tourney-top">
+                <span class="tourney-season">
+                  {[
+                    tournament.season,
+                    tournament.month,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </span>
+
+                <span
+                  class:list={[
+                    'status-badge',
+                    `status-${tournament.status}`,
+                  ]}
+                >
+                  {tournament.statusLabel}
+                </span>
+              </div>
+
+              <div class="tourney-main">
+                <h2>{tournament.name}</h2>
+
+                <div class="tourney-meta">
+                  {dateLabel && (
+                    <span class="meta-item">
+                      <span class="meta-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24">
+                          <path d="M7 2v3M17 2v3M3.5 9h17M5 4h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/>
+                        </svg>
+                      </span>
+                      {dateLabel}
+                    </span>
+                  )}
+
+                  {tournament.matchCount > 0 && (
+                    <span class="meta-item">
+                      <span class="meta-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24">
+                          <path d="M8 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8ZM16.5 8.5a3 3 0 1 0 0 6M2 21c.5-3.2 2.6-5 6-5s5.5 1.8 6 5M14 17c3.8-.5 6.3.8 7 4"/>
+                        </svg>
+                      </span>
+                      {tournament.matchCount} {tournament.matchCount === 1 ? 'Match' : 'Matches'}
+                    </span>
+                  )}
+                </div>
+
+                {tournament.winner && (
+                  <div class="tourney-champion">
+                    <img
+                      src="/icons/gold-medal.webp"
+                      alt=""
+                      width="22"
+                      height="22"
+                    />
+
+                    <div>
+                      <span>Champion</span>
+                      <strong>
+                        {tournament.winner.data.name}
+                      </strong>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div class="tourney-cta">
+                <span>Tournament info</span>
+                <span class="tourney-arrow" aria-hidden="true">→</span>
+              </div>
+            </div>
+          </a>
+        );
+      })}
     </div>
   </div>
 </Layout>
 
 <style>
-  .tourney-grid {
-    display: grid;
-    grid-template-columns:
-      repeat(auto-fill, minmax(280px, 340px));
-    gap: 24px;
-    align-items: start;
+  :global(body:has(.tournaments-page)) {
+    --bg-primary:#090a0c;
+    --bg-secondary:#101114;
+    --bg-card:#16171b;
+    --bg-card-hover:#202126;
+    --border:#303137;
+    --text-primary:#f4f3ef;
+    --text-secondary:#c4c3bf;
+    --text-muted:#a4a6ac;
+    --tournament-display:'DIN Condensed','Arial Narrow','Avenir Next Condensed',sans-serif;
+  }
+
+  :global(body:has(.tournaments-page) .site-header) {
+    background:#0c0d0f;
+    backdrop-filter:none;
+  }
+
+  :global(body:has(.tournaments-page) .site-header .nav a) {
+    font-family:var(--tournament-display);
+    font-size:17px;
+    font-weight:500;
+  }
+
+  .tournaments-page {
+    max-width:1344px;
+    padding:0 32px 40px;
+    font-family:'Arial Narrow','Avenir Next Condensed',sans-serif;
+  }
+
+  .tournaments-page .page-header {
+    margin-bottom:24px;
+    padding:34px 0 26px;
+    background:none;
+  }
+
+  .tournaments-page .page-header h1 {
+    font-family:var(--tournament-display);
+    font-size:clamp(44px,6vw,68px);
+    text-transform:uppercase;
+  }
+
+  .tournaments-page .page-header p {
+    font-size:17px;
+  }
+
+  /* Tournament list */
+
+  .tourney-list {
+    display:grid;
+    grid-template-columns:minmax(0,1fr);
+    gap:18px;
   }
 
   .tourney-card {
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    padding: 0;
-    color: inherit;
-
-    /* ONE card surface */
-    background: var(--bg-secondary);
-
-    border: 1px solid var(--border);
-    border-top: 3px solid var(--accent);
-    border-radius: 10px;
-    text-decoration: none;
-
-    transition:
-      border-color .18s,
-      transform .18s;
+    display:grid;
+    grid-template-columns:380px minmax(0,1fr);
+    height: 280px;
+    min-height: 0;
+    overflow:hidden;
+    border:1px solid var(--border);
+    border-top:3px solid var(--accent);
+    border-radius:0;
+    background:#111215;
+    color:var(--text-primary);
+    text-decoration:none;
+    transition:background-color .18s,border-color .18s;
   }
 
   .tourney-card:hover {
-    border-color: rgba(255, 116, 46, .5);
-    transform: translateY(-2px);
+    background:#15161a;
+    border-color:#47484e;
+    border-top-color:var(--accent);
   }
 
-  /* Season + tournament status */
-
-  .poster-meta {
-    width: 100%;
-    min-height: 52px;
-    padding: 0 16px;
-
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-
-    background: transparent;
-  }
-
-  .poster-season {
-    margin-right: auto;
-    color: var(--accent);
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: .1em;
-    text-transform: uppercase;
-    text-align: left;
-  }
-
-  .status-badge {
-    flex-shrink: 0;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 25px;
-    padding: 0 9px;
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    font-size: 9px;
-    font-weight: 800;
-    letter-spacing: .07em;
-    text-transform: uppercase;
-  }
-
-  .poster-meta .status-badge {
-    margin-left: auto;
-  }
-
-  .status-completed {
-    color: #22c55e;
-    background: rgba(34, 197, 94, .08);
-    border-color: rgba(34, 197, 94, .32);
-  }
-
-  .status-ongoing {
-    color: var(--accent);
-    background: rgba(255, 116, 46, .08);
-    border-color: rgba(255, 116, 46, .30);;
-  }
-
-  .status-upcoming {
-    color: #e7bf59;
-    background: rgba(231, 191, 89, .08);
-    border-color: rgba(231, 191, 89, .30);
+  .tourney-card:focus-visible {
+    outline:2px solid var(--accent);
+    outline-offset:4px;
   }
 
   /* Poster */
 
-  .tourney-card > .tourney-poster-image {
-    display: block;
-    width: 100% !important;
-    max-width: none;
-    height: auto;
-    margin: 0 !important;
-    padding: 0 !important;
-    border: 0;
-    border-radius: 0;
-    object-fit: initial;
+  .tourney-poster {
+    position:relative;
+    min-width:0;
+    overflow:hidden;
+    background:#0c0d0f;
+    border-right:1px solid var(--border);
   }
 
-  .tourney-poster-image {
-    display: block;
-    width: 100%;
-    max-width: none;
-    height: auto;
+  .tourney-poster img {
+    display:block;
+    width:100%;
+    height:100%;
+    min-height:0;
+    object-fit:cover;
+    object-position:center 20%;
+  }
 
-    margin: 0;
-    padding: 0;
-
-    border: 0;
-    border-radius: 0;
-
-    /* don't crop */
-    object-fit: initial;
+  .tourney-card:hover .tourney-poster img {
+    transform:scale(1.015);
   }
 
   .poster-placeholder {
-    box-sizing: border-box;
-    width: 100%;
-    aspect-ratio: 3 / 4;
-    margin: 0;
-    padding: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-muted);
-    background: var(--bg-card);
-    text-align: center;
-    font-size: 14px;
-    font-weight: 700;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:100%;
+    height:100%;
+    min-height:260px;
+    padding:32px;
+    background:
+      linear-gradient(135deg,#17181c,#0d0e10);
+    color:var(--text-muted);
+    font-family:var(--tournament-display);
+    font-size:26px;
+    font-weight:600;
+    text-align:center;
+    text-transform:uppercase;
   }
 
-  /* Tournament info */
+  /* Content */
 
-  .tourney-content {
-    padding: 20px 20px 22px;
+  .tourney-body {
+    display:flex;
+    flex-direction:column;
+    min-width:0;
+    padding:24px 26px 0;
   }
 
-  .tourney-content h2 {
-    margin: 0;
-    color: var(--text-primary);
-    font-size: 15px;
-    font-weight: 800;
-    line-height: 1.2;
-    letter-spacing: -.02em;
-    text-align: center;
-    white-space: nowrap;
+  .tourney-top {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:18px;
+    min-width:0;
   }
 
-  /* Winner */
+  .tourney-season {
+    color:var(--accent);
+    font-family:var(--tournament-display);
+    font-size:16px;
+    font-weight:600;
+    letter-spacing:.03em;
+    text-transform:uppercase;
+  }
+
+  .status-badge {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    flex-shrink:0;
+    min-height:32px;
+    padding:0 13px;
+    border:1px solid var(--border);
+    border-radius:0;
+    font-family:var(--tournament-display);
+    font-size:13px;
+    font-weight:500;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+  }
+
+  .status-completed {
+    color:#a7ad8a;
+    background:#a7ad8a0c;
+    border-color:#515644;
+  }
+
+  .status-ongoing {
+    color:var(--accent);
+    background:rgba(255,116,46,.06);
+    border-color:rgba(255,116,46,.4);
+  }
+
+  .status-upcoming {
+    color:var(--text-secondary);
+    background:#ffffff05;
+    border-color:#555860;
+  }
+
+  .tourney-main {
+    display:flex;
+    flex-direction:column;
+    flex:1;
+    padding-top:16px;
+  }
+
+  .tourney-main h2 {
+    max-width:720px;
+    margin:0;
+    color:var(--text-primary);
+    font-family:var(--tournament-display);
+    font-size:clamp(30px,3.1vw,42px);
+    font-weight:700;
+    line-height:1.05;
+    letter-spacing:0;
+    text-transform:uppercase;
+    overflow-wrap:anywhere;
+  }
+
+  /* Metadata */
+
+  .tourney-meta {
+    display:flex;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:12px 28px;
+    margin-top:22px;
+  }
+
+  .meta-item {
+    display:inline-flex;
+    align-items:center;
+    gap:9px;
+    color:var(--text-secondary);
+    font-family:var(--tournament-display);
+    font-size:16px;
+    font-weight:500;
+    text-transform:uppercase;
+  }
+
+  .meta-icon {
+    display:flex;
+    width:19px;
+    height:19px;
+    color:var(--text-muted);
+  }
+
+  .meta-icon svg {
+    width:100%;
+    height:100%;
+    fill:none;
+    stroke:currentColor;
+    stroke-width:1.8;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+
+  /* Champion */
 
   .tourney-champion {
-    margin-top: 20px;
-    padding-top: 16px;
-    border-top: 1px solid var(--border);
+    display:flex;
+    align-items:center;
+    gap:11px;
+    margin-top:24px;
   }
 
-  .champion-name {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 7px;
-    color: #e7bf59;
+  .tourney-champion > img {
+    display:block;
+    width:24px;
+    height:24px;
+    flex-shrink:0;
+    object-fit:contain;
   }
 
-  .champion-name img {
-    display: block;
-    width: 18px;
-    height: 18px;
-    flex-shrink: 0;
-    object-fit: contain;
+  .tourney-champion div {
+    display:flex;
+    align-items:baseline;
+    flex-wrap:wrap;
+    gap:6px 9px;
+    min-width:0;
   }
 
-  .champion-name strong {
-    min-width: 0;
-    overflow: hidden;
-    color: inherit;
-    font-size: 14px;
-    font-weight: 800;
-    line-height: 1.2;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  .tourney-champion span {
+    color:var(--text-muted);
+    font-family:var(--tournament-display);
+    font-size:13px;
+    font-weight:500;
+    letter-spacing:.03em;
+    text-transform:uppercase;
+  }
+
+  .tourney-champion strong {
+    min-width:0;
+    color:var(--winner-color);
+    font-family:var(--tournament-display);
+    font-size:20px;
+    font-weight:700;
+    overflow-wrap:anywhere;
   }
 
   /* CTA */
 
   .tourney-cta {
-    min-height: 50px;
-    margin-top: auto;
-    padding: 0 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    color: var(--accent);
-    background: rgba(255, 116, 46, .025);
-    border-top: 1px solid var(--border);
-    font-size: 12px;
-    font-weight: 800;
+    display:flex;
+    align-items:center;
+    justify-content:flex-end;
+    gap:10px;
+    margin-top:20px;
+    padding:6px 8px 20px 0;
+    border-top:1px solid var(--border);
+    color:var(--accent);
+    font-family:var(--tournament-display);
+    font-size:17px;
+    font-weight:600;
+    text-transform:uppercase;
   }
 
   .tourney-arrow {
-    flex-shrink: 0;
-    font-size: 16px;
-    transition: transform .18s;
+    font-size:21px;
+    line-height:1;
+    transition:transform .18s ease;
   }
 
   .tourney-card:hover .tourney-arrow {
-    transform: translateX(3px);
+    transform:translateX(4px);
   }
 
-  @media (max-width: 640px) {
-    .tourney-grid {
-      grid-template-columns: 1fr;
-      gap: 18px;
+  /* Tablet */
+
+  @media (max-width:900px) {
+    .tourney-card {
+      grid-template-columns:280px minmax(0,1fr);
     }
 
-    .poster-meta {
-      min-height: 50px;
-      padding: 0 16px;
+    .tourney-main h2 {
+      font-size:32px;
+    }
+  }
+
+  /* Mobile */
+
+  @media (max-width:640px) {
+    .tournaments-page {
+      width:100%;
+      max-width:100%;
+      min-width:0;
+      padding:0 16px 24px;
+      box-sizing:border-box;
     }
 
-    .poster-season {
-      font-size: 8px;
+    .tournaments-page .page-header {
+      padding-top:26px;
+    }
+
+    .tournaments-page .page-header p {
+      font-size:15px;
+    }
+
+    .tournaments-page .tourney-list {
+      grid-template-columns:minmax(0,1fr);
+      gap:16px;
+    }
+
+    .tournaments-page .tourney-card {
+      grid-template-columns:112px minmax(0,1fr);
+      min-height:0;
+    }
+
+    .tourney-poster {
+      border-right:1px solid var(--border);
+    }
+
+    .tourney-poster img {
+      min-height:100%;
+      object-position:center;
+    }
+
+    .poster-placeholder {
+      min-height:220px;
+      padding:12px;
+      font-size:16px;
+    }
+
+    .tourney-body {
+      padding:14px 14px 0;
+    }
+
+    .tourney-top {
+      align-items:flex-start;
+      gap:8px;
+    }
+
+    .tourney-season {
+      padding-top:5px;
+      font-size:12px;
     }
 
     .status-badge {
-      min-height: 24px;
-      padding: 0 8px;
-      font-size: 8px;
+      min-height:26px;
+      padding:0 8px;
+      font-size:10px;
     }
 
-    .tourney-content {
-      padding: 18px 18px 20px;
+    .tourney-main {
+      padding-top:12px;
     }
 
-    .tourney-content h2 {
-      font-size: 15px;
+    .tourney-main h2 {
+      font-size:22px;
+      line-height:1.08;
+    }
+
+    .tourney-meta {
+      align-items:flex-start;
+      flex-direction:column;
+      gap:7px;
+      margin-top:14px;
+    }
+
+    .meta-item {
+      gap:7px;
+      font-size:12px;
+    }
+
+    .meta-icon {
+      width:15px;
+      height:15px;
     }
 
     .tourney-champion {
-      margin-top: 18px;
-      padding-top: 14px;
+      align-items:flex-start;
+      gap:8px;
+      margin-top:14px;
     }
 
-    .champion-name strong {
-      font-size: 14px;
+    .tourney-champion > img {
+      width:19px;
+      height:19px;
+    }
+
+    .tourney-champion div {
+      display:block;
+    }
+
+    .tourney-champion span {
+      display:block;
+      margin-bottom:2px;
+      font-size:10px;
+    }
+
+    .tourney-champion strong {
+      display:block;
+      font-size:16px;
     }
 
     .tourney-cta {
-      min-height: 50px;
-      padding: 0 18px;
+      justify-content:center;
+      margin-top:14px;
+      padding:11px 0 12px;
+      font-size:13px;
+    }
+
+    .tourney-arrow {
+      font-size:17px;
+    }
+  }
+
+  @media (max-width:400px) {
+    .tournaments-page {
+      padding-inline:14px;
+    }
+
+    .tournaments-page .tourney-card {
+      display:grid;
+      grid-template-columns:1fr;
+      height:auto;
+      min-height:0;
+    }
+
+    .tourney-poster {
+      width:100%;
+      height:auto;
+      aspect-ratio:16 / 9;
+      border-right:0;
+      border-bottom:1px solid var(--border);
+    }
+
+    .tourney-poster img {
+      width:100%;
+      height:100%;
+      min-height:0;
+      object-fit:cover;
+      object-position:center 18%;
+    }
+
+    .tourney-body {
+      padding:12px 12px 0;
+    }
+
+    .tourney-main h2 {
+      font-size:19px;
+    }
+
+    .tourney-season {
+      font-size:12px;
+    }
+
+    .status-badge {
+      padding-inline:6px;
+      font-size:9px;
+    }
+
+    .meta-item {
+      font-size:12px;
     }
   }
 </style>

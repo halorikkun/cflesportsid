@@ -57,10 +57,15 @@ function getEntries(stage: Stage, roundId: string) {
 function formatDate(value: string) {
   return new Date(value).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
+
+function bracketRow(slot: number, roundIndex: number) {
+  return (2 * slot - 1) * (2 ** roundIndex);
+}
 ---
 
 <Layout title={`CFL Esports ID - ${tournamentName}`} current="Tournaments" canonicalPath={`/tournament/${tournament.id}`}>
-  <div class="container">
+  <div class="container tournament-detail">
+    <a class="back-to-tournaments" href="/tournament"><span aria-hidden="true">←</span> All tournaments</a>
     <section class="tournament-hero">
       <div class="tournament-hero-top">
         <span class="tournament-kicker">
@@ -108,7 +113,7 @@ function formatDate(value: string) {
           {winner ? (
             <a href={`/teams/${winner.id}`}>
               <strong class="winner-name">
-                <span class="winner-crown" aria-hidden="true">👑</span>
+                <img class="winner-medal" src="/icons/gold-medal.webp" alt="" width="22" height="22" />
                 <span class="winner-team-name">{winner.data.name}</span>
               </strong>
             </a>
@@ -122,82 +127,128 @@ function formatDate(value: string) {
     {tournament.data.stages.map(stage => {
       const rounds = stage.rounds.filter(r => r.placement !== 3).sort((a, b) => a.order - b.order);
       const placementRounds = stage.rounds.filter(r => r.placement === 3).sort((a, b) => a.order - b.order);
+      const firstRoundEntries = rounds[0] ? getEntries(stage, rounds[0].id) : [];
+      const rowCount = Math.max(2, firstRoundEntries.length * 2);
       return (
         <section class="tournament-stage">
           <h2>{stage.name}</h2>
           <p class="series-format">All {stage.series.mapCount} maps played per match</p>
-          <p class="bracket-scroll-hint">
-            Swipe to view the full bracket →
-          </p>
+          <p class="bracket-scroll-hint">Swipe to view the full bracket →</p>
           <div class="bracket-scroll">
-            <div class="bracket-wrapper">
-              <div class="bracket">
-                {rounds.map((round, index) => (
-                  <div class="bracket-round">
-                    {[round, ...(index === rounds.length - 1 ? placementRounds : [])].map(section => {
-                      const entries = getEntries(stage, section.id);
-                      const dates = [...new Set(tMatches.filter(m => m.data.stageId === stage.id && m.data.roundId === section.id).map(m => m.data.date))];
+            <div class="bracket-wrapper" style={`--round-count:${rounds.length};--bracket-rows:${rowCount};`}>
+              <div class="bracket-grid">
+                {rounds.map((round, roundIndex) => {
+                  const entries = getEntries(stage, round.id);
+                  const dates = [...new Set(tMatches.filter(m => m.data.stageId === stage.id && m.data.roundId === round.id).map(m => m.data.date))];
+                  return (
+                    <div class="bracket-round-header" style={`grid-column:${roundIndex + 1};grid-row:1;--mobile-order:${roundIndex * 100};`}>
+                      <div class="bracket-round-title">{round.name}</div>
+                      {dates.length > 0 && <div class="bracket-round-date">{dates.map(formatDate).join(' & ')}</div>}
+                    </div>
+                  );
+                })}
+                {rounds.flatMap((round, roundIndex) =>
+                  getEntries(stage, round.id).map(entry => {
+                    const gridRow = 2 + bracketRow(entry.slot, roundIndex);
+                    if (entry.kind === 'bye') {
+                      const team = teamsMap.get(entry.bye.teamId);
                       return (
-                        <div class={section.placement === 3 ? 'bracket-bronze' : 'bracket-main-section'}>
-                          <div class="bracket-round-header">
-                            <div class="bracket-round-title">{section.name}</div>
-                            {dates.length > 0 && <div class="bracket-round-date">{dates.map(formatDate).join(' & ')}</div>}
+                        <div
+                          class="bracket-match bye"
+                          data-node={`${stage.id}:${entry.bye.id}`}
+                          data-round-index={roundIndex}
+                          data-slot={entry.slot}
+                          style={`grid-column:${roundIndex + 1};grid-row:${gridRow};order:${roundIndex * 100 + entry.slot};`}
+                        >
+                          <div class="bracket-team-row winner">
+                            <div class="bracket-team-info">
+                              <span class="bracket-team-tag">{team?.data.tag ?? entry.bye.teamId}</span>
+                              <span class="bracket-team-name">{team?.data.name ?? entry.bye.teamId}</span>
+                            </div>
+                            <span class="bracket-bye-label">BYE</span>
                           </div>
-                          <div class="bracket-round-matches">
-                            {entries.length === 0 && <p class="bracket-empty">Matches not scheduled yet</p>}
-                            {entries.map(entry => {
-                              if (entry.kind === 'bye') {
-                                const team = teamsMap.get(entry.bye.teamId);
-                                return (
-                                  <div class="bracket-match bye" data-node={`${stage.id}:${entry.bye.id}`}>
-                                    <div class="bracket-team-row winner">
-                                      <div class="bracket-team-info">
-                                        <span class="bracket-team-tag">{team?.data.tag ?? entry.bye.teamId}</span>
-                                        <span class="bracket-team-name">{team?.data.name ?? entry.bye.teamId}</span>
-                                      </div>
-                                      <span class="bracket-bye-label">BYE</span>
-                                    </div>
-                                    <div class="bracket-team-row empty"><span class="bracket-team-name">No opponent</span></div>
-                                  </div>
-                                );
-                              }
-                              const m = entry.match;
-                              const complete = m.data.status === 'completed';
-                              const team1Id = m.data.team1Id ?? resolveSourceTeam(m, 1, tournament, tMatches);
-                              const team2Id = m.data.team2Id ?? resolveSourceTeam(m, 2, tournament, tMatches);
-                              const team1 = team1Id ? teamsMap.get(team1Id) : undefined;
-                              const team2 = team2Id ? teamsMap.get(team2Id) : undefined;
-                              const win1 = complete && Boolean(m.data.winnerId) && m.data.winnerId === team1Id;
-                              const win2 = complete && Boolean(m.data.winnerId) && m.data.winnerId === team2Id;
-                              return (
-                                <a href={`/matches/${m.id}`} class={`bracket-match ${complete ? '' : 'upcoming'}`}
-                                  data-node={m.id} data-source1={getSourceNode(m, 1)} data-source2={getSourceNode(m, 2)}
-                                  data-source-kind1={m.data.team1Source?.type} data-source-kind2={m.data.team2Source?.type}>
-                                  <div class={`bracket-team-row ${win1 ? 'winner' : win2 ? 'loser' : ''}`}>
-                                    <div class="bracket-team-info">
-                                      <span class="bracket-team-tag">{team1?.data.tag ?? 'TBD'}</span>
-                                      <span class="bracket-team-name">{team1?.data.name ?? team1Id ?? getParticipantLabel(m, 1)}</span>
-                                    </div>
-                                    <span class="bracket-team-score">{complete ? m.data.score1 : '–'}</span>
-                                  </div>
-                                  <div class={`bracket-team-row ${win2 ? 'winner' : win1 ? 'loser' : ''}`}>
-                                    <div class="bracket-team-info">
-                                      <span class="bracket-team-tag">{team2?.data.tag ?? 'TBD'}</span>
-                                      <span class="bracket-team-name">{team2?.data.name ?? team2Id ?? getParticipantLabel(m, 2)}</span>
-                                    </div>
-                                    <span class="bracket-team-score">{complete ? m.data.score2 : '–'}</span>
-                                  </div>
-                                </a>
-                              );
-                            })}
-                          </div>
+                          <div class="bracket-team-row empty"><span class="bracket-team-name">No opponent</span></div>
                         </div>
                       );
-                    })}
-                  </div>
-                ))}
+                    }
+                    const m = entry.match;
+                    const complete = m.data.status === 'completed';
+                    const team1Id = m.data.team1Id ?? resolveSourceTeam(m, 1, tournament, tMatches);
+                    const team2Id = m.data.team2Id ?? resolveSourceTeam(m, 2, tournament, tMatches);
+                    const team1 = team1Id ? teamsMap.get(team1Id) : undefined;
+                    const team2 = team2Id ? teamsMap.get(team2Id) : undefined;
+                    const win1 = complete && Boolean(m.data.winnerId) && m.data.winnerId === team1Id;
+                    const win2 = complete && Boolean(m.data.winnerId) && m.data.winnerId === team2Id;
+                    return (
+                      <a
+                        href={`/matches/${m.id}`}
+                        class={`bracket-match ${complete ? '' : 'upcoming'}`}
+                        data-node={m.id}
+                        data-round-index={roundIndex}
+                        data-slot={entry.slot}
+                        data-source1={getSourceNode(m, 1)}
+                        data-source2={getSourceNode(m, 2)}
+                        data-source-kind1={m.data.team1Source?.type}
+                        data-source-kind2={m.data.team2Source?.type}
+                        style={`grid-column:${roundIndex + 1};grid-row:${gridRow};order:${roundIndex * 100 + entry.slot};`}
+                      >
+                        <div class={`bracket-team-row ${win1 ? 'winner' : win2 ? 'loser' : ''}`}>
+                          <div class="bracket-team-info">
+                            <span class="bracket-team-tag">{team1?.data.tag ?? 'TBD'}</span>
+                            <span class="bracket-team-name">{team1?.data.name ?? team1Id ?? getParticipantLabel(m, 1)}</span>
+                          </div>
+                          <span class="bracket-team-score">{complete ? m.data.score1 : '–'}</span>
+                        </div>
+                        <div class={`bracket-team-row ${win2 ? 'winner' : win1 ? 'loser' : ''}`}>
+                          <div class="bracket-team-info">
+                            <span class="bracket-team-tag">{team2?.data.tag ?? 'TBD'}</span>
+                            <span class="bracket-team-name">{team2?.data.name ?? team2Id ?? getParticipantLabel(m, 2)}</span>
+                          </div>
+                          <span class="bracket-team-score">{complete ? m.data.score2 : '–'}</span>
+                        </div>
+                      </a>
+                    );
+                  })
+                )}
               </div>
               <svg class="bracket-connectors" aria-hidden="true"></svg>
+              {placementRounds.map(section => {
+                const entries = getEntries(stage, section.id);
+                const dates = [...new Set(tMatches.filter(m => m.data.stageId === stage.id && m.data.roundId === section.id).map(m => m.data.date))];
+                return (
+                  <div class="bracket-bronze" style={`--bronze-col:${rounds.length};--final-slot-offset:${2 ** (rounds.length - 1)};`}>
+                    <div class="bracket-round-header">
+                      <div class="bracket-round-title">{section.name}</div>
+                      {dates.length > 0 && <div class="bracket-round-date">{dates.map(formatDate).join(' & ')}</div>}
+                    </div>
+                    <div class="bracket-bronze-matches">
+                      {entries.map(entry => {
+                        if (entry.kind === 'bye') return null;
+                        const m = entry.match;
+                        const complete = m.data.status === 'completed';
+                        const team1Id = m.data.team1Id ?? resolveSourceTeam(m, 1, tournament, tMatches);
+                        const team2Id = m.data.team2Id ?? resolveSourceTeam(m, 2, tournament, tMatches);
+                        const team1 = team1Id ? teamsMap.get(team1Id) : undefined;
+                        const team2 = team2Id ? teamsMap.get(team2Id) : undefined;
+                        const win1 = complete && m.data.winnerId === team1Id;
+                        const win2 = complete && m.data.winnerId === team2Id;
+                        return (
+                          <a href={`/matches/${m.id}`} class={`bracket-match ${complete ? '' : 'upcoming'}`}>
+                            <div class={`bracket-team-row ${win1 ? 'winner' : win2 ? 'loser' : ''}`}>
+                              <div class="bracket-team-info"><span class="bracket-team-tag">{team1?.data.tag ?? 'TBD'}</span><span class="bracket-team-name">{team1?.data.name ?? team1Id ?? getParticipantLabel(m, 1)}</span></div>
+                              <span class="bracket-team-score">{complete ? m.data.score1 : '–'}</span>
+                            </div>
+                            <div class={`bracket-team-row ${win2 ? 'winner' : win1 ? 'loser' : ''}`}>
+                              <div class="bracket-team-info"><span class="bracket-team-tag">{team2?.data.tag ?? 'TBD'}</span><span class="bracket-team-name">{team2?.data.name ?? team2Id ?? getParticipantLabel(m, 2)}</span></div>
+                              <span class="bracket-team-score">{complete ? m.data.score2 : '–'}</span>
+                            </div>
+                          </a>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </section>
@@ -472,7 +523,7 @@ function formatDate(value: string) {
   #tourney-select:focus { outline: none; border-color: var(--accent); }
 
   .bracket-scroll { 
-    overflow-x: auto;
+    overflow-x: visible;
     padding: 8px 20px 28px;
     background:
       linear-gradient(
@@ -483,184 +534,84 @@ function formatDate(value: string) {
       var(--bg-secondary);
     border: 1px solid var(--border);
     border-radius: 10px;
-    scrollbar-width: thin;
-    scrollbar-color: var(--border) transparent;
+    scrollbar-width: none;
   }
-  .bracket-scroll::-webkit-scrollbar { height: 7px; }
-  .bracket-scroll::-webkit-scrollbar-track { background: transparent; }
-  .bracket-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 999px; }
+  .bracket-scroll::-webkit-scrollbar { display:none; }
 
   .bracket-scroll-hint {
     display: none;
   }
 
   .bracket-wrapper {
-    position: relative;
-    min-width: max-content;
-    padding: 20px 0 8px;
+    position:relative;
+    width:100%;
+    min-width:0;
+    padding:20px 0 8px;
   }
-  .bracket { 
-    position: relative;
-    z-index: 1;
-    display: flex;
-    align-items: stretch;
-    gap: 48px;
+  .bracket-grid {
+    position:relative;
+    z-index:1;
+    display:grid;
+    grid-template-columns:repeat(var(--round-count),minmax(0,1fr));
+    grid-template-rows:64px repeat(var(--bracket-rows),58px);
+    column-gap:36px;
+    width:100%;
   }
-
-  .bracket-round {
-    display: flex;
-    flex-direction: column;
-    min-width: 230px;
-  }
-  .bracket-round-header { margin-bottom: 16px; }
+  .bracket-grid > .bracket-round-header { align-self:start; }
+  .bracket-round-header { margin-bottom:16px; }
   .bracket-round-title {
-    padding-bottom: 11px;
-    color: var(--accent);
-    border-bottom: 1px solid rgba(255, 116, 46, .35);
-    font-size: 12px;
-    font-weight: 800;
-    letter-spacing: .06em;
-    text-align: center;
-    text-transform: uppercase;
+    padding-bottom:11px;
+    color:var(--accent);
+    border-bottom:1px solid rgba(255,116,46,.35);
+    font-size:12px;
+    font-weight:800;
+    letter-spacing:.06em;
+    text-align:center;
+    text-transform:uppercase;
   }
-  .bracket-round-date {
-    margin-top: 9px;
-    color: var(--text-muted);
-    font-size: 11px;
-    font-weight: 500;
-    text-align: center;
-  }
-
-  .bracket-round-matches {
-    display: flex;
-    flex: 1;
-    flex-direction: column;
-    justify-content: space-around;
-    gap: 24px;
-  }
-
+  .bracket-round-date { margin-top:9px;color:var(--text-muted);font-size:11px;font-weight:500;text-align:center; }
   .bracket-match {
-    position: relative;
-    display: block;
-    overflow: hidden;
-    color: inherit;
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: 7px;
-    text-decoration: none;
-    transition:
-      border-color .18s,
-      background-color .18s,
-      transform .18s;
+    position:relative;
+    display:block;
+    align-self:center;
+    overflow:hidden;
+    color:inherit;
+    background:var(--bg-card);
+    border:1px solid var(--border);
+    border-radius:7px;
+    text-decoration:none;
+    transition:border-color .18s,background-color .18s;
   }
-  .bracket-match:hover { 
-    background: var(--bg-card-hover);
-    border-color: rgba(255, 116, 46, .45);
-    transform: translateY(-1px);
-  }
-  .bracket-match.upcoming { border-style: dashed; }
-  .bracket-match.bye { 
-    opacity: .72;
-    border-style: dashed;
-    pointer-events: none; 
-  }
-
+  .bracket-match:hover { background:var(--bg-card-hover);border-color:rgba(255,116,46,.45); }
+  .bracket-match.upcoming { border-style:dashed; }
+  .bracket-match.bye { opacity:.72;border-style:dashed;pointer-events:none; }
   .bracket-team-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    min-height: 42px;
-    padding: 8px 11px;
-    font-size: 13px;
+    display:flex;align-items:center;justify-content:space-between;min-height:42px;padding:8px 11px;font-size:13px;
   }
-  .bracket-team-row + .bracket-team-row { border-top: 1px solid var(--border); }
-  
-  .bracket-team-row.winner { background: rgba(231, 191, 89, .07); }
-  .bracket-team-row.loser { opacity: .48; }
-  .bracket-team-row.empty { opacity: 0.4; }
-  
-  .bracket-team-info {
-    display: flex;
-    flex: 1;
-    min-width: 0;
-    align-items: center;
-    gap: 8px;
+  .bracket-team-row + .bracket-team-row { border-top:1px solid var(--border); }
+  .bracket-team-row.winner { background:rgba(231,191,89,.07); }
+  .bracket-team-row.loser { opacity:.48; }
+  .bracket-team-row.empty { opacity:.4; }
+  .bracket-team-info { display:flex;flex:1;min-width:0;align-items:center;gap:8px; }
+  .bracket-team-tag { min-width:34px;flex-shrink:0;padding:3px 5px;color:var(--text-secondary);background:rgba(255,255,255,.045);border-radius:4px;font-size:10px;font-weight:800;text-align:center; }
+  .bracket-team-row.winner .bracket-team-tag { color:#e7bf59;background:rgba(231,191,89,.14); }
+  .bracket-team-row.winner .bracket-team-name { color:var(--text-primary); }
+  .bracket-team-name { overflow:hidden;color:var(--text-secondary);font-size:12px;font-weight:650;text-overflow:ellipsis;white-space:nowrap; }
+  .bracket-team-score { min-width:22px;margin-left:8px;color:var(--text-secondary);font-size:14px;font-weight:800;text-align:right;font-variant-numeric:tabular-nums; }
+  .bracket-team-row.winner .bracket-team-score { color:#e7bf59; }
+  .bracket-team-row.loser .bracket-team-score { color:var(--text-muted); }
+  .bracket-bye-label { flex-shrink:0;padding:3px 6px;color:var(--text-muted);background:rgba(255,255,255,.04);border-radius:4px;font-size:9px;font-weight:800;letter-spacing:.05em; }
+  .bracket-connectors { position:absolute;top:20px;left:0;width:100%;height:calc(100% - 20px);pointer-events:none;z-index:0;overflow:visible; }
+  .bracket-bronze {
+    position:absolute;
+    z-index:2;
+    right:0;
+    left:auto;
+    top:calc(20px + 64px + var(--final-slot-offset) * 58px + 260px);
+    width:calc((100% - 108px) / var(--bronze-col));
+    margin:0;
   }
-  .bracket-team-tag {
-    min-width: 34px;
-    flex-shrink: 0;
-    padding: 3px 5px;
-    color: var(--text-secondary);
-    background: rgba(255, 255, 255, .045);
-    border-radius: 4px;
-    font-size: 10px;
-    font-weight: 800;
-    text-align: center;
-  }
-  .bracket-team-row.winner .bracket-team-tag {
-    color: #e7bf59;
-    background: rgba(231, 191, 89, .14);
-  }
-
-  .bracket-team-row.winner .bracket-team-name {
-    color: var(--text-primary);
-  }
-  
-  .bracket-team-name {
-    overflow: hidden;
-    color: var(--text-secondary);
-    font-size: 12px;
-    font-weight: 650;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .bracket-team-score {
-    min-width: 22px;
-    margin-left: 8px;
-    color: var(--text-secondary);
-    font-size: 14px;
-    font-weight: 800;
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-  }
-  .bracket-team-row.winner .bracket-team-score { color: #e7bf59; }
-  .bracket-team-row.loser .bracket-team-score { color: var(--text-muted); }
-  
-  .bracket-bye-label {
-    flex-shrink: 0;
-    padding: 3px 6px;
-    color: var(--text-muted);
-    background: rgba(255, 255, 255, .04);
-    border-radius: 4px;
-    font-size: 9px;
-    font-weight: 800;
-    letter-spacing: .05em;
-  }
-
-  .bracket-connectors {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    z-index: 0;
-    overflow: visible;
-  }
-
-  .bracket-bronze { margin-top: 2rem; }
-  .bracket-bronze-divider { height: 1px; background: var(--border); margin-bottom: 1.5rem; }
-  .bracket-bronze .bracket-round-title {
-    text-align: center;
-    font-size: 0.85rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--accent-orange);
-    margin-bottom: 1rem;
-    border-bottom-color: rgba(245, 158, 11, 0.2);
-  }
-
+  .bracket-bronze-matches { display:flex;flex-direction:column;gap:12px;margin-top:18px; }
   .bracket-round:last-child .bracket-main-section .bracket-match {
     border-color: rgba(231, 191, 89, .28);
   }
@@ -686,12 +637,29 @@ function formatDate(value: string) {
       padding-top: 16px;
     }
 
-    .bracket-round {
-      min-width: 220px;
+    .bracket-scroll { overflow:visible;padding:8px 12px 24px; }
+    .bracket-scroll-hint { display:none; }
+    .bracket-wrapper { width:100%;padding-top:16px; }
+    .bracket-grid {
+      display:flex;
+      flex-direction:column;
+      gap:0;
+      width:100%;
     }
-
-    .bracket {
-      gap: 24px;
+    .bracket-grid > .bracket-round-header {
+      order:var(--mobile-order,0);
+      margin:24px 0 10px;
+    }
+    .bracket-grid > .bracket-match {
+      position:static;
+      width:100%;
+      margin:0 0 10px;
+    }
+    .bracket-connectors { display:none; }
+    .bracket-bronze {
+      position:static;
+      width:100%;
+      margin:28px 0 0;
     }
     .tournament-hero {
       margin-top: 14px;
@@ -741,39 +709,90 @@ function formatDate(value: string) {
   (() => {
     function drawConnectors() {
       document.querySelectorAll('.bracket-wrapper').forEach(wrapper => {
+        const grid = wrapper.querySelector('.bracket-grid');
         const svg = wrapper.querySelector('.bracket-connectors');
+        if (!grid || !svg) return;
+        const nodes = new Map(Array.from(grid.querySelectorAll('[data-node]')).map(node => [node.dataset.node, node]));
         svg.replaceChildren();
         const bounds = wrapper.getBoundingClientRect();
-        svg.setAttribute('viewBox', `0 0 ${bounds.width} ${bounds.height}`);
-        const nodes = new Map(Array.from(wrapper.querySelectorAll('[data-node]')).map(node => [node.dataset.node, node]));
+        const svgTop = bounds.top + 20;
+        svg.setAttribute('viewBox', `0 0 ${bounds.width} ${Math.max(1, bounds.height - 20)}`);
+        const makePath = (d, dashed = false) => {
+          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          path.setAttribute('d', d);
+          path.setAttribute('stroke', '#3a4258');
+          path.setAttribute('stroke-width', '2');
+          path.setAttribute('fill', 'none');
+          path.setAttribute('vector-effect', 'non-scaling-stroke');
+          if (dashed) path.setAttribute('stroke-dasharray', '5 5');
+          svg.appendChild(path);
+        };
         nodes.forEach(target => {
-          for (const side of [1, 2]) {
-            const source = nodes.get(target.dataset[`source${side}`]);
-            if (!source) continue;
+          const source1 = nodes.get(target.dataset.source1);
+          const source2 = nodes.get(target.dataset.source2);
+          if (!source1 && !source2) return;
+          const targetRect = target.getBoundingClientRect();
+          const x2 = targetRect.left - bounds.left;
+          const y2 = targetRect.top + targetRect.height / 2 - svgTop;
+          const drawOne = (source, kind) => {
+            if (!source) return;
             const from = source.getBoundingClientRect();
-            const row = target.querySelectorAll('.bracket-team-row')[side - 1].getBoundingClientRect();
             const x1 = from.right - bounds.left;
-            const y1 = from.top + from.height / 2 - bounds.top;
-            const x2 = row.left - bounds.left;
-            const y2 = row.top + row.height / 2 - bounds.top;
+            const y1 = from.top + from.height / 2 - svgTop;
             const middle = (x1 + x2) / 2;
-            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            path.setAttribute('d', `M ${x1} ${y1} H ${middle} V ${y2} H ${x2}`);
-            path.setAttribute('stroke', '#3a4258');
-            path.setAttribute('stroke-width', '2');
-            path.setAttribute('fill', 'none');
-            if (target.dataset[`sourceKind${side}`] === 'loser') path.setAttribute('stroke-dasharray', '5 4');
-            svg.appendChild(path);
-          }
+            makePath(`M ${x1} ${y1} H ${middle} V ${y2} H ${x2}`, kind === 'loser');
+          };
+          drawOne(source1, target.dataset.sourceKind1);
+          drawOne(source2, target.dataset.sourceKind2);
         });
       });
     }
-    document.addEventListener('DOMContentLoaded', drawConnectors);
-    document.fonts.ready.then(drawConnectors);
+    const scheduleDraw = () => requestAnimationFrame(() => requestAnimationFrame(drawConnectors));
+    document.addEventListener('DOMContentLoaded', scheduleDraw);
+    if (document.fonts?.ready) document.fonts.ready.then(scheduleDraw);
     let resizeTimer;
     window.addEventListener('resize', () => {
       clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(drawConnectors, 100);
+      resizeTimer = setTimeout(scheduleDraw, 100);
     });
   })();
 </script>
+
+<style>
+  :global(body:has(.tournament-detail)) {
+    --bg-primary: #090a0c; --bg-secondary: #101114; --bg-card: #16171b; --border: #303137;
+    --text-primary: #f4f3ef; --text-secondary: #c4c3bf; --text-muted: #a4a6ac;
+    --tournament-display: 'DIN Condensed', 'Arial Narrow', 'Avenir Next Condensed', sans-serif;
+  }
+  :global(body:has(.tournament-detail) .site-header) { background: #0c0d0f; backdrop-filter: none; }
+  :global(body:has(.tournament-detail) .site-header .nav a) { font-family: var(--tournament-display); font-size: 17px; font-weight: 500; }
+  .tournament-detail { max-width: 1344px; padding: 20px 32px 32px; font-family: 'Arial Narrow', 'Avenir Next Condensed', sans-serif; }
+  .back-to-tournaments { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; color: var(--text-secondary); font-size: 14px; text-transform: uppercase; }
+  :global(#main-content) .tournament-detail .tournament-hero { margin: 10px 0 30px; background: #141518; border-radius: 0; border-top-width: 2px; }
+  :global(#main-content) .tournament-detail .tournament-hero::after { display: none; }
+  :global(#main-content) .tournament-detail .tournament-kicker { font-size: 14px; font-weight: 500; }
+  :global(#main-content) .tournament-detail .tournament-status { border-radius: 0; font-size: 11px; font-weight: 500; }
+  :global(#main-content) .tournament-detail .tournament-status.completed { color: #a7ad8a; border-color: #515644; background: #a7ad8a0c; }
+  :global(#main-content) .tournament-detail .tournament-hero-main { padding: 28px 0 30px; }
+  :global(#main-content) .tournament-detail .tournament-hero h1 { font-family: var(--tournament-display); font-size: clamp(36px,5vw,64px); line-height: 1.05; letter-spacing: 0; text-transform: uppercase; }
+  :global(#main-content) .tournament-detail .tournament-date { font-size: 15px; font-weight: 400; }
+  :global(#main-content) .tournament-detail .tournament-metric strong { font-family: var(--tournament-display); font-size: 34px; font-weight: 700; }
+  :global(#main-content) .tournament-detail .tournament-metric > span { font-size: 12px; font-weight: 400; letter-spacing: .04em; }
+  .winner-medal { flex-shrink: 0; object-fit: contain; }
+  :global(#main-content) .tournament-detail .tournament-stage > h2 { font-family: var(--tournament-display); font-size: 32px; text-transform: uppercase; letter-spacing: 0; }
+  :global(#main-content) .tournament-detail .bracket-round-title { font-family: var(--tournament-display); font-size: 22px; text-transform: uppercase; }
+  :global(#main-content) .tournament-detail .bracket-match { border-radius: 0; background: #111215; box-shadow: none; }
+  :global(#main-content) .tournament-detail .bracket-match:hover { transform: none; box-shadow: none; border-color: var(--accent); }
+  :global(#main-content) .tournament-detail .bracket-team-name { font-size: 15px; }
+  :global(#main-content) .tournament-detail .bracket-team-score { font-family: var(--tournament-display); font-size: 24px; }
+  :global(#main-content) .tournament-detail .bracket-team-tag { border-radius: 0; font-size: 11px; }
+  .tournament-detail a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  @media(max-width:640px) {
+    .tournament-detail { padding: 14px 16px 24px; }
+    :global(#main-content) .tournament-detail .tournament-hero { padding: 20px 18px 0; }
+    :global(#main-content) .tournament-detail .tournament-metrics { margin-inline: -18px; grid-template-columns: 1fr 1fr; }
+    :global(#main-content) .tournament-detail .tournament-metric { padding: 16px 18px; }
+    :global(#main-content) .tournament-detail .winner-metric { grid-column: 1 / -1; border-left: 0; border-top: 1px solid var(--border); }
+    :global(#main-content) .tournament-detail .tournament-metric strong { font-size: 30px; }
+  }
+</style>

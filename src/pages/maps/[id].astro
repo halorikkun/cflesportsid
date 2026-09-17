@@ -115,7 +115,8 @@ const mapMatches = matches
   title={`${map.data.name} Statistics - CFL Esports ID`}
   current="Maps"
 >
-  <div class="container">
+  <div class="container map-detail-page">
+    <a class="back-to-maps" href="/maps"><span aria-hidden="true">←</span> All maps</a>
 
     <!-- MAP HERO -->
 
@@ -192,19 +193,31 @@ const mapMatches = matches
       <article class="stat-box">
         <h2>Top Fragger</h2>
 
-        {leadingPlayers.map(([uid, s]) => (
-          <p>
-            <a
-              href={`/players/${
-                players.get(uid)?.id ?? uid
-              }`}
-            >
-              {players.get(uid)?.data.ign ?? uid}
-            </a>
-            {' · '}
-            {s.kills} kills
-          </p>
-        ))}
+        {leadingPlayers.map(([uid, s]) => {
+          const player = players.get(uid);
+
+          return (
+            <div class="map-player-leader">
+              <img
+                src={
+                  player?.data.avatar ||
+                  (uid ? `/players/${uid}.webp` : '/players/default.webp')
+                }
+                alt=""
+                width="54"
+                height="62"
+                loading="lazy"
+                onerror="this.onerror=null;this.src='/players/default.webp'"
+              />
+              <p>
+                <a href={`/players/${player?.id ?? uid}`}>
+                  {player?.data.ign ?? uid}
+                </a>
+                <span>{s.kills} kills</span>
+              </p>
+            </div>
+          );
+        })}
 
         {!leadingPlayers.length && (
           <p>No recorded stats</p>
@@ -214,19 +227,31 @@ const mapMatches = matches
       <article class="stat-box">
         <h2>Top Assists</h2>
 
-        {assistLeaders.map(([uid, s]) => (
-          <p>
-            <a
-              href={`/players/${
-                players.get(uid)?.id ?? uid
-              }`}
-            >
-              {players.get(uid)?.data.ign ?? uid}
-            </a>
-            {' · '}
-            {s.assists} assists
-          </p>
-        ))}
+        {assistLeaders.map(([uid, s]) => {
+          const player = players.get(uid);
+
+          return (
+            <div class="map-player-leader">
+              <img
+                src={
+                  player?.data.avatar ||
+                  (uid ? `/players/${uid}.webp` : '/players/default.webp')
+                }
+                alt=""
+                width="54"
+                height="62"
+                loading="lazy"
+                onerror="this.onerror=null;this.src='/players/default.webp'"
+              />
+              <p>
+                <a href={`/players/${player?.id ?? uid}`}>
+                  {player?.data.ign ?? uid}
+                </a>
+                <span>{s.assists} assists</span>
+              </p>
+            </div>
+          );
+        })}
 
         {!assistLeaders.length && (
           <p>No recorded stats</p>
@@ -236,19 +261,31 @@ const mapMatches = matches
       <article class="stat-box">
         <h2>Best KDA</h2>
 
-        {kdaLeaders.map(([uid, s]) => (
-          <p>
-            <a
-              href={`/players/${
-                players.get(uid)?.id ?? uid
-              }`}
-            >
-              {players.get(uid)?.data.ign ?? uid}
-            </a>
-            {' · '}
-            {mapKda(s).toFixed(2)}
-          </p>
-        ))}
+        {kdaLeaders.map(([uid, s]) => {
+          const player = players.get(uid);
+
+          return (
+            <div class="map-player-leader">
+              <img
+                src={
+                  player?.data.avatar ||
+                  (uid ? `/players/${uid}.webp` : '/players/default.webp')
+                }
+                alt=""
+                width="54"
+                height="62"
+                loading="lazy"
+                onerror="this.onerror=null;this.src='/players/default.webp'"
+              />
+              <p>
+                <a href={`/players/${player?.id ?? uid}`}>
+                  {player?.data.ign ?? uid}
+                </a>
+                <span>{mapKda(s).toFixed(2)} KDA</span>
+              </p>
+            </div>
+          );
+        })}
 
         {!kdaLeaders.length && (
           <p>No recorded stats</p>
@@ -1157,6 +1194,41 @@ const mapMatches = matches
     font-size: 14px;
   }
 
+  .map-player-leader {
+    display:flex;
+    align-items:flex-end;
+    gap:12px;
+    min-width:0;
+  }
+
+  .map-player-leader img {
+    width:54px;
+    height:62px;
+    flex:0 0 auto;
+    object-fit:contain;
+    object-position:bottom;
+  }
+
+  .map-player-leader p {
+    min-width:0;
+    margin:0 0 6px;
+  }
+
+  .map-player-leader p a,
+  .map-player-leader p span {
+    display:block;
+  }
+
+  .map-player-leader p a {
+    font-weight:700;
+  }
+
+  .map-player-leader p span {
+    margin-top:3px;
+    color:var(--text-muted);
+    font-size:13px;
+  }
+
   /* TABS */
 
   .map-tabs {
@@ -1456,5 +1528,49 @@ const mapMatches = matches
       grid-template-columns:
         minmax(0, 1fr);
     }
+  }
+</style>
+
+<style>
+  :global(body:has(.map-detail-page)) {
+    --bg-primary: #090a0c; --bg-secondary: #101114; --bg-card: #16171b; --border: #303137;
+    --text-primary: #f4f3ef; --text-secondary: #c4c3bf; --text-muted: #a4a6ac;
+    --map-display: 'DIN Condensed', 'Arial Narrow', 'Avenir Next Condensed', sans-serif;
+  }
+  :global(body:has(.map-detail-page) .site-header) { background: #0c0d0f; backdrop-filter: none; }
+  :global(body:has(.map-detail-page) .site-header .nav a) { font-family: var(--map-display); font-size: 17px; font-weight: 500; }
+  .map-detail-page { max-width: 1344px; padding: 20px 32px 32px; font-family: 'Arial Narrow', 'Avenir Next Condensed', sans-serif; }
+  .back-to-maps { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; color: var(--text-secondary); text-transform: uppercase; font-size: 14px; }
+  :global(#main-content) .map-detail-page .map-detail-hero { margin: 10px 0 24px; min-height: 0; border-radius: 0; border-color: var(--border); background: #141518; }
+  .map-detail-page .map-hero-content { min-height: 320px; padding: 28px 32px; gap: 28px; }
+  :global(#main-content) .map-detail-page .map-hero-heading h1 { font-family: var(--map-display); font-size: clamp(42px,6vw,68px); text-transform: uppercase; letter-spacing: 0; }
+  :global(#main-content) .map-detail-page .map-hero-stats { border-radius: 0; background: #101114e8; backdrop-filter: none; max-width: 100%; }
+  .map-detail-page .map-hero-stat strong { font-family: var(--map-display); font-size: 36px; color: var(--text-primary); }
+  .map-detail-page .map-hero-stat:first-child strong { color: var(--accent); }
+  .map-detail-page .map-hero-stat span { font-size: 12px; font-weight: 400; }
+  .map-detail-page .map-leaders { gap: 12px; }
+  .map-detail-page .stat-box { border-radius: 0; text-align: left; padding: 20px; background: #111215; }
+  .map-detail-page h2 { font-family: var(--map-display); font-size: 28px; text-transform: uppercase; }
+  .map-detail-page .stat-box h2 { font-size: 23px; color: var(--text-secondary); }
+  .map-detail-page .stat-box p { font-size: 16px; overflow-wrap: anywhere; }
+  .map-detail-page .coverage { font-size: 14px; color: var(--text-muted); }
+  .map-detail-page .map-methodology { border-bottom: 1px solid var(--border); }
+  .map-detail-page .map-tabs { justify-content: flex-start; gap: 0; padding-bottom: 0; }
+  .map-detail-page .map-tabs button { border-radius: 0; border: 0; border-bottom: 2px solid transparent; min-height: 48px; background: transparent; font-family: var(--map-display); font-size: 22px; text-transform: uppercase; }
+  .map-detail-page .map-tabs button[aria-selected="true"] { color: var(--accent); background: transparent; border-bottom-color: var(--accent); }
+  .map-detail-page .map-table-wrap { border-radius: 0; }
+  .map-detail-page table { font-size: 16px; font-variant-numeric: tabular-nums; }
+  .map-detail-page th { background: #1b1c20; color: var(--text-secondary); font-size: 12px; }
+  .map-detail-page td { background: #101114; }
+  .map-detail-page tr:nth-child(even) td { background: #141518; }
+  .map-detail-page th[aria-sort="ascending"], .map-detail-page th[aria-sort="descending"] { color: var(--accent); }
+  .map-detail-page .table-pagination :global(button) { border-radius: 0; font-size: 14px; }
+  .map-detail-page :is(a,button):focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  @media(max-width:640px) {
+    .map-detail-page { padding: 14px 16px 24px; }
+    .map-detail-page .map-hero-content { min-height: 0; padding: 24px 18px; }
+    .map-detail-page .map-hero-heading { margin: 0; }
+    .map-detail-page .map-hero-stat { padding: 14px; }
+    .map-detail-page .map-tabs button { font-size: 17px; white-space: normal; padding: 12px 8px; }
   }
 </style>

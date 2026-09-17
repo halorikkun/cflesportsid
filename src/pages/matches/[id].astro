@@ -207,7 +207,8 @@ const roundMVPs =
   title={`${team1Name} vs ${team2Name} - CFL Esports ID Tournament Hub`}
   current="Matches"
 >
-  <div class="container">
+  <div class="container match-detail-page">
+    <a class="back-to-matches" href="/matches"><span aria-hidden="true">←</span> All matches</a>
 
     {
       m.data.status === 'upcoming' &&
@@ -239,7 +240,7 @@ const roundMVPs =
         </h1>
 
         <p>
-          <time datetime={m.data.date}>
+          <span class="match-status">{m.data.status}</span> · <time datetime={m.data.date}>
             {m.data.date}
           </time>
         </p>
@@ -476,9 +477,10 @@ const roundMVPs =
                                           ? `/players/${mvp.uid}.webp`
                                           : '/players/default.webp')
                                       }
-                                      alt=""
+                                      alt={`${mvp.ign} photo`}
                                       width="100"
                                       height="110"
+                                      loading="lazy"
                                       onerror="this.onerror=null;this.src='/players/default.webp'"
                                     />
 
@@ -1735,3 +1737,46 @@ const roundMVPs =
   );
 
 </script>
+<style is:global>
+  body:has(.match-detail-page) {
+    --bg-primary: #090a0c; --bg-secondary: #101114; --bg-card: #16171b; --bg-card-hover: #202126;
+    --border: #303137; --text-primary: #f4f3ef; --text-secondary: #c4c3bf; --text-muted: #a4a6ac;
+    --match-display: 'DIN Condensed', 'Arial Narrow', 'Avenir Next Condensed', sans-serif;
+  }
+  body:has(.match-detail-page) .site-header { background: #0c0d0f; backdrop-filter: none; }
+  body:has(.match-detail-page) .site-header .nav a { font-family: var(--match-display); font-size: 17px; font-weight: 500; }
+  .match-detail-page.match-detail-page { max-width: 1344px; padding: 20px 32px 32px; font-family: 'Arial Narrow', 'Avenir Next Condensed', sans-serif; }
+  .match-detail-page.match-detail-page .back-to-matches { display: inline-flex; gap: 10px; align-items: center; min-height: 44px; color: var(--text-secondary); font-size: 14px; text-transform: uppercase; }
+  .match-detail-page.match-detail-page .match-score-card { margin: 10px 0 28px; padding: 24px 32px; border: 1px solid var(--border); border-radius: 0; background: #141518; }
+  .match-detail-page.match-detail-page .score-metadata { padding-bottom: 18px; border-bottom: 1px solid var(--border); }
+  .match-detail-page.match-detail-page .score-metadata h1 { font-family: var(--match-display); font-size: clamp(26px,3vw,38px); text-transform: uppercase; line-height: 1.2; }
+  .match-detail-page.match-detail-page .match-status { text-transform: uppercase; }
+  .match-detail-page.match-detail-page .match-round-badge { border-radius: 0; background: transparent; border-color: var(--border); font-weight: 500; }
+  .match-detail-page.match-detail-page .match-detail-scoreboard { gap: 24px; padding: 16px 0; }
+  .match-detail-page.match-detail-page .team-logo-large { width: 90px; height: 90px; object-fit: contain; border: 0; border-radius: 0; background: none; }
+  .match-detail-page.match-detail-page .match-detail-team a { font-family: var(--match-display); font-size: 30px; line-height: 1.2; margin-top: 10px; }
+  .match-detail-page.match-detail-page .match-detail-score { font-family: var(--match-display); font-size: 68px; line-height: 1; border: 0; padding: 0 24px; white-space: nowrap; color: var(--text-primary); }
+  .match-detail-page.match-detail-page .section-title { font-family: var(--match-display); font-size: 30px; text-transform: uppercase; line-height: 1.15; }
+  .match-detail-page.match-detail-page :is(.insight-summary,.match-leader,.comparison-profile,.mvp-card,.table-wrap) { border-radius: 0; box-shadow: none; background: #111215; border-color: var(--border); }
+  .match-detail-page.match-detail-page :is(.match-leader h3,.team-header) { font-family: var(--match-display); font-size: 24px; text-transform: uppercase; }
+  .match-detail-page.match-detail-page .match-tabs { justify-content: flex-start; gap: 0; padding: 0; margin: 28px 0 24px; }
+  .match-detail-page.match-detail-page .match-tabs button { border-radius: 0; border: 0; border-bottom: 2px solid transparent; background: transparent; min-height: 48px; font-family: var(--match-display); font-size: 21px; text-transform: uppercase; }
+  .match-detail-page.match-detail-page .match-tabs button[aria-selected="true"] { color: var(--accent); background: transparent; border-bottom-color: var(--accent); }
+  .match-detail-page.match-detail-page :is(select,.badge,.map-mvp-thumbnail,.map-mvp-image-link) { border-radius: 0; }
+  .match-detail-page.match-detail-page select { font: inherit; min-height: 46px; }
+  .match-detail-page.match-detail-page .match-stats-table { font-size: 16px; font-variant-numeric: tabular-nums; }
+  .match-detail-page.match-detail-page .match-stats-table th { background: #1b1c20; color: var(--text-secondary); font-size: 12px; }
+  .match-detail-page.match-detail-page .match-stats-table td { background: #101114; }
+  .match-detail-page.match-detail-page .match-stats-table tr:nth-child(even) td { background: #141518; }
+  .match-detail-page.match-detail-page :is(a,button,select):focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  @media(max-width:700px) {
+    .match-detail-page.match-detail-page { padding: 14px 16px 24px; }
+    .match-detail-page.match-detail-page .match-score-card { padding: 20px 14px; }
+    .match-detail-page.match-detail-page .match-detail-scoreboard { display: grid; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); flex-direction: row; gap: 10px; }
+    .match-detail-page.match-detail-page .team-logo-large { width: 58px; height: 58px; }
+    .match-detail-page.match-detail-page .match-detail-team a { font-size: 23px; }
+    .match-detail-page.match-detail-page .match-detail-score { width: auto; min-width: 0; font-size: 42px; padding: 0 6px; }
+    .match-detail-page.match-detail-page .match-tabs { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .match-detail-page.match-detail-page .match-tabs button { padding: 12px 8px; font-size: 19px; }
+  }
+</style>

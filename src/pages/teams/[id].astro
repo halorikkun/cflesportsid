@@ -48,20 +48,22 @@ const sortedMatches = [...teamMatches].sort((a, b) => {
 ---
 
 <Layout title={`${team.data.name} - CFL Esports ID Tournament Hub`} current="Teams">
-  <div class="container">
+  <div class="container team-detail" style={`--team-color: ${team.data.color ?? '#777B82'};`}>
+    <a class="back-to-teams" href="/teams"><span aria-hidden="true">←</span> All teams</a>
     
     <section class="profile-banner" aria-label="Team overview">
       <div class="profile-identity"><img class="profile-image team-image" src={team.data.logo || `/logos/${team.data.tag}.webp`} alt={team.data.name} width="160" height="160" onerror="this.onerror=null; this.src='/logos/default.webp'" />
-        <div><p class="profile-kicker">{team.data.region === 'ID' ? 'Indonesia' : team.data.region}</p><h1>{team.data.name}</h1><p class="profile-subtitle">{team.data.tag}</p></div>
+        <div><p class="profile-kicker">{team.data.region === 'ID' ? 'Indonesia' : team.data.region} · Crossfire Legends</p><h1>{team.data.name}</h1><p class="profile-subtitle">{team.data.tag}</p></div>
       </div>
-      <dl class="profile-metrics"><div><dt>Overall standing</dt><dd>#{currentPosition}</dd></div><div><dt>Matches played</dt><dd>{matchesPlayed}</dd></div><div><dt>Wins</dt><dd>{wins}</dd></div><div><dt>Total kills</dt><dd>{totalKills}</dd></div></dl>
+      <dl class="profile-metrics"><div><dt>Overall standing</dt><dd>#{currentPosition}</dd></div><div><dt>Matches played</dt><dd>{matchesPlayed}</dd></div><div><dt>Wins</dt><dd>{wins}</dd></div><div><dt>Losses</dt><dd>{losses}</dd></div></dl>
     </section>
 
     {team.data.description && (
       <p class="team-description">{team.data.description}</p>
     )}
 
-    <h2 class="section-title">Match Stats</h2>
+    <section class="detail-section" aria-labelledby="stats-title">
+    <div class="detail-heading"><h2 id="stats-title">Match stats</h2><span>Completed matches</span></div>
     <div class="stat-grid section-spacing">
       <div class="stat-box stat-box-kill">
         <div class="stat-value">{totalKills}</div>
@@ -76,8 +78,10 @@ const sortedMatches = [...teamMatches].sort((a, b) => {
         <div class="stat-label">Assists</div>
       </div>
     </div>
+    </section>
 
-    <h2 class="section-title">Roster</h2>
+    <section class="detail-section" aria-labelledby="roster-title">
+    <div class="detail-heading"><h2 id="roster-title">Roster</h2><span>{teamPlayers.length} {teamPlayers.length === 1 ? 'player' : 'players'}</span></div>
     <div class="roster-detail-grid section-spacing">
       {teamPlayers.map(player => (
         <a href={`/players/${player.id}`} class="roster-card">
@@ -91,8 +95,7 @@ const sortedMatches = [...teamMatches].sort((a, b) => {
             }
             alt={`${player.data.ign} photo`}
             loading="lazy"
-            onerror="this.onerror=null; this.src='/players/default.webp'"
-            style="object-fit:cover;"
+            onerror="this.onerror=null;this.src='/players/default.webp'"
           />
           <div class="roster-card-info">
             <strong>{player.data.ign}</strong>
@@ -104,15 +107,16 @@ const sortedMatches = [...teamMatches].sort((a, b) => {
         </a>
       ))}
     </div>
+    {!teamPlayers.length && <p class="detail-empty">The team roster has not been announced.</p>}
+    </section>
 
-    {sortedMatches.length > 0 && (
-      <div>
-        <h2 class="section-title">Match History</h2>
+      <section class="detail-section history-section" aria-labelledby="history-title">
+        <div class="detail-heading"><h2 id="history-title">Match history</h2><span>{sortedMatches.length} {sortedMatches.length === 1 ? 'match' : 'matches'}</span></div>
+        {sortedMatches.length > 0 ? (<>
         <p class="table-scroll-hint">
           Swipe to view full match history →
         </p>
         <div class="table-wrap" tabindex="0" role="region" aria-label="Match history table">
-          <!-- NEW: Added class for targeted mobile sticky columns -->
           <table class="match-history-table">
             <thead>
               <tr>
@@ -160,13 +164,89 @@ const sortedMatches = [...teamMatches].sort((a, b) => {
             </tbody>
           </table>
         </div>
-      </div>
-    )}
+        </>) : <p class="detail-empty">No matches recorded for this team yet.</p>}
+      </section>
   </div>
 </Layout>
 
 <style>
-  /* NEW: Detail Hero Styling */
+  :global(body:has(.team-detail)) {
+    --bg-primary: #090a0c;
+    --bg-secondary: #101114;
+    --bg-card: #16171b;
+    --bg-card-hover: #202126;
+    --border: #303137;
+    --text-primary: #f4f3ef;
+    --text-secondary: #c4c3bf;
+    --text-muted: #a4a6ac;
+    --detail-display: 'DIN Condensed', 'Arial Narrow', 'Avenir Next Condensed', sans-serif;
+  }
+  :global(body:has(.team-detail) .site-header) { background: #0c0d0f; backdrop-filter: none; }
+  :global(body:has(.team-detail) .site-header .nav a) { font-family: var(--detail-display); font-size: 17px; font-weight: 500; }
+  .team-detail { max-width: 1344px; padding: 20px 32px 32px; font-family: 'Arial Narrow', 'Avenir Next Condensed', sans-serif; }
+  .back-to-teams { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; color: var(--text-secondary); text-transform: uppercase; font-size: 14px; }
+  .team-detail .profile-banner { position: relative; isolation: isolate; margin: 10px 0 24px; min-height: 0; padding: 32px; background: #141518; border: 1px solid var(--border); border-radius: 0; gap: 28px; }
+  .team-detail .profile-banner::before { content: ''; position: absolute; inset: 0; z-index: -1; background: var(--team-color); mask: url('/patterns/team-card.svg') center / 100% 100% no-repeat; -webkit-mask: url('/patterns/team-card.svg') center / 100% 100% no-repeat; opacity: .23; pointer-events: none; }
+  .team-detail .profile-identity { gap: 24px; }
+  .team-detail .profile-image { width: 120px; height: 120px; border-radius: 0; }
+  .team-detail .profile-identity h1 { font-family: var(--detail-display); text-transform: uppercase; font-size: clamp(36px,4.5vw,64px); letter-spacing: .01em; margin-bottom: 6px; }
+  .team-detail .profile-kicker { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 10px; }
+  .team-detail .profile-subtitle { font-size: 18px; }
+  .team-detail .profile-metrics { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 18px 24px; width: 310px; padding: 20px 24px; border-radius: 0; background: #101114e8; }
+  .team-detail .profile-metrics div { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 0; border: 0; }
+  .team-detail .profile-metrics dt { font-size: 12px; font-weight: 400; text-transform: uppercase; color: var(--text-secondary); }
+  .team-detail .profile-metrics dd { font-family: var(--detail-display); font-size: 34px; line-height: 1; color: var(--text-primary); }
+  .team-detail .profile-metrics div:first-child dd { color: var(--accent); }
+  .detail-section { margin-bottom: 24px; }
+  .detail-heading { display: flex; align-items: baseline; gap: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border); margin-bottom: 14px; }
+  .detail-heading h2 { font-family: var(--detail-display); font-size: 30px; line-height: 1.1; text-transform: uppercase; }
+  .detail-heading > span { color: var(--text-muted); font-size: 13px; }
+  .team-detail .section-spacing { margin-bottom: 0; }
+  .team-detail .stat-grid { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 0; border: 1px solid var(--border); }
+  .team-detail .stat-box { display: flex; align-items: baseline; justify-content: center; gap: 12px; border: 0; border-right: 1px solid var(--border); border-radius: 0; padding: 20px; background: var(--bg-secondary); }
+  .team-detail .stat-box:last-child { border-right: 0; }
+  .team-detail .stat-box .stat-value { font-family: var(--detail-display); font-size: 38px; line-height: 1; }
+  .team-detail .stat-box .stat-label { font-size: 14px; text-transform: uppercase; }
+  .team-detail .roster-detail-grid { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; }
+  .team-detail .roster-card { border-radius: 0; background: #141518; padding: 14px; gap: 12px; }
+  .team-detail .roster-card .avatar { width: 42px; height: 50px; border-radius: 0; background: transparent; object-fit:cover; }
+  .team-detail .roster-card-info strong { font-size: 18px; }
+  .team-detail .roster-card-info span { font-size: 13px; }
+  .team-detail .roster-card .badge { font-size: 10px; padding: 3px 6px; }
+  .team-detail .table-wrap { border-radius: 0; margin-bottom: 0; }
+  .team-detail .match-history-table { font-size: 16px; background: #101114; }
+  .team-detail .match-history-table th { background: #1b1c20; color: var(--text-secondary); border-bottom: 1px solid var(--border); font-size: 12px; }
+  .team-detail .match-history-table td { padding: 12px 16px; }
+  .team-detail .match-history-table td:first-child { white-space: nowrap; }
+  .team-detail .score-link { font-family: var(--detail-display); font-size: 24px; display: inline-flex; align-items: center; min-height: 44px; white-space: nowrap; }
+  .detail-empty { color: var(--text-secondary); padding: 20px 0; }
+  @media(max-width:1000px) {
+    .team-detail .profile-banner { padding: 24px; gap: 20px; }
+    .team-detail .profile-image { width: 90px; height: 90px; }
+    .team-detail .profile-metrics { width: 240px; padding: 18px; gap: 16px; }
+    .team-detail .roster-detail-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  }
+  @media(max-width:700px) {
+    .team-detail { padding: 14px 16px 24px; }
+    .team-detail .profile-banner { flex-direction: column; align-items: stretch; padding: 22px 18px; }
+    .team-detail .profile-identity { gap: 16px; }
+    .team-detail .profile-image { width: 74px; height: 74px; }
+    .team-detail .profile-kicker { font-size: 11px; letter-spacing: .04em; }
+    .team-detail .profile-identity h1 { font-size: clamp(30px,7vw,42px); }
+    .team-detail .profile-metrics { width: 100%; grid-template-columns: repeat(4,minmax(0,1fr)); padding: 14px 10px; gap: 10px; }
+    .team-detail .profile-metrics dt { font-size: 10px; }
+    .team-detail .profile-metrics dd { font-size: 29px; }
+    .team-detail .stat-box { flex-direction: column; align-items: center; gap: 6px; padding: 16px 8px; }
+    .team-detail .stat-box .stat-value { font-size: 32px; }
+    .team-detail .stat-box .stat-label { font-size: 12px; }
+    .team-detail .match-history-table :is(th,td) { position: static; left: auto; }
+  }
+  @media(max-width:480px) {
+    .team-detail .roster-detail-grid { grid-template-columns: minmax(0,1fr); }
+    .team-detail .profile-identity { flex-direction: column; align-items: flex-start; }
+    .team-detail .profile-identity h1 { font-size: 30px; }
+  }
+
   .team-description {
     color: var(--text-secondary);
     margin-bottom: 2rem;
