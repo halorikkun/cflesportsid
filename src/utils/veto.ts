@@ -57,7 +57,7 @@ export function resolveVeto(
    */
   if (config.steps.length >= pool.length) {
     throw new Error(
-      'Veto must leave at least one map for the wheel.'
+      `Veto must leave at least one map for the wheel. steps=${config.steps.length} pool=${pool.length} poolIds=${JSON.stringify(pool.map(p=>p.id))}`
     );
   }
 

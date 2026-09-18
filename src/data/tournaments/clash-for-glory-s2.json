@@ -1,0 +1,104 @@
+{
+  "name": "Clash for Glory: Road to All-Star S2",
+  "game": "crossfire-legends",
+  "region": "ID",
+  "startDate": "2026-09-26",
+  "endDate": "2026-09-27",
+  "status": "upcoming",
+  "format": "single-elimination",
+  "teams": [],
+  "stages": [
+    {
+      "id": "playoffs",
+      "name": "Playoffs",
+      "format": "single-elimination",
+      "bracketSize": 16,
+      "series": {
+        "type": "fixed-maps",
+        "mapCount": 3
+      },
+      "rounds": [
+        {
+          "id": "top-16",
+          "name": "Top 16",
+          "order": 1
+        },
+        {
+          "id": "quarter-final",
+          "name": "Quarter Final",
+          "order": 2
+        },
+        {
+          "id": "semi-final",
+          "name": "Semi Final",
+          "order": 3
+        },
+        {
+          "id": "final",
+          "name": "Final",
+          "order": 5,
+          "placement": 1
+        },
+        {
+          "id": "bronze",
+          "name": "Bronze Match",
+          "order": 4,
+          "placement": 3
+        }
+      ],
+      "byes": [],
+      "veto": {
+        "mapPoolIds": [
+          "desert",
+          "sub-base",
+          "satellite",
+          "island",
+          "ankara",
+          "eagle-eye",
+          "power-supply",
+          "greece",
+          "black-widow",
+          "port",
+          "aztec"
+        ],
+        "steps": [
+          {
+            "team": "A",
+            "action": "ban"
+          },
+          {
+            "team": "B",
+            "action": "ban"
+          },
+          {
+            "team": "A",
+            "action": "ban"
+          },
+          {
+            "team": "B",
+            "action": "ban"
+          },
+          {
+            "team": "A",
+            "action": "pick"
+          },
+          {
+            "team": "B",
+            "action": "pick"
+          },
+          {
+            "team": "A",
+            "action": "ban"
+          },
+          {
+            "team": "B",
+            "action": "ban"
+          }
+        ],
+        "finalMap": "random",
+        "actionSeconds": 20,
+        "reserveSeconds": 90
+      }
+    }
+  ]
+}
