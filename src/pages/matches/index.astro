@@ -525,10 +525,22 @@ const rounds = [...new Set(matches.map(m => getRoundName(m, tournamentsMap)))];
     text-decoration: none;
   }
 
+  .match-card.status-card-upcoming {
+    border-top-color:#777a82;
+  }
+
+  .match-card.status-card-live {
+    border-top-color:var(--accent);
+  }
+
+  .match-card.status-card-completed {
+    border-top-color:#a7ad8a;
+  }
+
   .match-card:hover {
     background: #15161a;
     border-color: #47484e;
-    border-top-color: var(--accent);
+    border-top-color:var(--accent);
   }
 
   /* Card header */

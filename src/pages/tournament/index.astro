@@ -13,6 +13,7 @@ const allTournaments = await getCollection('tournaments');
 
 const tournamentPosters: Record<string, string> = {
   'clash-for-glory-s1': '/tournaments/clash-for-glory-s1.webp',
+  'clash-for-glory-s2': '/tournaments/clash-for-glory-s2.webp',
 };
 
 const formatDate = (date: string | null) => {
@@ -330,6 +331,18 @@ tournaments.sort((a, b) => {
     transition:background-color .18s,border-color .18s;
   }
 
+  .tourney-card.status-card-upcoming {
+    border-top-color:#777a82;
+  }
+
+  .tourney-card.status-card-ongoing {
+    border-top-color:var(--accent);
+  }
+
+  .tourney-card.status-card-completed {
+    border-top-color:#a7ad8a;
+  }
+
   .tourney-card:hover {
     background:#15161a;
     border-color:#47484e;
@@ -357,7 +370,7 @@ tournaments.sort((a, b) => {
     height:100%;
     min-height:0;
     object-fit:cover;
-    object-position:center 20%;
+    object-position:center 18%;
   }
 
   .tourney-card:hover .tourney-poster img {
@@ -422,12 +435,14 @@ tournaments.sort((a, b) => {
     font-weight:500;
     letter-spacing:.04em;
     text-transform:uppercase;
+    line-height:1;
+    padding-top:3px;
   }
 
   .status-completed {
-    color:#a7ad8a;
-    background:#a7ad8a0c;
-    border-color:#515644;
+    color:#b8bf91;
+    background:#a7ad8a12;
+    border-color:#656b50;
   }
 
   .status-ongoing {
@@ -437,9 +452,9 @@ tournaments.sort((a, b) => {
   }
 
   .status-upcoming {
-    color:var(--text-secondary);
-    background:#ffffff05;
-    border-color:#555860;
+    color:#f4f3ef;
+    background:#ffffff0a;
+    border-color:#777a82;
   }
 
   .tourney-main {

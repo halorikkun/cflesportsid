@@ -160,9 +160,17 @@ function bracketRow(slot: number, roundIndex: number) {
                           data-slot={entry.slot}
                           style={`grid-column:${roundIndex + 1};grid-row:${gridRow};order:${roundIndex * 100 + entry.slot};`}
                         >
-                          <div class="bracket-team-row winner">
+                          <div class="bracket-team-row winner" style={`--team-color:${team?.data.color || '#777B82'};`}>
                             <div class="bracket-team-info">
-                              <span class="bracket-team-tag">{team?.data.tag ?? entry.bye.teamId}</span>
+                              {team && (
+                                <img
+                                  class="bracket-team-logo"
+                                  src={team.data.logo || `/logos/${team.data.tag}.webp`}
+                                  alt={`${team.data.name} logo`}
+                                  loading="lazy"
+                                  onerror="this.onerror=null;this.src='/logos/default.webp'"
+                                />
+                              )}
                               <span class="bracket-team-name">{team?.data.name ?? entry.bye.teamId}</span>
                             </div>
                             <span class="bracket-bye-label">BYE</span>
@@ -192,16 +200,32 @@ function bracketRow(slot: number, roundIndex: number) {
                         data-source-kind2={m.data.team2Source?.type}
                         style={`grid-column:${roundIndex + 1};grid-row:${gridRow};order:${roundIndex * 100 + entry.slot};`}
                       >
-                        <div class={`bracket-team-row ${win1 ? 'winner' : win2 ? 'loser' : ''}`}>
+                        <div class={`bracket-team-row ${win1 ? 'winner' : win2 ? 'loser' : ''}`} style={`--team-color:${team1?.data.color || '#777B82'};`}>
                           <div class="bracket-team-info">
-                            <span class="bracket-team-tag">{team1?.data.tag ?? 'TBD'}</span>
+                            {team1 && (
+                              <img
+                                class="bracket-team-logo"
+                                src={team1.data.logo || `/logos/${team1.data.tag}.webp`}
+                                alt={`${team1.data.name} logo`}
+                                loading="lazy"
+                                onerror="this.onerror=null;this.src='/logos/default.webp'"
+                              />
+                            )}
                             <span class="bracket-team-name">{team1?.data.name ?? team1Id ?? getParticipantLabel(m, 1)}</span>
                           </div>
                           <span class="bracket-team-score">{complete ? m.data.score1 : '–'}</span>
                         </div>
-                        <div class={`bracket-team-row ${win2 ? 'winner' : win1 ? 'loser' : ''}`}>
+                        <div class={`bracket-team-row ${win2 ? 'winner' : win1 ? 'loser' : ''}`} style={`--team-color:${team2?.data.color || '#777B82'};`}>
                           <div class="bracket-team-info">
-                            <span class="bracket-team-tag">{team2?.data.tag ?? 'TBD'}</span>
+                            {team2 && (
+                              <img
+                                class="bracket-team-logo"
+                                src={team2.data.logo || `/logos/${team2.data.tag}.webp`}
+                                alt={`${team2.data.name} logo`}
+                                loading="lazy"
+                                onerror="this.onerror=null;this.src='/logos/default.webp'"
+                              />
+                            )}
                             <span class="bracket-team-name">{team2?.data.name ?? team2Id ?? getParticipantLabel(m, 2)}</span>
                           </div>
                           <span class="bracket-team-score">{complete ? m.data.score2 : '–'}</span>
@@ -234,12 +258,35 @@ function bracketRow(slot: number, roundIndex: number) {
                         const win2 = complete && m.data.winnerId === team2Id;
                         return (
                           <a href={`/matches/${m.id}`} class={`bracket-match ${complete ? '' : 'upcoming'}`}>
-                            <div class={`bracket-team-row ${win1 ? 'winner' : win2 ? 'loser' : ''}`}>
-                              <div class="bracket-team-info"><span class="bracket-team-tag">{team1?.data.tag ?? 'TBD'}</span><span class="bracket-team-name">{team1?.data.name ?? team1Id ?? getParticipantLabel(m, 1)}</span></div>
+                            <div class={`bracket-team-row ${win1 ? 'winner' : win2 ? 'loser' : ''}`} style={`--team-color:${team1?.data.color || '#777B82'};`}>
+                              <div class="bracket-team-info">
+                                {team1 && (
+                                  <img
+                                    class="bracket-team-logo"
+                                    src={team1.data.logo || `/logos/${team1.data.tag}.webp`}
+                                    alt={`${team1.data.name} logo`}
+                                    loading="lazy"
+                                    onerror="this.onerror=null;this.src='/logos/default.webp'"
+                                  />
+                                )}
+                                <span class="bracket-team-name">{team1?.data.name ?? team1Id ?? getParticipantLabel(m, 1)}</span>
+                              </div>
                               <span class="bracket-team-score">{complete ? m.data.score1 : '–'}</span>
                             </div>
-                            <div class={`bracket-team-row ${win2 ? 'winner' : win1 ? 'loser' : ''}`}>
-                              <div class="bracket-team-info"><span class="bracket-team-tag">{team2?.data.tag ?? 'TBD'}</span><span class="bracket-team-name">{team2?.data.name ?? team2Id ?? getParticipantLabel(m, 2)}</span></div>
+
+                            <div class={`bracket-team-row ${win2 ? 'winner' : win1 ? 'loser' : ''}`} style={`--team-color:${team2?.data.color || '#777B82'};`}>
+                              <div class="bracket-team-info">
+                                {team2 && (
+                                  <img
+                                    class="bracket-team-logo"
+                                    src={team2.data.logo || `/logos/${team2.data.tag}.webp`}
+                                    alt={`${team2.data.name} logo`}
+                                    loading="lazy"
+                                    onerror="this.onerror=null;this.src='/logos/default.webp'"
+                                  />
+                                )}
+                                <span class="bracket-team-name">{team2?.data.name ?? team2Id ?? getParticipantLabel(m, 2)}</span>
+                              </div>
                               <span class="bracket-team-score">{complete ? m.data.score2 : '–'}</span>
                             </div>
                           </a>
@@ -586,15 +633,35 @@ function bracketRow(slot: number, roundIndex: number) {
   .bracket-match.upcoming { border-style:dashed; }
   .bracket-match.bye { opacity:.72;border-style:dashed;pointer-events:none; }
   .bracket-team-row {
-    display:flex;align-items:center;justify-content:space-between;min-height:42px;padding:8px 11px;font-size:13px;
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    min-height:42px;
+    padding:8px 11px 8px 14px;
+    font-size:13px;
+  }
+  .bracket-team-row::before {
+    content:'';
+    position:absolute;
+    top:0;
+    bottom:0;
+    left:0;
+    width:3px;
+    background:var(--team-color,transparent);
   }
   .bracket-team-row + .bracket-team-row { border-top:1px solid var(--border); }
   .bracket-team-row.winner { background:rgba(231,191,89,.07); }
   .bracket-team-row.loser { opacity:.48; }
   .bracket-team-row.empty { opacity:.4; }
-  .bracket-team-info { display:flex;flex:1;min-width:0;align-items:center;gap:8px; }
-  .bracket-team-tag { min-width:34px;flex-shrink:0;padding:3px 5px;color:var(--text-secondary);background:rgba(255,255,255,.045);border-radius:4px;font-size:10px;font-weight:800;text-align:center; }
-  .bracket-team-row.winner .bracket-team-tag { color:#e7bf59;background:rgba(231,191,89,.14); }
+  .bracket-team-info { display:flex;flex:1;min-width:0;align-items:center;gap:9px; }
+  .bracket-team-logo {
+    display:block;
+    flex:0 0 28px;
+    width:28px;
+    height:28px;
+    object-fit:contain;
+  }
   .bracket-team-row.winner .bracket-team-name { color:var(--text-primary); }
   .bracket-team-name { overflow:hidden;color:var(--text-secondary);font-size:12px;font-weight:650;text-overflow:ellipsis;white-space:nowrap; }
   .bracket-team-score { min-width:22px;margin-left:8px;color:var(--text-secondary);font-size:14px;font-weight:800;text-align:right;font-variant-numeric:tabular-nums; }
@@ -785,7 +852,6 @@ function bracketRow(slot: number, roundIndex: number) {
   :global(#main-content) .tournament-detail .bracket-match:hover { transform: none; box-shadow: none; border-color: var(--accent); }
   :global(#main-content) .tournament-detail .bracket-team-name { font-size: 15px; }
   :global(#main-content) .tournament-detail .bracket-team-score { font-family: var(--tournament-display); font-size: 24px; }
-  :global(#main-content) .tournament-detail .bracket-team-tag { border-radius: 0; font-size: 11px; }
   .tournament-detail a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
   @media(max-width:640px) {
     .tournament-detail { padding: 14px 16px 24px; }
