@@ -123,8 +123,8 @@ const mapMatches = matches
     <section class="map-detail-hero">
       <img
         class="map-hero-image"
-        src={map.data.thumbnail || '/maps/placeholder.svg'}
-        alt=""
+        src={`/maps/${map.id}.webp`}
+        alt={`${map.data.name} map`}
         width="1600"
         height="720"
         onerror="this.onerror=null;this.src='/maps/placeholder.svg'"

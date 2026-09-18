@@ -48,10 +48,7 @@ const maps = (await getCollection('maps'))
           <article class="map-card">
             <div class="map-thumbnail">
               <img
-                src={
-                  map.data.thumbnail ||
-                  '/maps/placeholder.svg'
-                }
+                src={`/maps/${map.id}.webp`}
                 alt=""
                 width="800"
                 height="360"
